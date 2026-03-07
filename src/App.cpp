@@ -18,7 +18,7 @@ void App::Update() {
         m_CoverImage->Draw();  // 繪製封面圖片
 
         if (Util::Input::IsKeyPressed(Util::Keycode::SPACE)) {  // 偵測空白鍵
-            LOG_INFO("進入遊戲");
+            LOG_INFO("Start Game");
             m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
         }
     }

@@ -4,6 +4,7 @@ set(SRC_FILES
 
 set(INCLUDE_FILES
     App.hpp
+    BackgroundImage.hpp
 )
 
 set(TEST_FILES

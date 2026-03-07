@@ -7,12 +7,21 @@
 
 void App::Start() {
     LOG_TRACE("Start");
+
+    m_CoverImage = std::make_shared<BackgroundImage>();
+
     m_CurrentState = State::UPDATE;
 }
 
 void App::Update() {
-    
-    //TODO: do your things here and delete this line <3
+    if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
+        m_CoverImage->Draw();  // 繪製封面圖片
+
+        if (Util::Input::IsKeyPressed(Util::Keycode::SPACE)) {  // 偵測空白鍵
+            LOG_INFO("進入遊戲");
+            m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
+        }
+    }
     
     /*
      * Do not touch the code below as they serve the purpose for

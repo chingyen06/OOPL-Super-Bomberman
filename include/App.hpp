@@ -3,6 +3,9 @@
 
 #include "pch.hpp" // IWYU pragma: export
 
+#include <memory>
+#include "BackgroundImage.hpp"
+
 class App {
 public:
     enum class State {
@@ -23,7 +26,15 @@ private:
     void ValidTask();
 
 private:
+    enum class GameState {
+        TITLE_SCREEN,
+        GAMEPLAY
+    };
+
     State m_CurrentState = State::START;
+    GameState m_GameState = GameState::TITLE_SCREEN;  // 初始為 TITLE_SCREEN (封面)
+
+    std::shared_ptr<BackgroundImage> m_CoverImage;  // 存封面圖片的 pointer
 };
 
 #endif

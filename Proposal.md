@@ -1,13 +1,13 @@
 # Abstract
 
-遊戲名稱：Super Bomberman: Castle Mode
+遊戲名稱：超級炸彈人
 
 組員：
 
 - 113820032 曾靖諺
 
 # Game Introduction
-Super Bomberman: Castle Mode 是一款參考 Super Bomberman R2 中城堡模式的遊戲，原作 Super Bomberman R2 為 3D 版本，擬定改將原作的城堡模式復刻為類似 Super Bomberman 3 的 2D 版本，雙方圍繞場地上的「鑰匙」與「寶箱」展開攻防對決。  
+超級炸彈人 是一款參考 Super Bomberman R2 中城堡模式的遊戲，原作 Super Bomberman R2 為 3D 版本，擬定改將原作的城堡模式復刻為類似 Super Bomberman 5 的 2D 版本，雙方圍繞場地上的「鑰匙」與「寶箱」展開攻防對決。  
 
 遊戲分為 `進攻方` 與 `防守方`。 
 
@@ -26,12 +26,12 @@ Super Bomberman: Castle Mode 是一款參考 Super Bomberman R2 中城堡模式�
 # Development timeline
 
 - Week 1：準備素材
-  - [ ] 蒐集遊戲的素材
+  - [x] 蒐集遊戲的素材
 - Week 2：處理遊戲的封面
-  - [ ] 處理遊戲封面的素材
-  - [ ] 進行遊戲封面的設計
+  - [x] 處理遊戲封面的素材
+  - [x] 進行遊戲封面的設計
 - Week 3：完成練習 & 遊戲地圖
-  - [ ] 完成練習
+  - [x] 完成練習
   - [ ] 設計地圖儲存與載入機制
   - [ ] 設計不同方塊的樣式與用途
 - Week 4：角色與炸彈

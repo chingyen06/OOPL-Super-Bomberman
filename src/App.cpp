@@ -12,6 +12,8 @@ void App::Start() {
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
     m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
 
+    m_Player = std::make_shared<Player>(1, 1);  // 將角色加入根節點
+
     m_CurrentState = State::UPDATE;
 }
 
@@ -27,10 +29,11 @@ void App::Update() {
 
             m_Root.RemoveChild(m_CoverImage);       // 移除封面圖片
             m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
+            m_Root.AddChild(m_Player);  // 載入角色
         }
     }
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
-
+        m_Player->Update(m_LevelManager);  // 更新角色
     }
     
     /*

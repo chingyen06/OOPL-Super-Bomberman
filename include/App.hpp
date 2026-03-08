@@ -7,6 +7,7 @@
 #include "Util/Renderer.hpp"
 #include "BackgroundImage.hpp"
 #include "LevelManager.hpp"
+#include "Player.hpp"
 
 class App {
 public:
@@ -40,6 +41,8 @@ private:
 
     std::shared_ptr<BackgroundImage> m_CoverImage;  // 存封面圖片的 pointer
     LevelManager m_LevelManager;  // 管理關卡
+
+    std::shared_ptr<Player> m_Player;  // 存角色的 pointer
 };
 
 #endif

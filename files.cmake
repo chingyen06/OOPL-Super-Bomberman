@@ -2,6 +2,7 @@ set(SRC_FILES
     App.cpp
     LevelManager.cpp
     MapTiles.cpp
+    Player.cpp
 )
 
 set(INCLUDE_FILES
@@ -9,6 +10,7 @@ set(INCLUDE_FILES
     BackgroundImage.hpp
     LevelManager.hpp
     MapTiles.hpp
+    Player.hpp
 )
 
 set(TEST_FILES

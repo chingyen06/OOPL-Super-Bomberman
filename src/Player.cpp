@@ -21,71 +21,65 @@ Player::Player(int startGridX, int startGridY) : m_GridX(startGridX), m_GridY(st
     m_Pos.x = (m_GridX - 12) * 32.0f;
     m_Pos.y = (8 - m_GridY) * 32.0f;
 
-    m_Transform.translation = { m_Pos.x, m_Pos.y + 8.0f };
+    m_Transform.translation = { m_Pos.x, m_Pos.y };
 }
 
 void Player::Update(const LevelManager& levelManager) {
     float speed = 3.0f;  // 移動速度
+    float dx = 0.0f;  // x 方向移動
+    float dy = 0.0f;  // y 方向移動
     float nextX = m_Pos.x;
     float nextY = m_Pos.y;
-    bool moved = false;
+    //bool moved = false;
 
     // 取得當前位置的網格中心點座標
     float centerX = (m_GridX - 12) * 32.0f;
     float centerY = (8 - m_GridY) * 32.0f;
 
     if (Util::Input::IsKeyPressed(Util::Keycode::W)) {
-        nextY += speed;
-
-        // 轉彎輔助對齊
-        if (m_Pos.x < centerX)
-            nextX += std::min(speed, centerX - m_Pos.x);
-        else if (m_Pos.x > centerX)
-            nextX -= std::min(speed, m_Pos.x - centerX);
-
+        dy += speed;
         ChangeDirection(Direction::UP);
-        moved = true;
     }
     else if (Util::Input::IsKeyPressed(Util::Keycode::S)) {
-        nextY -= speed;
-
-        // 轉彎輔助對齊
-        if (m_Pos.x < centerX)
-            nextX += std::min(speed, centerX - m_Pos.x);
-        else if (m_Pos.x > centerX)
-            nextX -= std::min(speed, m_Pos.x - centerX);
-
+        dy -= speed;
         ChangeDirection(Direction::DOWN);
-        moved = true;
     }
-    else if (Util::Input::IsKeyPressed(Util::Keycode::A)) {
-        nextX -= speed;
 
-        // 轉彎輔助對齊
-        if (m_Pos.y < centerY)
-            nextY += std::min(speed, centerY - m_Pos.y);
-        else if (m_Pos.y > centerY)
-            nextY -= std::min(speed, m_Pos.y - centerY);
-
+    if (Util::Input::IsKeyPressed(Util::Keycode::A)) {
+        dx -= speed;
         ChangeDirection(Direction::LEFT);
-        moved = true;
     }
     else if (Util::Input::IsKeyPressed(Util::Keycode::D)) {
-        nextX += speed;
-
-        // 轉彎輔助對齊
-        if (m_Pos.y < centerY)
-            nextY += std::min(speed, centerY - m_Pos.y);
-        else if (m_Pos.y > centerY)
-            nextY -= std::min(speed, m_Pos.y - centerY);
-
+        dx += speed;
         ChangeDirection(Direction::RIGHT);
-        moved = true;
     }
 
-    if (moved) {  // 正在移動
-        if (!IsColliding(nextX, nextY, levelManager)) {  // 如果不會碰撞，可以移動
+    bool moveX = (dx != 0.0f);
+    bool moveY = (dy != 0.0f);
+
+    if (moveX && moveY) {  // 斜向移動速度要與單一方向移動的速度一致
+        dx /= sqrt(2);
+        dy /= sqrt(2);
+    }
+
+    nextX += dx;
+    nextY += dy;
+
+    // 只有單一方向移動才做轉彎輔助對齊
+    if (moveY && !moveX) {
+        if (m_Pos.x < centerX) nextX += std::min(speed, centerX - m_Pos.x);
+        else if (m_Pos.x > centerX) nextX -= std::min(speed, m_Pos.x - centerX);
+    }
+    else if (moveX && !moveY) {
+        if (m_Pos.y < centerY) nextY += std::min(speed, centerY - m_Pos.y);
+        else if (m_Pos.y > centerY) nextY -= std::min(speed, m_Pos.y - centerY);
+    }
+
+    if (moveX || moveY) {  // 正在移動
+        if (!IsColliding(nextX, m_Pos.y, levelManager)) {  // 如果不會碰撞，可以移動
             m_Pos.x = nextX;
+        }
+        if (!IsColliding(m_Pos.x, nextY, levelManager)) {  // 如果不會碰撞，可以移動
             m_Pos.y = nextY;
         }
 

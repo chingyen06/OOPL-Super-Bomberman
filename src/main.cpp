@@ -1,6 +1,7 @@
 #include "App.hpp"
 
 #include "Core/Context.hpp"
+#include "config.hpp"
 
 int main(int, char**) {
     auto context = Core::Context::GetInstance();

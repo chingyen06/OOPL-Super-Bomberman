@@ -3,22 +3,36 @@
 
 #include "Util/GameObject.hpp"
 
+class Tile : public Util::GameObject {
+public:
+    virtual bool IsPassable() const = 0;
+};
+
 // 草地
-class Ground : public Util::GameObject {
+class Ground : public Tile {
 public:
     Ground(int gridX, int gridY);
+    bool IsPassable() const override {
+        return true;
+    };
 };
 
 // 無敵牆
-class Wall : public Util::GameObject {
+class Wall : public Tile {
 public:
     Wall(int gridX, int gridY);
+    bool IsPassable() const override {
+        return false;
+    };
 };
 
 // 磚塊 (可破壞)
-class Brick : public Util::GameObject {
+class Brick : public Tile {
 public:
     Brick(int gridX, int gridY);
+    bool IsPassable() const override {
+        return false;
+    };
 };
 
 #endif

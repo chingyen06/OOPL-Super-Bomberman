@@ -56,7 +56,7 @@ void App::Update() {
             m_BombManager.Update(m_LevelManager, m_Root, m_Player);
         }
 		else {  // 玩家死亡
-            if (m_DeathCountdown == -1) {
+            /*if (m_DeathCountdown == -1) {
                 m_DeathCountdown = 30;
             }
 
@@ -78,6 +78,31 @@ void App::Update() {
                 m_GameState = GameState::TITLE_SCREEN;   // 暫時的死亡懲罰：踢回首頁
 
 				m_DeathCountdown = -1;  // 重置死亡倒數計時
+            }*/
+
+            if (m_DeathCountdown == -1 && m_RespawnTimer == -1) {
+                m_DeathCountdown = 30;
+                LOG_INFO("Player died, showing body...");
+            }
+
+            if (m_DeathCountdown > 0) {
+                m_DeathCountdown--;
+                if (m_DeathCountdown == 0) {
+                    m_Root.RemoveChild(m_Player);
+                    m_RespawnTimer = 90; // 等待 1.5 秒重生
+                    m_DeathCountdown = -1;
+                }
+            }
+            // 玩家消失在畫面上，但炸彈還在爆
+            else if (m_RespawnTimer > 0) {
+                m_RespawnTimer--;
+                if (m_RespawnTimer == 0) {
+					// 復活角色
+                    m_Player->Respawn(1, 1); // 回到起點
+                    m_Root.AddChild(m_Player);
+                    m_RespawnTimer = -1;
+                    LOG_INFO("Player Respawned!");
+                }
             }
         }
     }

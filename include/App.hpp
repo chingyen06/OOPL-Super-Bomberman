@@ -48,6 +48,7 @@ private:
 	BombManager m_BombManager;  // 管理炸彈與火焰
 
 	int m_DeathCountdown = -1;  // 死亡倒數計時
+	int m_RespawnTimer = -1;  // 重生倒數計時
 };
 
 #endif

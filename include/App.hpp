@@ -8,6 +8,7 @@
 #include "BackgroundImage.hpp"
 #include "LevelManager.hpp"
 #include "Player.hpp"
+#include "BombManager.hpp"
 
 class App {
 public:
@@ -43,6 +44,10 @@ private:
     LevelManager m_LevelManager;  // 管理關卡
 
     std::shared_ptr<Player> m_Player;  // 存角色的 pointer
+
+	BombManager m_BombManager;  // 管理炸彈與火焰
+
+	int m_DeathCountdown = -1;  // 死亡倒數計時
 };
 
 #endif

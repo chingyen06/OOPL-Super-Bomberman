@@ -22,6 +22,7 @@ void App::Update() {
 
     if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
         // m_CoverImage->Draw();  // 繪製封面圖片 (用 Renderer 繪圖，不需要這一行)
+        m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
 
         if (Util::Input::IsKeyPressed(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Start Game");
@@ -33,7 +34,47 @@ void App::Update() {
         }
     }
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
-        m_Player->Update(m_LevelManager);  // 更新角色
+        // LOG_INFO(m_Player->IsDead());
+        
+        if (!m_Player->IsDead()) {  // 玩家活著才允許移動與放炸彈
+            m_Player->Update(m_LevelManager);  // 更新角色
+            // LOG_INFO("Update Player");
+
+            // 按下空白鍵放炸彈 (目前火力暫定寫死為 2)
+            if (Util::Input::IsKeyDown(Util::Keycode::SPACE)) {
+                LOG_INFO("Bomb");
+                m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
+            }
+
+            // 運算物理與傷害
+            m_BombManager.Update(m_LevelManager, m_Root, m_Player);
+        }
+		else {  // 玩家死亡
+            LOG_INFO("Game Over!");
+
+            if (m_DeathCountdown == -1) {
+                m_DeathCountdown = 60;
+            }
+
+            m_DeathCountdown--;  // 開始死亡倒數
+
+			m_BombManager.Update(m_LevelManager, m_Root, m_Player);  // 讓炸彈與火焰繼續運作，確保玩家能看到死亡動畫與傷害判定
+
+            // 死亡倒數結束
+            if (m_DeathCountdown <= 0) {
+                LOG_INFO("Game Over!");
+
+                // 從畫面上拔除所有遊戲物件
+                m_Root.RemoveChild(m_Player);
+                m_LevelManager.DetachFromRoot(m_Root);
+                m_BombManager.Clear(m_Root);
+
+                m_Root.AddChild(m_CoverImage);
+                m_GameState = GameState::TITLE_SCREEN;   // 暫時的死亡懲罰：踢回首頁
+
+				m_DeathCountdown = -1;  // 重置死亡倒數計時
+            }
+        }
     }
     
     /*

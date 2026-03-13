@@ -3,6 +3,9 @@ set(SRC_FILES
     LevelManager.cpp
     MapTiles.cpp
     Player.cpp
+    Bomb.cpp
+    Explosion.cpp
+    BombManager.cpp
 )
 
 set(INCLUDE_FILES
@@ -11,6 +14,9 @@ set(INCLUDE_FILES
     LevelManager.hpp
     MapTiles.hpp
     Player.hpp
+    Bomb.hpp
+    Explosion.hpp
+    BombManager.hpp
 )
 
 set(TEST_FILES

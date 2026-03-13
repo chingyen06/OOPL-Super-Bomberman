@@ -98,18 +98,18 @@ void Player::ChangeDirection(Direction dir) {
 
     m_CurrentDir = dir;
     switch (m_CurrentDir) {
-    case Direction::UP:
-        SetDrawable(m_ImgUp);
-        break;
-    case Direction::DOWN:
-        SetDrawable(m_ImgDown);
-        break;
-    case Direction::LEFT:
-        SetDrawable(m_ImgLeft);
-        break;
-    case Direction::RIGHT:
-        SetDrawable(m_ImgRight);
-        break;
+        case Direction::UP:
+            SetDrawable(m_ImgUp);
+            break;
+        case Direction::DOWN:
+            SetDrawable(m_ImgDown);
+            break;
+        case Direction::LEFT:
+            SetDrawable(m_ImgLeft);
+            break;
+        case Direction::RIGHT:
+            SetDrawable(m_ImgRight);
+            break;
     }
 }
 
@@ -125,10 +125,14 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
     auto getGridY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
 
     // 其中一個角不能走就判定有碰撞
-    if (!levelManager.IsWalkable(getGridX(left), getGridY(top))) return true;
-    if (!levelManager.IsWalkable(getGridX(right), getGridY(top))) return true;
-    if (!levelManager.IsWalkable(getGridX(left), getGridY(bottom))) return true;
-    if (!levelManager.IsWalkable(getGridX(right), getGridY(bottom))) return true;
+    if (!levelManager.IsWalkable(getGridX(left), getGridY(top))) 
+        return true;
+    if (!levelManager.IsWalkable(getGridX(right), getGridY(top))) 
+        return true;
+    if (!levelManager.IsWalkable(getGridX(left), getGridY(bottom))) 
+        return true;
+    if (!levelManager.IsWalkable(getGridX(right), getGridY(bottom))) 
+        return true;
 
     return false;  // 無碰撞
 }

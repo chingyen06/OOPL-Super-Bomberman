@@ -13,7 +13,7 @@ Ground::Ground(int gridX, int gridY) {
 Wall::Wall(int gridX, int gridY) {
     auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/wall.png");
     SetDrawable(image);
-    SetZIndex(5); 
+    SetZIndex(15); 
 
     m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };  // 限制大小
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };

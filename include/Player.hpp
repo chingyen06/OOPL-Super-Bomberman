@@ -19,6 +19,9 @@ public:
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
 
+    bool IsDead() const { return m_IsDead; }
+    void Kill() { m_IsDead = true; }
+
 private:
     int m_GridX;
     int m_GridY;
@@ -35,6 +38,8 @@ private:
     void ChangeDirection(Direction dir);
 
     bool IsColliding(float nextX, float nextY, const LevelManager& levelManager);  // 確認是否可以移動
+
+	bool m_IsDead = false;  // 角色是否死亡
 };
 
 #endif

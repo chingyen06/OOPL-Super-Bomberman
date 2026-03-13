@@ -10,7 +10,7 @@ void App::Start() {
 
     m_CoverImage = std::make_shared<BackgroundImage>();  // 載入封面圖片
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
-    m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
+    // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
 
     m_Player = std::make_shared<Player>(1, 1);  // 將角色加入根節點
 
@@ -22,39 +22,45 @@ void App::Update() {
 
     if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
         // m_CoverImage->Draw();  // 繪製封面圖片 (用 Renderer 繪圖，不需要這一行)
-        m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
 
         if (Util::Input::IsKeyPressed(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Start Game");
             m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
 
+            
+
             m_Root.RemoveChild(m_CoverImage);       // 移除封面圖片
+            m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 載入第一關
             m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
-            m_Root.AddChild(m_Player);  // 載入角色
+            
+            m_Player = std::make_shared<Player>(1, 1);  // 重新建立角色
+            m_Root.AddChild(m_Player);  // 將角色加入根節點
         }
     }
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
         // LOG_INFO(m_Player->IsDead());
         
         if (!m_Player->IsDead()) {  // 玩家活著才允許移動與放炸彈
-            m_Player->Update(m_LevelManager);  // 更新角色
+            // m_Player->Update(m_LevelManager);  // 更新角色
+            m_Player->Update(m_LevelManager, m_BombManager);  // 更新角色
             // LOG_INFO("Update Player");
 
             // 按下空白鍵放炸彈 (目前火力暫定寫死為 2)
             if (Util::Input::IsKeyDown(Util::Keycode::SPACE)) {
                 LOG_INFO("Bomb");
-                m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
+                // m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
+                m_BombManager.PlaceBomb(m_Player, m_LevelManager, m_Root);
             }
 
             // 運算物理與傷害
             m_BombManager.Update(m_LevelManager, m_Root, m_Player);
         }
 		else {  // 玩家死亡
-            LOG_INFO("Game Over!");
-
             if (m_DeathCountdown == -1) {
-                m_DeathCountdown = 60;
+                m_DeathCountdown = 30;
             }
+
+            m_Root.RemoveChild(m_Player);  // 先移除角色
 
             m_DeathCountdown--;  // 開始死亡倒數
 
@@ -65,7 +71,6 @@ void App::Update() {
                 LOG_INFO("Game Over!");
 
                 // 從畫面上拔除所有遊戲物件
-                m_Root.RemoveChild(m_Player);
                 m_LevelManager.DetachFromRoot(m_Root);
                 m_BombManager.Clear(m_Root);
 

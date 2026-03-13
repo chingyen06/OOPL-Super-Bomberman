@@ -1,4 +1,5 @@
 #include "Player.hpp"
+#include "BombManager.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
@@ -24,7 +25,7 @@ Player::Player(int startGridX, int startGridY) : m_GridX(startGridX), m_GridY(st
     m_Transform.translation = { m_Pos.x, m_Pos.y };
 }
 
-void Player::Update(const LevelManager& levelManager) {
+void Player::Update(const LevelManager& levelManager, const class BombManager& bombManager) {
     float speed = 3.0f;  // 移動速度
     float dx = 0.0f;  // x 方向移動
     float dy = 0.0f;  // y 方向移動
@@ -67,19 +68,23 @@ void Player::Update(const LevelManager& levelManager) {
 
     // 只有單一方向移動才做轉彎輔助對齊
     if (moveY && !moveX) {
-        if (m_Pos.x < centerX) nextX += std::min(speed, centerX - m_Pos.x);
-        else if (m_Pos.x > centerX) nextX -= std::min(speed, m_Pos.x - centerX);
+        if (m_Pos.x < centerX) 
+            nextX += std::min(speed, centerX - m_Pos.x);
+        else if (m_Pos.x > centerX) 
+            nextX -= std::min(speed, m_Pos.x - centerX);
     }
     else if (moveX && !moveY) {
-        if (m_Pos.y < centerY) nextY += std::min(speed, centerY - m_Pos.y);
-        else if (m_Pos.y > centerY) nextY -= std::min(speed, m_Pos.y - centerY);
+        if (m_Pos.y < centerY) 
+            nextY += std::min(speed, centerY - m_Pos.y);
+        else if (m_Pos.y > centerY) 
+            nextY -= std::min(speed, m_Pos.y - centerY);
     }
 
     if (moveX || moveY) {  // 正在移動
-        if (!IsColliding(nextX, m_Pos.y, levelManager)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(nextX, m_Pos.y, levelManager, bombManager)) {  // 如果不會碰撞，可以移動
             m_Pos.x = nextX;
         }
-        if (!IsColliding(m_Pos.x, nextY, levelManager)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(m_Pos.x, nextY, levelManager, bombManager)) {  // 如果不會碰撞，可以移動
             m_Pos.y = nextY;
         }
 
@@ -113,7 +118,7 @@ void Player::ChangeDirection(Direction dir) {
     }
 }
 
-bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelManager) {
+bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager) {
     float radius = 9.0f;  // 碰撞箱半徑
     float left = nextX - radius;
     float right = nextX + radius;
@@ -124,15 +129,30 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
     auto getGridX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
     auto getGridY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
 
+	// 檢查四個角落的網格座標是否可行走或有炸彈
+    auto check = [&](int gx, int gy) {
+        return !levelManager.IsWalkable(gx, gy) || bombManager.IsBombAt(gx, gy);
+    };
+
     // 其中一個角不能走就判定有碰撞
-    if (!levelManager.IsWalkable(getGridX(left), getGridY(top))) 
+    if (check(getGridX(left), getGridY(top)))
         return true;
-    if (!levelManager.IsWalkable(getGridX(right), getGridY(top))) 
+    if (check(getGridX(right), getGridY(top)))
         return true;
-    if (!levelManager.IsWalkable(getGridX(left), getGridY(bottom))) 
+    if (check(getGridX(left), getGridY(bottom)))
         return true;
-    if (!levelManager.IsWalkable(getGridX(right), getGridY(bottom))) 
+    if (check(getGridX(right), getGridY(bottom)))
         return true;
 
     return false;  // 無碰撞
+}
+
+// 重生角色
+void Player::Respawn(int gridX, int gridY) {
+    m_GridX = gridX;
+    m_GridY = gridY;
+    m_Pos.x = (m_GridX - 12) * 32.0f;
+    m_Pos.y = (8 - m_GridY) * 32.0f;
+    m_Transform.translation = { m_Pos.x, m_Pos.y + 8.0f };
+    m_IsDead = false;
 }

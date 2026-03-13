@@ -18,6 +18,8 @@ public:
     int GetGridY() const { return m_GridY; }
     int GetFirepower() const { return m_Firepower; }
 
+	void ForceDetonate() { m_State = State::DONE; }  // 強制引爆（被其他炸彈的火焰引爆）
+
 private:
     int m_GridX;
     int m_GridY;

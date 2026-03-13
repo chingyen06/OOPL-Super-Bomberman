@@ -1,17 +1,41 @@
 #include "BombManager.hpp"
+#include "Player.hpp"
 #include "Util/Logger.hpp"
 
 // 放置炸彈
-void BombManager::PlaceBomb(int gridX, int gridY, int firepower, Util::Renderer& root) {
-    for (const auto& b : m_Bombs) {
-        if (b->GetGridX() == gridX && b->GetGridY() == gridY) 
-            return; // 防止同格重複放置
+void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, Util::Renderer& root) {
+    if (!player->CanPlaceBomb())  // 玩家不能放炸彈
+        return;
+
+    // 計算玩家方向
+    int targetX = player->GetGridX();
+    int targetY = player->GetGridY();
+
+    // 取得玩家當前方向
+    switch (player->GetDirection()) {
+        case Player::Direction::UP:    
+            targetY--; 
+            break;
+        case Player::Direction::DOWN:  
+            targetY++; 
+            break;
+        case Player::Direction::LEFT:  
+            targetX--; 
+            break;
+        case Player::Direction::RIGHT: 
+            targetX++; 
+            break;
     }
 
-    auto newBomb = std::make_shared<Bomb>(gridX, gridY, firepower);
-    m_Bombs.push_back(newBomb);
-    root.AddChild(newBomb);
-    LOG_INFO("Bomb placed at (" + std::to_string(gridX) + ", " + std::to_string(gridY) + ")");
+    // 檢查目標位置是否是草地且沒有其他炸彈
+    if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY)) {
+        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2); // 火力固定 2
+        m_Bombs.push_back(newBomb);
+        root.AddChild(newBomb);
+
+        player->AddBombCount(); // 增加計數
+        LOG_INFO("Bomb placed in front at (" + std::to_string(targetX) + ", " + std::to_string(targetY) + ")");
+    }
 }
 
 // 更新炸彈與火焰
@@ -78,6 +102,7 @@ void BombManager::Update(LevelManager& levelManager, Util::Renderer& root, std::
                 }
             }
 
+			player->DecBombCount();  // 減少計數
             root.RemoveChild(*it);
             it = m_Bombs.erase(it);
         }
@@ -99,6 +124,17 @@ void BombManager::Update(LevelManager& levelManager, Util::Renderer& root, std::
             LOG_INFO("Player was BURNED!");
         }
 
+		// 連鎖爆炸
+        for (auto& bomb : m_Bombs) {
+            if (bomb->GetState() == Bomb::State::COUNTDOWN &&
+                bomb->GetGridX() == (*it)->GetGridX() &&
+                bomb->GetGridY() == (*it)->GetGridY()) {
+
+                bomb->ForceDetonate(); // 強制提早引爆
+                LOG_INFO("Chain Reaction Triggered!");
+            }
+        }
+
         if ((*it)->IsDone()) {
             root.RemoveChild(*it);
             it = m_Explosions.erase(it);
@@ -114,4 +150,11 @@ void BombManager::Clear(Util::Renderer& root) {
     for (auto& e : m_Explosions) root.RemoveChild(e);
     m_Bombs.clear();
     m_Explosions.clear();
+}
+
+bool BombManager::IsBombAt(int gridX, int gridY) const {
+    for (const auto& b : m_Bombs) {
+        if (b->GetGridX() == gridX && b->GetGridY() == gridY) return true;
+    }
+    return false;
 }

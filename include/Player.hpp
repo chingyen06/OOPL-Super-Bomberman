@@ -33,6 +33,8 @@ public:
 
 	Direction GetDirection() const { return m_CurrentDir; }  // 取得當前方向
 
+	void SetIgnoreBomb(int gx, int gy) { m_IgnoreBombX = gx; m_IgnoreBombY = gy; }  // 設定放置炸彈後暫時忽略的座標
+
 private:
     int m_GridX;
     int m_GridY;
@@ -55,6 +57,10 @@ private:
 
     int m_MaxBombs = 3;        // 最大炸彈放置數量
     int m_CurrentBombs = 0;    // 當前場上炸彈數量
+
+	// 暫時忽略的炸彈座標
+    int m_IgnoreBombX = -1;
+    int m_IgnoreBombY = -1;
 };
 
 #endif

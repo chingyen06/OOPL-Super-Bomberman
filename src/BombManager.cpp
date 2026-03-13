@@ -34,6 +34,9 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
         root.AddChild(newBomb);
 
         player->AddBombCount(); // 增加計數
+
+        player->SetIgnoreBomb(targetX, targetY);  // 放置後暫時忽略這格子，避免卡住
+
         LOG_INFO("Bomb placed in front at (" + std::to_string(targetX) + ", " + std::to_string(targetY) + ")");
     }
 }

@@ -93,6 +93,44 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         // 計算角色真正的座標
         m_GridX = std::round(m_Pos.x / 32.0f) + 12;
         m_GridY = 8 - std::round(m_Pos.y / 32.0f);
+
+		/*if (m_IgnoreBombX != -1) {  // 如果正在忽略炸彈，檢查是否已經離開那個格子
+            // 取角色中心點所在的網格
+            int currentGX = std::round(m_Pos.x / 32.0f) + 12;
+            int currentGY = 8 - std::round(m_Pos.y / 32.0f);
+
+            // 如果中心點已經不在放炸彈的那一格，就恢復卡位判定
+            if (currentGX != m_IgnoreBombX || currentGY != m_IgnoreBombY) {
+                m_IgnoreBombX = -1;
+                m_IgnoreBombY = -1;
+            }
+        }*/
+
+        if (m_IgnoreBombX != -1) {  // 如果正在忽略炸彈，檢查是否已經離開那個格子
+            // 取得目前碰撞箱的四個邊界所在的網格座標
+            float radius = 9.0f;
+            auto getGX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
+            auto getGY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
+
+            int gxl = getGX(m_Pos.x - radius);
+            int gxr = getGX(m_Pos.x + radius);
+            int gyt = getGY(m_Pos.y + radius);
+            int gyb = getGY(m_Pos.y - radius);
+
+            // 檢查有沒有任何角落還在被忽略的炸彈格內
+            bool isStillTouching = false;
+            if ((gxl == m_IgnoreBombX || gxr == m_IgnoreBombX) &&
+                (gyt == m_IgnoreBombY || gyb == m_IgnoreBombY)) {
+                isStillTouching = true;
+            }
+
+            // 只有當四個角落都完全離開了該格子，才恢復卡位
+            if (!isStillTouching) {
+                m_IgnoreBombX = -1;
+                m_IgnoreBombY = -1;
+                // LOG_INFO("Successfully exited bomb at (" + std::to_string(m_IgnoreBombX) + ")");
+            }
+        }
     }
 }
 
@@ -131,7 +169,15 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
 
 	// 檢查四個角落的網格座標是否可行走或有炸彈
     auto check = [&](int gx, int gy) {
-        return !levelManager.IsWalkable(gx, gy) || bombManager.IsBombAt(gx, gy);
+        // return !levelManager.IsWalkable(gx, gy) || bombManager.IsBombAt(gx, gy);
+        bool isMapObstacle = !levelManager.IsWalkable(gx, gy);
+        bool isBomb = bombManager.IsBombAt(gx, gy);
+
+        // 如果是炸彈，但該座標等於 m_IgnoreBombX/Y，則視為可穿透
+        if (gx == m_IgnoreBombX && gy == m_IgnoreBombY) {
+            return isMapObstacle;
+        }
+        return isMapObstacle || isBomb;
     };
 
     // 其中一個角不能走就判定有碰撞

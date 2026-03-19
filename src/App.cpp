@@ -40,20 +40,20 @@ void App::Update() {
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
         // LOG_INFO(m_Player->IsDead());
         
+        m_BombManager.Update(m_LevelManager, m_Root, m_Player);  // 運算物理與傷害
+
         if (!m_Player->IsDead()) {  // 玩家活著才允許移動與放炸彈
             // m_Player->Update(m_LevelManager);  // 更新角色
             m_Player->Update(m_LevelManager, m_BombManager);  // 更新角色
             // LOG_INFO("Update Player");
 
-            // 按下空白鍵放炸彈 (目前火力暫定寫死為 2)
+            // 按下空白鍵放炸彈
             if (Util::Input::IsKeyDown(Util::Keycode::SPACE)) {
                 LOG_INFO("Bomb");
                 // m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
                 m_BombManager.PlaceBomb(m_Player, m_LevelManager, m_Root);
             }
 
-            // 運算物理與傷害
-            m_BombManager.Update(m_LevelManager, m_Root, m_Player);
         }
 		else {  // 玩家死亡
             /*if (m_DeathCountdown == -1) {

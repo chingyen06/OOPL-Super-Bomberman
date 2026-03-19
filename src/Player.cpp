@@ -132,6 +132,12 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
             }
         }
     }
+
+    // 無敵時間
+    if (m_Invincible > 0) {
+        m_Invincible--;
+        // 預留：可以加特效
+    }
 }
 
 // 切換方向
@@ -202,4 +208,6 @@ void Player::Respawn(int gridX, int gridY) {
     m_Transform.translation = { m_Pos.x, m_Pos.y + 8.0f };
     m_IsDead = false;
     m_CurrentBombs = 0;
+
+    m_Invincible = 180;  // 無敵時間
 }

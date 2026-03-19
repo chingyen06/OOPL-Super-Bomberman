@@ -23,7 +23,11 @@ public:
     int GetGridY() const { return m_GridY; }
 
     bool IsDead() const { return m_IsDead; }
-    void Kill() { m_IsDead = true; }
+    void Kill() { 
+        if (m_Invincible > 0)  // 無敵時間
+            return;
+        m_IsDead = true; 
+    }
 
     void Respawn(int gridX, int gridY);
 
@@ -61,6 +65,8 @@ private:
 	// 暫時忽略的炸彈座標
     int m_IgnoreBombX = -1;
     int m_IgnoreBombY = -1;
+
+    int m_Invincible = -1;  // 無敵時間
 };
 
 #endif

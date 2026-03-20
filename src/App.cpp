@@ -31,7 +31,7 @@ void App::LoadLevel(int levelIndex) {
     m_Player = std::make_shared<Player>(1, 1);  // 重新建立角色
     m_Root.AddChild(m_Player);  // 將角色加入根節點
 
-    m_GameTime = 60 * 3;  // 遊戲時間 (3 分鐘)
+    m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
 }
 
 void App::Update() {

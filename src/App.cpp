@@ -51,7 +51,7 @@ void App::Update() {
 
             // 按下空白鍵放炸彈
             if (Util::Input::IsKeyDown(Util::Keycode::SPACE)) {
-                LOG_INFO("Bomb");
+                // LOG_INFO("Bomb");
                 // m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
                 m_BombManager.PlaceBomb(m_Player, m_LevelManager, m_InteractableManager, m_Root);
             }
@@ -60,7 +60,16 @@ void App::Update() {
 		else {  // 玩家死亡
             if (m_DeathCountdown == -1 && m_RespawnTimer == -1) {
                 m_DeathCountdown = 30;
-                LOG_INFO("Player died, showing body...");
+                LOG_INFO("Player died");
+
+                if (m_Player->HasKey()) {
+					LOG_INFO("Player dropped the Key!");
+
+                    m_Player->SetKey(false);
+
+                    m_InteractableManager.AddKey(m_Player->GetGridX(), m_Player->GetGridY());
+                    m_InteractableManager.AttachToRoot(m_Root);
+                }
             }
 
             if (m_DeathCountdown > 0) {

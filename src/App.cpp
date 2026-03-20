@@ -8,13 +8,30 @@
 void App::Start() {
     LOG_TRACE("Start");
 
-    m_CoverImage = std::make_shared<BackgroundImage>();  // 載入封面圖片
+    m_CoverImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/cover.jpg");  // 載入封面圖片
+    m_DefenseImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/defense_win.png");  // 載入防守方獲勝圖片
+    m_AttackImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/attack_win.png");  // 載入防守方獲勝圖片
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
     // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
 
     m_Player = std::make_shared<Player>(1, 1);  // 將角色加入根節點
 
     m_CurrentState = State::UPDATE;
+}
+
+void App::LoadLevel(int levelIndex) {
+    LOG_INFO("Loading Level " + std::to_string(levelIndex) + "...");
+
+    std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
+
+    m_LevelManager.LoadLevel(levelPath, m_InteractableManager);  // 載入關卡
+    m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
+    m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
+
+    m_Player = std::make_shared<Player>(1, 1);  // 重新建立角色
+    m_Root.AddChild(m_Player);  // 將角色加入根節點
+
+    m_GameTime = 60 * 3;  // 遊戲時間 (3 分鐘)
 }
 
 void App::Update() {
@@ -27,19 +44,49 @@ void App::Update() {
             LOG_INFO("Start Game");
             m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
 
-            
-
             m_Root.RemoveChild(m_CoverImage);       // 移除封面圖片
-            m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt", m_InteractableManager);  // 載入第一關
-            m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
-			m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
             
-            m_Player = std::make_shared<Player>(1, 1);  // 重新建立角色
-            m_Root.AddChild(m_Player);  // 將角色加入根節點
+            LoadLevel(1);
         }
     }
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
-        // LOG_INFO(m_Player->IsDead());
+        if (m_GameTime > 0) 
+            m_GameTime--;
+
+        if (m_GameTime % 60 == 0) {
+            int seconds = m_GameTime / 60;
+            LOG_INFO("Time Remaining: " + std::to_string(seconds) + "s");
+		}
+
+        if (m_InteractableManager.IsAllChestOpened()) {
+            LOG_INFO("Attacker Wins!");
+            m_GameState = GameState::GAMEEND;
+
+            // 清除戰場
+            m_InteractableManager.Clear(m_Root);
+            m_BombManager.Clear(m_Root);
+            m_LevelManager.DetachFromRoot(m_Root);
+			m_InteractableManager.Clear(m_Root);
+            m_Root.RemoveChild(m_Player);
+
+            m_Root.AddChild(m_AttackImage); // 進攻方勝利
+            return;
+        }
+
+        if (m_GameTime == 0) {
+            LOG_INFO("Defender Wins!");
+            m_GameState = GameState::GAMEEND;
+
+            // 清除戰場
+            m_InteractableManager.Clear(m_Root);
+            m_BombManager.Clear(m_Root);
+            m_LevelManager.DetachFromRoot(m_Root);
+            m_InteractableManager.Clear(m_Root);
+            m_Root.RemoveChild(m_Player);
+
+            m_Root.AddChild(m_DefenseImage); // 防守方勝利
+            return;
+        }
         
         m_BombManager.Update(m_LevelManager, m_Root, m_Player);  // 運算物理與傷害
         m_InteractableManager.Update(m_Player, m_Root);  // 更新互動物件

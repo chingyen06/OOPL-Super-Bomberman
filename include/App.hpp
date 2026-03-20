@@ -25,6 +25,8 @@ public:
 
     void Update();
 
+	void LoadLevel(int levelIndex);
+
     void End(); // NOLINT(readability-convert-member-functions-to-static)
 
 private:
@@ -33,7 +35,8 @@ private:
 private:
     enum class GameState {
         TITLE_SCREEN,
-        GAMEPLAY
+        GAMEPLAY,
+        GAMEEND
     };
 
     State m_CurrentState = State::START;
@@ -42,6 +45,8 @@ private:
     Util::Renderer m_Root;  // 場景的根節點
 
     std::shared_ptr<BackgroundImage> m_CoverImage;  // 存封面圖片的 pointer
+	std::shared_ptr<BackgroundImage> m_DefenseImage;  // 存防守方獲勝圖片的 pointer
+    std::shared_ptr<BackgroundImage> m_AttackImage;  // 存進攻方獲勝圖片的 pointer
     LevelManager m_LevelManager;  // 管理關卡
 
     std::shared_ptr<Player> m_Player;  // 存角色的 pointer
@@ -52,6 +57,8 @@ private:
 	int m_RespawnTimer = -1;  // 重生倒數計時
 
 	InteractableManager m_InteractableManager;  // 管理互動物件
+
+	int m_GameTime = -1;  // 遊戲時間
 };
 
 #endif

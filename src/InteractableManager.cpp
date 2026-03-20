@@ -76,3 +76,13 @@ bool InteractableManager::IsInteractableAt(int gridX, int gridY) const {
 
     return false;
 }
+
+bool InteractableManager::IsAllChestOpened() const {
+    for (const auto& chest : m_Chests) {
+        if (!chest->IsOpened()) {
+            return false;
+        }
+    }
+
+    return true;
+}

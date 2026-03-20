@@ -21,6 +21,7 @@ set(INCLUDE_FILES
     BombManager.hpp
     InteractableManager.hpp
     Interactable.hpp
+    ScreenImage.hpp
 )
 
 set(TEST_FILES

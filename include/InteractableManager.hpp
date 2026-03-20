@@ -23,6 +23,8 @@ public:
 
     void AttachToRoot(Util::Renderer& root);
 
+    bool IsAllChestOpened() const;
+
 private:
     std::vector<std::shared_ptr<Key>> m_Keys;
     std::vector<std::shared_ptr<Chest>> m_Chests;

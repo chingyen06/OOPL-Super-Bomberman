@@ -8,6 +8,7 @@
 #include "LevelManager.hpp"
 
 class BombManager;
+class InteractableManager;
 
 class Player : public Util::GameObject {
 public:
@@ -16,18 +17,14 @@ public:
     Player(int startGridX, int startGridY);
 
     // void Update(const LevelManager& levelManager);
-    void Update(const LevelManager& levelManager, const class BombManager& bombManager);
+    void Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
 
     // 取得角色真正的座標
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
 
     bool IsDead() const { return m_IsDead; }
-    void Kill() { 
-        if (m_Invincible > 0)  // 無敵時間
-            return;
-        m_IsDead = true; 
-    }
+    void Kill();
 
     void Respawn(int gridX, int gridY);
 
@@ -38,6 +35,9 @@ public:
 	Direction GetDirection() const { return m_CurrentDir; }  // 取得當前方向
 
 	void SetIgnoreBomb(int gx, int gy) { m_IgnoreBombX = gx; m_IgnoreBombY = gy; }  // 設定放置炸彈後暫時忽略的座標
+
+    bool HasKey() const { return m_HasKey; }
+    void SetKey(bool key) { m_HasKey = key; }
 
 private:
     int m_GridX;
@@ -55,7 +55,8 @@ private:
     void ChangeDirection(Direction dir);
 
     //bool IsColliding(float nextX, float nextY, const LevelManager& levelManager);  // 確認是否可以移動
-    bool IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager);  // 確認是否可以移動
+    // 確認是否可以移動
+    bool IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
 
 	bool m_IsDead = false;  // 角色是否死亡
 
@@ -67,6 +68,8 @@ private:
     int m_IgnoreBombY = -1;
 
     int m_Invincible = -1;  // 無敵時間
+
+    bool m_HasKey = false;  // 角色是否有鑰匙
 };
 
 #endif

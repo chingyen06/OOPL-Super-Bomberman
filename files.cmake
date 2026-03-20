@@ -6,6 +6,8 @@ set(SRC_FILES
     Bomb.cpp
     Explosion.cpp
     BombManager.cpp
+    InteractableManager.cpp
+    Interactable.cpp
 )
 
 set(INCLUDE_FILES
@@ -17,6 +19,8 @@ set(INCLUDE_FILES
     Bomb.hpp
     Explosion.hpp
     BombManager.hpp
+    InteractableManager.hpp
+    Interactable.hpp
 )
 
 set(TEST_FILES

@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #include "BombManager.hpp"
+#include "InteractableManager.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
@@ -13,7 +14,7 @@ Player::Player(int startGridX, int startGridY) : m_GridX(startGridX), m_GridY(st
     m_ImgRight = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_right.png");
 
     SetDrawable(m_ImgDown); // 初始面向下方
-    SetZIndex(10);
+    SetZIndex(20);
 
     // 放大角色：寬度 36、高度 48
     m_Transform.scale = { 36.0f / m_ImgDown->GetSize().x, 48.0f / m_ImgDown->GetSize().y };
@@ -25,7 +26,7 @@ Player::Player(int startGridX, int startGridY) : m_GridX(startGridX), m_GridY(st
     m_Transform.translation = { m_Pos.x, m_Pos.y };
 }
 
-void Player::Update(const LevelManager& levelManager, const class BombManager& bombManager) {
+void Player::Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager) {
     float speed = 3.0f;  // 移動速度
     float dx = 0.0f;  // x 方向移動
     float dy = 0.0f;  // y 方向移動
@@ -81,10 +82,10 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     }
 
     if (moveX || moveY) {  // 正在移動
-        if (!IsColliding(nextX, m_Pos.y, levelManager, bombManager)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(nextX, m_Pos.y, levelManager, bombManager, interactableManager)) {  // 如果不會碰撞，可以移動
             m_Pos.x = nextX;
         }
-        if (!IsColliding(m_Pos.x, nextY, levelManager, bombManager)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(m_Pos.x, nextY, levelManager, bombManager, interactableManager)) {  // 如果不會碰撞，可以移動
             m_Pos.y = nextY;
         }
 
@@ -162,7 +163,7 @@ void Player::ChangeDirection(Direction dir) {
     }
 }
 
-bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager) {
+bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager) {
     float radius = 9.0f;  // 碰撞箱半徑
     float left = nextX - radius;
     float right = nextX + radius;
@@ -178,6 +179,7 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
         // return !levelManager.IsWalkable(gx, gy) || bombManager.IsBombAt(gx, gy);
         bool isMapObstacle = !levelManager.IsWalkable(gx, gy);
         bool isBomb = bombManager.IsBombAt(gx, gy);
+        // bool isChest = interactableManager.IsChestAt(gx, gy);
 
         // 如果是炸彈，但該座標等於 m_IgnoreBombX/Y，則視為可穿透
         if (gx == m_IgnoreBombX && gy == m_IgnoreBombY) {
@@ -210,4 +212,11 @@ void Player::Respawn(int gridX, int gridY) {
     m_CurrentBombs = 0;
 
     m_Invincible = 180;  // 無敵時間
+}
+
+void Player::Kill() {
+    if (m_Invincible > 0)  // 無敵時間
+        return;
+
+    m_IsDead = true;
 }

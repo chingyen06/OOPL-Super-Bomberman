@@ -1,9 +1,10 @@
 #include "LevelManager.hpp"
+#include "InteractableManager.hpp"
 #include "MapTiles.hpp"
 #include <fstream>
 #include "Util/Logger.hpp"
 
-void LevelManager::LoadLevel(const std::string& filepath) {
+void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& interactableManager) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         LOG_ERROR("Error opening file: " + filepath);
@@ -39,6 +40,13 @@ void LevelManager::LoadLevel(const std::string& filepath) {
             }
             else {
                 tile = std::make_shared<Ground>(x, y);
+
+                if (type == 'K') {   // 鑰匙
+                    interactableManager.AddKey(x, y); // 生成鑰匙
+                }
+                else if (type == '9') {   // 寶箱
+                    interactableManager.AddChest(x, y); // 生成寶箱
+                }
             }
 
             m_TileGrid[y][x] = tile;  // 存地圖方塊
@@ -88,7 +96,7 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
 
     root.RemoveChild(oldBrick);  // 移除畫面
 
-    // 從 m_Tiles 一維陣列中清除 (避免記憶體洩漏)
+    // 從 m_Tiles 一維陣列中清除
     for (auto it = m_Tiles.begin(); it != m_Tiles.end(); ++it) {
         if (*it == oldBrick) {
             m_Tiles.erase(it);
@@ -98,7 +106,7 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
 
     // 在原地生成一塊新的草地，補上破洞
     auto newGround = std::make_shared<Ground>(gridX, gridY);
-    m_TileGrid[gridY][gridX] = newGround; // 更新二維陣列
-    m_Tiles.push_back(newGround);         // 加入實體清單
-    root.AddChild(newGround);             // 畫到螢幕上
+    m_TileGrid[gridY][gridX] = newGround; 
+    m_Tiles.push_back(newGround);
+    root.AddChild(newGround);
 }

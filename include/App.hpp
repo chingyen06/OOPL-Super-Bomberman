@@ -9,6 +9,7 @@
 #include "LevelManager.hpp"
 #include "Player.hpp"
 #include "BombManager.hpp"
+#include "InteractableManager.hpp"
 
 class App {
 public:
@@ -49,6 +50,8 @@ private:
 
 	int m_DeathCountdown = -1;  // 死亡倒數計時
 	int m_RespawnTimer = -1;  // 重生倒數計時
+
+	InteractableManager m_InteractableManager;  // 管理互動物件
 };
 
 #endif

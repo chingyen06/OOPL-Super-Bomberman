@@ -3,7 +3,7 @@
 #include "Util/Logger.hpp"
 
 // 放置炸彈
-void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, Util::Renderer& root) {
+void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root) {
     if (!player->CanPlaceBomb())  // 玩家不能放炸彈
         return;
 
@@ -28,7 +28,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
     }
 
     // 檢查目標位置是否是草地且沒有其他炸彈
-    if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY)) {
+    if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsChestAt(targetX, targetY)) {
         auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2); // 火力固定 2
         m_Bombs.push_back(newBomb);
         root.AddChild(newBomb);

@@ -8,9 +8,11 @@
 #include "Util/Renderer.hpp"
 #include "MapTiles.hpp"
 
+class InteractableManager;
+
 class LevelManager {
 public:
-    void LoadLevel(const std::string& filepath);
+    void LoadLevel(const std::string& filepath, InteractableManager& interactableManager);
     void AttachToRoot(Util::Renderer& root);
     void DetachFromRoot(Util::Renderer& root);
     bool IsWalkable(int gridX, int gridY) const;  // 查詢是否可移動至 (gridX, gridY)

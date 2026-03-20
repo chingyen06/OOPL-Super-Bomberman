@@ -43,7 +43,7 @@
 - Week 6：角色重生
   - [x] 設計死亡判定與重生機制
 - Week 7：城堡模式核心機制
-  - [ ] 設計鑰匙與寶箱互動機制
+  - [x] 設計鑰匙與寶箱互動機制
   - [ ] 設計死亡鑰匙掉落機制
   - [ ] 設計道具拾取與角色狀態強化機制（低重要性：視開發進度遞延）
 - Week 8：遊戲關卡切換
@@ -87,6 +87,7 @@
 ├── Systems                      # 系統層
 │   ├── LevelManager                # 關卡與地圖管理 (載入、破壞、碰撞查詢)
 │   ├── BombManager                 # 炸彈管理 (生成、爆炸範圍計算、傷害判定)
+│   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
 │   ├── UIManager                   # 遊戲介面管理 (Week 10 預定：計時器、鑰匙提示)
 │   └── AIManager                   # AI 管理 (Week 12 預定：尋路演算法與躲避邏輯)
 │
@@ -94,17 +95,17 @@
      │
      ├── BackgroundImage             # 開始畫面
      │
-     ├── Map                         # 地圖
+     ├── Map                         # 地圖 (不是物件，僅參考用)
      │   ├── Tile                        # 地圖基底 (多型介面：IsPassable)
      │   │   ├── Ground                      # 草地
      │   │   ├── Wall                        # 無敵牆
      │   │   └── Brick                       # 磚塊
      │   │
-     │   └── Interactable                # 任務互動目標 (Week 7 預定)
+     │   └── Interactable                # 任務互動目標 (不是物件，僅參考用)
      │        ├── Key                         # 鑰匙
      │        └── Chest                       # 寶箱
      │
-     ├── Effect & Item               # 物理特效與掉落物
+     ├── Effect & Item               # 物理特效與掉落物 (不是物件，僅參考用)
      │   ├── Bomb                        # 炸彈
      │   ├── Explosion                   # 火焰
      │   ├── PowerUp                     # 掉落道具 (Week 7 預定：火力、速度提升)

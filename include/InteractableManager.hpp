@@ -19,7 +19,7 @@ public:
 
     void Clear(Util::Renderer& root);
 
-    bool IsChestAt(int gridX, int gridY) const;
+    bool IsInteractableAt(int gridX, int gridY) const;
 
     void AttachToRoot(Util::Renderer& root);
 

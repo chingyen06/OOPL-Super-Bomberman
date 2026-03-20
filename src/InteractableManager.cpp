@@ -62,11 +62,17 @@ void InteractableManager::Clear(Util::Renderer& root) {
     m_Chests.clear();
 }
 
-bool InteractableManager::IsChestAt(int gridX, int gridY) const {
+bool InteractableManager::IsInteractableAt(int gridX, int gridY) const {
     for (const auto& chest : m_Chests) {
         if (chest->GetGridX() == gridX && chest->GetGridY() == gridY) {
             return true;
         }
     }
+    for (const auto& key : m_Keys) {
+        if (key->GetGridX() == gridX && key->GetGridY() == gridY) {
+            return true;
+        }
+    }
+
     return false;
 }

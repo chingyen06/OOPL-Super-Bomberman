@@ -11,22 +11,6 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
     int targetX = player->GetGridX();
     int targetY = player->GetGridY();
 
-    // 取得玩家當前方向
-    switch (player->GetDirection()) {
-        case Player::Direction::UP:    
-            targetY--; 
-            break;
-        case Player::Direction::DOWN:  
-            targetY++; 
-            break;
-        case Player::Direction::LEFT:  
-            targetX--; 
-            break;
-        case Player::Direction::RIGHT: 
-            targetX++; 
-            break;
-    }
-
     // 檢查目標位置是否是草地且沒有其他炸彈
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {
         auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2); // 火力固定 2
@@ -37,7 +21,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
         player->SetIgnoreBomb(targetX, targetY);  // 放置後暫時忽略這格子，避免卡住
 
-        LOG_INFO("Bomb placed in front at (" + std::to_string(targetX) + ", " + std::to_string(targetY) + ")");
+        LOG_INFO("Bomb placed at (" + std::to_string(targetX) + ", " + std::to_string(targetY) + ")");
     }
 }
 

@@ -88,7 +88,7 @@ void App::Update() {
             return;
         }
         
-        m_BombManager.Update(m_LevelManager, m_Root, m_Player);  // 運算物理與傷害
+        m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Player);  // 運算物理與傷害
         m_InteractableManager.Update(m_Player, m_Root);  // 更新互動物件
 
         if (!m_Player->IsDead()) {  // 玩家活著才允許移動與放炸彈

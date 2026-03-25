@@ -5,25 +5,38 @@
 #include "Util/Image.hpp"
 #include <memory>
 
-class Key : public Util::GameObject {
+class Interactable : public Util::GameObject {
+public:
+    virtual ~Interactable() = default;
+    virtual int GetGridX() const = 0;
+    virtual int GetGridY() const = 0;
+
+    virtual bool IsBlocksFire() const = 0;
+};
+
+class Key : public Interactable {
 public:
     Key(int gridX, int gridY);
 
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
 
+    bool IsBlocksFire() const override { return false; }
+
 private:
     int m_GridX;
     int m_GridY;
 };
 
-class Chest : public Util::GameObject {
+class Chest : public Interactable {
 public:
     Chest(int gridX, int gridY);
 
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
     bool IsOpened() const { return m_Opened; }
+
+    bool IsBlocksFire() const override { return true; }
 
     void Open();
 

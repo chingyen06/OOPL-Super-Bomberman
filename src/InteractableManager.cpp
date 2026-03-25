@@ -4,72 +4,61 @@
 
 void InteractableManager::AddKey(int gridX, int gridY) {
     auto key = std::make_shared<Key>(gridX, gridY);
-    m_Keys.push_back(key);
+    m_Interactables.push_back(key);
 }
 
 void InteractableManager::AddChest(int gridX, int gridY) {
     auto chest = std::make_shared<Chest>(gridX, gridY);
-    m_Chests.push_back(chest);
+    m_Interactables.push_back(chest);
 }
 
 void InteractableManager::AttachToRoot(Util::Renderer& root) {
-    for (auto& key : m_Keys) root.AddChild(key);
-    for (auto& chest : m_Chests) root.AddChild(chest);
+    for (auto& interactable : m_Interactables) {
+        root.AddChild(interactable);
+    }
 }
 
 void InteractableManager::Update(std::shared_ptr<Player>& player, Util::Renderer& root) {
-    if (player->IsDead()) 
+    if (player->IsDead())
         return;
 
-    // 鑰匙拾取判定
-    for (auto it = m_Keys.begin(); it != m_Keys.end(); ) {
-        if (player->GetGridX() == (*it)->GetGridX() &&
-            player->GetGridY() == (*it)->GetGridY() && !player->HasKey()) {
+    for (auto it = m_Interactables.begin(); it != m_Interactables.end(); ) {
+        auto item = *it;
 
-            player->SetKey(true); // 玩家獲得鑰匙
-            LOG_INFO("Player picked up the Key!");
+        if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY()) {
 
-            root.RemoveChild(*it);
-            it = m_Keys.erase(it);
-        }
-        else {
-            ++it;
-        }
-    }
+            if (auto key = std::dynamic_pointer_cast<Key>(item)) {
+                if (!player->HasKey()) {
+                    player->SetKey(true);
+                    LOG_INFO("Player picked up the Key!");
 
-    // 寶箱開啟判定
-    for (auto& chest : m_Chests) {
-        if (!chest->IsOpened() &&
-            player->GetGridX() == chest->GetGridX() &&
-            player->GetGridY() == chest->GetGridY()) {
-
-            if (player->HasKey()) {
-                chest->Open();
-                player->SetKey(false);
-                LOG_INFO("Chest Opened! Check victory condition here.");
+                    root.RemoveChild(item);
+                    it = m_Interactables.erase(it);
+                    continue;
+                }
+            }
+            else if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
+                if (!chest->IsOpened() && player->HasKey()) {
+                    chest->Open();
+                    player->SetKey(false);
+                    LOG_INFO("Chest Opened! Check victory condition here.");
+                }
             }
         }
+        ++it;
     }
 }
 
 void InteractableManager::Clear(Util::Renderer& root) {
-    for (auto& k : m_Keys) 
-        root.RemoveChild(k);
-    for (auto& c : m_Chests) 
-        root.RemoveChild(c);
-
-    m_Keys.clear();
-    m_Chests.clear();
+    for (auto& interactable : m_Interactables) {
+        root.RemoveChild(interactable);
+    }
+    m_Interactables.clear();
 }
 
 bool InteractableManager::IsInteractableAt(int gridX, int gridY) const {
-    for (const auto& chest : m_Chests) {
-        if (chest->GetGridX() == gridX && chest->GetGridY() == gridY) {
-            return true;
-        }
-    }
-    for (const auto& key : m_Keys) {
-        if (key->GetGridX() == gridX && key->GetGridY() == gridY) {
+    for (const auto& interactable : m_Interactables) {
+        if (interactable->GetGridX() == gridX && interactable->GetGridY() == gridY) {
             return true;
         }
     }
@@ -77,12 +66,21 @@ bool InteractableManager::IsInteractableAt(int gridX, int gridY) const {
     return false;
 }
 
-bool InteractableManager::IsAllChestOpened() const {
-    for (const auto& chest : m_Chests) {
-        if (!chest->IsOpened()) {
-            return false;
+bool InteractableManager::BlocksFireAt(int gridX, int gridY) const {
+    for (const auto& interactable : m_Interactables) {
+        if (interactable->GetGridX() == gridX && interactable->GetGridY() == gridY) {
+            return interactable->IsBlocksFire();
         }
     }
+}
 
+bool InteractableManager::IsAllChestOpened() const {
+    for (const auto& item : m_Interactables) {
+        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
+            if (!chest->IsOpened()) {
+                return false;
+            }
+        }
+    }
     return true;
 }

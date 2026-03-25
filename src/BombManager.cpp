@@ -1,4 +1,5 @@
 #include "BombManager.hpp"
+#include "InteractableManager.hpp"
 #include "Player.hpp"
 #include "Util/Logger.hpp"
 
@@ -26,7 +27,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 }
 
 // 更新炸彈與火焰
-void BombManager::Update(LevelManager& levelManager, Util::Renderer& root, std::shared_ptr<Player>& player) {
+void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::shared_ptr<Player>& player) {
     for (auto it = m_Bombs.begin(); it != m_Bombs.end(); ) {  // 炸彈生命週期與火焰延伸
         (*it)->Update();
 

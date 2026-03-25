@@ -20,14 +20,17 @@ public:
     void Clear(Util::Renderer& root);
 
     bool IsInteractableAt(int gridX, int gridY) const;
+    bool BlocksFireAt(int gridX, int gridY) const;
 
     void AttachToRoot(Util::Renderer& root);
 
     bool IsAllChestOpened() const;
 
 private:
-    std::vector<std::shared_ptr<Key>> m_Keys;
-    std::vector<std::shared_ptr<Chest>> m_Chests;
+    /*std::vector<std::shared_ptr<Key>> m_Keys;
+    std::vector<std::shared_ptr<Chest>> m_Chests;*/
+
+    std::vector<std::shared_ptr<Interactable>> m_Interactables;
 };
 
 #endif

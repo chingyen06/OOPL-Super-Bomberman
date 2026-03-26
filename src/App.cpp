@@ -40,7 +40,7 @@ void App::Update() {
     if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
         // m_CoverImage->Draw();  // 繪製封面圖片 (用 Renderer 繪圖，不需要這一行)
 
-        if (Util::Input::IsKeyPressed(Util::Keycode::SPACE)) {  // 偵測空白鍵
+        if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Start Game");
             m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
 
@@ -138,6 +138,18 @@ void App::Update() {
                     LOG_INFO("Player Respawned!");
                 }
             }
+        }
+    }
+    else if (m_GameState == GameState::GAMEEND) {
+        if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
+            LOG_INFO("Return to Title Screen");
+
+            m_Root.RemoveChild(m_AttackImage);
+            m_Root.RemoveChild(m_DefenseImage);
+
+            m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
+
+            m_GameState = GameState::TITLE_SCREEN;
         }
     }
     

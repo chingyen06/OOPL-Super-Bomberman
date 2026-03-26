@@ -100,7 +100,7 @@
      │   ├── Wall                        # 無敵牆
      │   └── Brick                       # 磚塊
      │
-     ├── Interactable                     # 互動物件基底
+     ├── Interactable                # 互動物件基底
      │   ├── Key                         # 鑰匙
      │   └── Chest                       # 寶箱
      │

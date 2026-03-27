@@ -84,7 +84,6 @@ bool LevelManager::IsBrick(int gridX, int gridY) const {
     if (gridX < 0 || gridX >= 25 || gridY < 0 || gridY >= 17) 
         return false;
 
-    // 檢查 m_TileGrid 裡面那個指標是不是 Brick 型態
     return std::dynamic_pointer_cast<Brick>(m_TileGrid[gridY][gridX]) != nullptr;
 }
 
@@ -94,9 +93,8 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
 
     auto oldBrick = m_TileGrid[gridY][gridX];  // 待摧毀的方塊
 
-    root.RemoveChild(oldBrick);  // 移除畫面
+    root.RemoveChild(oldBrick);
 
-    // 從 m_Tiles 一維陣列中清除
     for (auto it = m_Tiles.begin(); it != m_Tiles.end(); ++it) {
         if (*it == oldBrick) {
             m_Tiles.erase(it);
@@ -104,7 +102,6 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
         }
     }
 
-    // 在原地生成一塊新的草地，補上破洞
     auto newGround = std::make_shared<Ground>(gridX, gridY);
     m_TileGrid[gridY][gridX] = newGround; 
     m_Tiles.push_back(newGround);

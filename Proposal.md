@@ -79,7 +79,34 @@
 - Week 17：完成實習成果
   - [ ] 完成並繳交書面報告
 
-# 程式物件架構
+# 程式架構
+```
+├── Core
+│   └── App
+│
+├── Systems                      # 系統層
+│   ├── LevelManager                # 關卡與地圖管理 (載入、破壞、碰撞查詢)
+│   ├── BombManager                 # 炸彈管理 (生成、爆炸範圍計算、傷害判定)
+│   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
+│
+└── Util::GameObject
+     │
+     ├── BackgroundImage             # 開始畫面
+     │
+     ├── Tile                        # 地圖物件
+     │   ├── Ground                      # 草地
+     │   ├── Wall                        # 無敵牆
+     │   └── Brick                       # 磚塊
+     │
+     ├── Interactable                # 互動物件
+     │   ├── Key                         # 鑰匙
+     │   └── Chest                       # 寶箱
+     │
+     ├── Bomb                        # 炸彈
+     └── Explosion                   # 火焰
+```
+
+# 預定架構
 ```
 ├── Core                         # 核心層
 │   └── App                         # 遊戲 App (狀態機控制、整合所有 Manager 與遊戲主迴圈)

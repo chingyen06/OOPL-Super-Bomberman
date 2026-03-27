@@ -6,7 +6,7 @@
 #include "Util/Logger.hpp"
 #include <cmath>
 
-Player::Player(int startGridX, int startGridY) : m_GridX(startGridX), m_GridY(startGridY), m_CurrentDir(Direction::DOWN) {
+Player::Player(int startGridX, int startGridY, Team team, Control control) : m_GridX(startGridX), m_GridY(startGridY), m_CurrentDir(Direction::DOWN), m_Team(team), m_Control(control) {
 
     m_ImgUp = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_up.png");
     m_ImgDown = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_down.png");
@@ -38,20 +38,20 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     float centerX = (m_GridX - 12) * 32.0f;
     float centerY = (8 - m_GridY) * 32.0f;
 
-    if (Util::Input::IsKeyPressed(Util::Keycode::W)) {
+    if (Util::Input::IsKeyPressed(m_Control.UP)) {
         dy += speed;
         ChangeDirection(Direction::UP);
     }
-    else if (Util::Input::IsKeyPressed(Util::Keycode::S)) {
+    else if (Util::Input::IsKeyPressed(m_Control.DOWN)) {
         dy -= speed;
         ChangeDirection(Direction::DOWN);
     }
 
-    if (Util::Input::IsKeyPressed(Util::Keycode::A)) {
+    if (Util::Input::IsKeyPressed(m_Control.LEFT)) {
         dx -= speed;
         ChangeDirection(Direction::LEFT);
     }
-    else if (Util::Input::IsKeyPressed(Util::Keycode::D)) {
+    else if (Util::Input::IsKeyPressed(m_Control.RIGHT)) {
         dx += speed;
         ChangeDirection(Direction::RIGHT);
     }
@@ -89,23 +89,11 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
             m_Pos.y = nextY;
         }
 
-        m_Transform.translation = { m_Pos.x, m_Pos.y + 8.0f };  // 更新畫面像素座標
+        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };  // 更新畫面像素座標
 
         // 計算角色真正的座標
         m_GridX = std::round(m_Pos.x / 32.0f) + 12;
         m_GridY = 8 - std::round(m_Pos.y / 32.0f);
-
-		/*if (m_IgnoreBombX != -1) {  // 如果正在忽略炸彈，檢查是否已經離開那個格子
-            // 取角色中心點所在的網格
-            int currentGX = std::round(m_Pos.x / 32.0f) + 12;
-            int currentGY = 8 - std::round(m_Pos.y / 32.0f);
-
-            // 如果中心點已經不在放炸彈的那一格，就恢復卡位判定
-            if (currentGX != m_IgnoreBombX || currentGY != m_IgnoreBombY) {
-                m_IgnoreBombX = -1;
-                m_IgnoreBombY = -1;
-            }
-        }*/
 
         if (m_IgnoreBombX != -1) {  // 如果正在忽略炸彈，檢查是否已經離開那個格子
             // 取得目前碰撞箱的四個邊界所在的網格座標

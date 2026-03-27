@@ -3,6 +3,7 @@
 
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
+#include "Util/Keycode.hpp"
 #include <memory>
 #include "glm/vec2.hpp"
 #include "LevelManager.hpp"
@@ -10,11 +11,25 @@
 class BombManager;
 class InteractableManager;
 
+enum class Team {
+    ATTACKER,
+    DEFENDER
+};
+
+struct Control {
+    Util::Keycode UP;
+    Util::Keycode DOWN;
+    Util::Keycode LEFT;
+    Util::Keycode RIGHT;
+    Util::Keycode PLACEBOMB;
+};
+
 class Player : public Util::GameObject {
 public:
     enum class Direction { UP, DOWN, LEFT, RIGHT };
 
-    Player(int startGridX, int startGridY);
+    // Player(int startGridX, int startGridY);
+    Player(int startGridX, int startGridY, Team m_Team, Control m_Control);
 
     // void Update(const LevelManager& levelManager);
     void Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
@@ -38,6 +53,9 @@ public:
 
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }
+
+    Util::Keycode GetBombKey() const { return m_Control.PLACEBOMB; }
+	Team GetTeam() const { return m_Team; }
 
 private:
     int m_GridX;
@@ -70,6 +88,9 @@ private:
     int m_Invincible = -1;  // 無敵時間
 
     bool m_HasKey = false;  // 角色是否有鑰匙
+
+    Team m_Team;
+    Control m_Control;
 };
 
 #endif

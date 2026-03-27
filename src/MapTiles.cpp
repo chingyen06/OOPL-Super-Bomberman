@@ -6,7 +6,7 @@ Ground::Ground(int gridX, int gridY) {
     SetDrawable(image);
     SetZIndex(1); 
     
-    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };  // 限制大小
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
 }
 
@@ -15,7 +15,7 @@ Wall::Wall(int gridX, int gridY) {
     SetDrawable(image);
     SetZIndex(15); 
 
-    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };  // 限制大小
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
 }
 
@@ -24,6 +24,6 @@ Brick::Brick(int gridX, int gridY) {
     SetDrawable(image);
     SetZIndex(5); 
 
-    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };  // 限制大小
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
 }

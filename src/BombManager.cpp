@@ -65,10 +65,8 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                     int targetX = bx + dx[dir] * step;
                     int targetY = by + dy[dir] * step;
 
-                    // 如果撞到不可行走的東西 (無敵牆 或 磚塊)
                     if (!levelManager.IsWalkable(targetX, targetY)) {
 
-						// 詢問是否是磚塊，如果是的話要先引爆火焰再破壞磚塊
                         if (levelManager.IsBrick(targetX, targetY)) {
                             // 在磚塊上引爆一團火焰
                             auto fire = std::make_shared<Explosion>(targetX, targetY);
@@ -79,11 +77,9 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                             levelManager.DestroyBrick(targetX, targetY, root);
                         }
 
-                        // 停止延伸火焰
                         break;
                     }
 
-                    // 如果是普通空地，正常延伸火焰
                     auto fire = std::make_shared<Explosion>(targetX, targetY);
                     m_Explosions.push_back(fire);
                     root.AddChild(fire);

@@ -14,8 +14,6 @@ void App::Start() {
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
     // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
 
-    m_Player = std::make_shared<Player>(1, 1);  // 將角色加入根節點
-
     m_CurrentState = State::UPDATE;
 }
 
@@ -28,7 +26,23 @@ void App::LoadLevel(int levelIndex) {
     m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
     m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
 
-    m_Player = std::make_shared<Player>(1, 1);  // 重新建立角色
+    Control ctrl1P = {
+        Util::Keycode::W, 
+        Util::Keycode::S,
+        Util::Keycode::A, 
+        Util::Keycode::D,
+        Util::Keycode::SPACE
+    };
+
+    /*Control ctrl2P = {
+        Util::Keycode::UP,
+        Util::Keycode::DOWN,
+        Util::Keycode::LEFT,
+        Util::Keycode::RIGHT,
+        Util::Keycode::KP_ENTER
+    };*/
+
+    m_Player = std::make_shared<Player>(1, 1, Team::ATTACKER, ctrl1P);  // 重新建立角色
     m_Root.AddChild(m_Player);  // 將角色加入根節點
 
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
@@ -42,9 +56,9 @@ void App::Update() {
 
         if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Start Game");
-            m_GameState = GameState::GAMEPLAY;  // 切換到 GAMEPLAY (遊戲)
+            m_GameState = GameState::GAMEPLAY;
 
-            m_Root.RemoveChild(m_CoverImage);       // 移除封面圖片
+            m_Root.RemoveChild(m_CoverImage);
             
             LoadLevel(1);
         }

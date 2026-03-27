@@ -40,16 +40,18 @@ private:
     };
 
     State m_CurrentState = State::START;
-    GameState m_GameState = GameState::TITLE_SCREEN;  // 初始為 TITLE_SCREEN (封面)
+    GameState m_GameState = GameState::TITLE_SCREEN;
 
     Util::Renderer m_Root;  // 場景的根節點
 
-    std::shared_ptr<BackgroundImage> m_CoverImage;  // 存封面圖片的 pointer
-	std::shared_ptr<BackgroundImage> m_DefenseImage;  // 存防守方獲勝圖片的 pointer
-    std::shared_ptr<BackgroundImage> m_AttackImage;  // 存進攻方獲勝圖片的 pointer
+	// 背景圖片
+    std::shared_ptr<BackgroundImage> m_CoverImage;
+	std::shared_ptr<BackgroundImage> m_DefenseImage;
+    std::shared_ptr<BackgroundImage> m_AttackImage;
+
     LevelManager m_LevelManager;  // 管理關卡
 
-    std::shared_ptr<Player> m_Player;  // 存角色的 pointer
+    std::shared_ptr<Player> m_Player;  // 角色
 
 	BombManager m_BombManager;  // 管理炸彈與火焰
 

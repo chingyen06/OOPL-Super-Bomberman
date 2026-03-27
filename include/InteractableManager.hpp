@@ -15,7 +15,7 @@ public:
     void AddKey(int gridX, int gridY);
     void AddChest(int gridX, int gridY);
 
-    void Update(std::shared_ptr<Player>& player, Util::Renderer& root);
+    void Update(std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root);
 
     void Clear(Util::Renderer& root);
 
@@ -25,6 +25,8 @@ public:
     void AttachToRoot(Util::Renderer& root);
 
     bool IsAllChestOpened() const;
+
+    void DropKey(int gridX, int gridY, Util::Renderer& root);
 
 private:
     /*std::vector<std::shared_ptr<Key>> m_Keys;

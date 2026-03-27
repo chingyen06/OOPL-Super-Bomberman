@@ -41,7 +41,8 @@ public:
     bool IsDead() const { return m_IsDead; }
     void Kill();
 
-    void Respawn(int gridX, int gridY);
+    // void Respawn(int gridX, int gridY
+    void Respawn();
 
     void AddBombCount() { m_CurrentBombs++; }
     void DecBombCount() { m_CurrentBombs--; }
@@ -91,6 +92,11 @@ private:
 
     Team m_Team;
     Control m_Control;
+
+    int m_SpawnX;
+    int m_SpawnY;
+    int m_DeathCountdown = -1;
+    int m_RespawnTimer = -1;
 };
 
 #endif

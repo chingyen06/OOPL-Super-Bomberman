@@ -34,16 +34,21 @@ void App::LoadLevel(int levelIndex) {
         Util::Keycode::SPACE
     };
 
-    /*Control ctrl2P = {
+    Control ctrl2P = {
         Util::Keycode::UP,
         Util::Keycode::DOWN,
         Util::Keycode::LEFT,
         Util::Keycode::RIGHT,
         Util::Keycode::KP_ENTER
-    };*/
+    };
 
-    m_Player = std::make_shared<Player>(1, 1, Team::ATTACKER, ctrl1P);  // 重新建立角色
-    m_Root.AddChild(m_Player);  // 將角色加入根節點
+    auto p1 = std::make_shared<Player>(1, 1, Team::DEFENDER, ctrl1P);
+    m_Players.push_back(p1);
+    m_Root.AddChild(p1);
+
+    auto p2 = std::make_shared<Player>(23, 15, Team::ATTACKER, ctrl2P);
+    m_Players.push_back(p2);
+    m_Root.AddChild(p2);
 
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
 }
@@ -76,13 +81,6 @@ void App::Update() {
             LOG_INFO("Attacker Wins!");
             m_GameState = GameState::GAMEEND;
 
-            // 清除戰場
-            m_InteractableManager.Clear(m_Root);
-            m_BombManager.Clear(m_Root);
-            m_LevelManager.DetachFromRoot(m_Root);
-			m_InteractableManager.Clear(m_Root);
-            m_Root.RemoveChild(m_Player);
-
             m_Root.AddChild(m_AttackImage); // 進攻方勝利
             return;
         }
@@ -91,70 +89,40 @@ void App::Update() {
             LOG_INFO("Defender Wins!");
             m_GameState = GameState::GAMEEND;
 
-            // 清除戰場
-            m_InteractableManager.Clear(m_Root);
-            m_BombManager.Clear(m_Root);
-            m_LevelManager.DetachFromRoot(m_Root);
-            m_InteractableManager.Clear(m_Root);
-            m_Root.RemoveChild(m_Player);
-
             m_Root.AddChild(m_DefenseImage); // 防守方勝利
             return;
         }
-        
-        m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Player);  // 運算物理與傷害
-        m_InteractableManager.Update(m_Player, m_Root);  // 更新互動物件
 
-        if (!m_Player->IsDead()) {  // 玩家活著才允許移動與放炸彈
-            // m_Player->Update(m_LevelManager);  // 更新角色
-            m_Player->Update(m_LevelManager, m_BombManager, m_InteractableManager);  // 更新角色
-            // LOG_INFO("Update Player");
+        m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
+        m_InteractableManager.Update(m_Players, m_Root);
 
-            // 按下空白鍵放炸彈
-            if (Util::Input::IsKeyDown(Util::Keycode::SPACE)) {
-                // LOG_INFO("Bomb");
-                // m_BombManager.PlaceBomb(m_Player->GetGridX(), m_Player->GetGridY(), 2, m_Root);
-                m_BombManager.PlaceBomb(m_Player, m_LevelManager, m_InteractableManager, m_Root);
-            }
+        for (auto& player : m_Players) {
+            player->Update(m_LevelManager, m_BombManager, m_InteractableManager);
 
-        }
-		else {  // 玩家死亡
-            if (m_DeathCountdown == -1 && m_RespawnTimer == -1) {
-                m_DeathCountdown = 30;
-                LOG_INFO("Player died");
-
-                if (m_Player->HasKey()) {
-					LOG_INFO("Player dropped the Key!");
-
-                    m_Player->SetKey(false);
-
-                    m_InteractableManager.AddKey(m_Player->GetGridX(), m_Player->GetGridY());
-                    m_InteractableManager.AttachToRoot(m_Root);
+            if (!player->IsDead()) {
+                if (Util::Input::IsKeyDown(player->GetBombKey())) {
+                    m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root);
                 }
             }
-
-            if (m_DeathCountdown > 0) {
-                m_DeathCountdown--;
-                if (m_DeathCountdown == 0) {
-                    m_Root.RemoveChild(m_Player);
-                    m_RespawnTimer = 90; // 等待 1.5 秒重生
-                    m_DeathCountdown = -1;
-                }
-            }
-            // 玩家消失在畫面上，但炸彈還在爆
-            else if (m_RespawnTimer > 0) {
-                m_RespawnTimer--;
-                if (m_RespawnTimer == 0) {
-					// 復活角色
-                    m_Player->Respawn(1, 1); // 回到起點
-                    m_Root.AddChild(m_Player);
-                    m_RespawnTimer = -1;
-                    LOG_INFO("Player Respawned!");
+            else {
+                if (player->HasKey()) {
+                    LOG_INFO("Player dropped the Key!");
+                    player->SetKey(false);
+                    m_InteractableManager.DropKey(player->GetGridX(), player->GetGridY(), m_Root);
                 }
             }
         }
     }
     else if (m_GameState == GameState::GAMEEND) {
+        // 清除戰場
+        m_InteractableManager.Clear(m_Root);
+        m_BombManager.Clear(m_Root);
+        m_LevelManager.DetachFromRoot(m_Root);
+        m_InteractableManager.Clear(m_Root);
+
+        for (auto& player : m_Players)
+            m_Root.RemoveChild(player);
+
         if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Return to Title Screen");
 

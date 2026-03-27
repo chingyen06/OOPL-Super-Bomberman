@@ -6,7 +6,8 @@
 #include "Util/Logger.hpp"
 #include <cmath>
 
-Player::Player(int startGridX, int startGridY, Team team, Control control) : m_GridX(startGridX), m_GridY(startGridY), m_CurrentDir(Direction::DOWN), m_Team(team), m_Control(control) {
+Player::Player(int startGridX, int startGridY, Team team, Control control) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
+    m_CurrentDir(Direction::DOWN), m_Team(team), m_Control(control) {
 
     m_ImgUp = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_up.png");
     m_ImgDown = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_down.png");
@@ -23,7 +24,7 @@ Player::Player(int startGridX, int startGridY, Team team, Control control) : m_G
     m_Pos.x = (m_GridX - 12) * 32.0f;
     m_Pos.y = (8 - m_GridY) * 32.0f;
 
-    m_Transform.translation = { m_Pos.x, m_Pos.y };
+    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
 }
 
 void Player::Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager) {
@@ -33,6 +34,25 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     float nextX = m_Pos.x;
     float nextY = m_Pos.y;
     //bool moved = false;
+
+    if (m_IsDead) {
+        if (m_DeathCountdown > 0) {
+            m_DeathCountdown--;
+            if (m_DeathCountdown == 0) {
+                SetVisible(false);  // 將角色從畫面上隱藏
+                m_RespawnTimer = 90;
+                m_DeathCountdown = -1;
+            }
+        }
+        else if (m_RespawnTimer > 0) {
+            m_RespawnTimer--;
+            if (m_RespawnTimer == 0) {
+                Respawn(); // 呼叫重生
+                m_RespawnTimer = -1;
+            }
+        }
+        return;
+    }
 
     // 取得當前位置的網格中心點座標
     float centerX = (m_GridX - 12) * 32.0f;
@@ -125,7 +145,6 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     // 無敵時間
     if (m_Invincible > 0) {
         m_Invincible--;
-        // 預留：可以加特效
     }
 }
 
@@ -190,14 +209,15 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
 }
 
 // 重生角色
-void Player::Respawn(int gridX, int gridY) {
-    m_GridX = gridX;
-    m_GridY = gridY;
+void Player::Respawn() {
+	m_GridX = m_SpawnX;
+	m_GridY = m_SpawnY;
     m_Pos.x = (m_GridX - 12) * 32.0f;
     m_Pos.y = (8 - m_GridY) * 32.0f;
-    m_Transform.translation = { m_Pos.x, m_Pos.y + 8.0f };
+    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
     m_IsDead = false;
     m_CurrentBombs = 0;
+    SetVisible(true);
 
     m_Invincible = 180;  // 無敵時間
 }
@@ -207,4 +227,7 @@ void Player::Kill() {
         return;
 
     m_IsDead = true;
+    m_DeathCountdown = 30;
+
+    LOG_INFO("Player died");
 }

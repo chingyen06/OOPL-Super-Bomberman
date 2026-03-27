@@ -51,7 +51,8 @@ private:
 
     LevelManager m_LevelManager;  // 管理關卡
 
-    std::shared_ptr<Player> m_Player;  // 角色
+    // std::shared_ptr<Player> m_Player;  // 角色
+    std::vector<std::shared_ptr<Player>> m_Players;
 
 	BombManager m_BombManager;  // 管理炸彈與火焰
 

@@ -5,11 +5,13 @@
 #include "Util/Image.hpp"
 #include <memory>
 
+class Player;
+
 class Bomb : public Util::GameObject {
 public:
     enum class State { COUNTDOWN, DONE };
 
-    Bomb(int gridX, int gridY, int firepower);
+    Bomb(int gridX, int gridY, int firepower, std::shared_ptr<Player> owner);
 
     void Update();
 
@@ -17,6 +19,8 @@ public:
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
     int GetFirepower() const { return m_Firepower; }
+
+    std::shared_ptr<Player> GetOwner() const { return m_Owner; }
 
 	void ForceDetonate() { m_State = State::DONE; }  // 強制引爆（被其他炸彈的火焰引爆）
 
@@ -26,6 +30,8 @@ private:
     int m_Firepower;
     int m_Tick;
     State m_State;
+
+    std::shared_ptr<Player> m_Owner;
 };
 
 #endif

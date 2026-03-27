@@ -14,7 +14,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
     // 檢查目標位置是否是草地且沒有其他炸彈
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {
-        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2); // 火力固定 2
+        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2, player); // 火力固定 2
         m_Bombs.push_back(newBomb);
         root.AddChild(newBomb);
 
@@ -27,7 +27,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 }
 
 // 更新炸彈與火焰
-void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::shared_ptr<Player>& player) {
+void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players) {
     for (auto it = m_Bombs.begin(); it != m_Bombs.end(); ) {  // 炸彈生命週期與火焰延伸
         (*it)->Update();
 
@@ -86,7 +86,7 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                 }
             }
 
-			player->DecBombCount();  // 減少計數
+            ((*it)->GetOwner())->DecBombCount();  // 減少計數
             root.RemoveChild(*it);
             it = m_Bombs.erase(it);
         }
@@ -100,12 +100,14 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
         (*it)->Update();
 
         // 生物燒毀判定
-        if (!player->IsDead() &&
-            player->GetGridX() == (*it)->GetGridX() &&
-            player->GetGridY() == (*it)->GetGridY()) {
+        for (auto& player : players) {
+            if (!player->IsDead() &&
+                player->GetGridX() == (*it)->GetGridX() &&
+                player->GetGridY() == (*it)->GetGridY()) {
 
-            player->Kill();
-            LOG_INFO("Player was BURNED!");
+                player->Kill();
+                LOG_INFO("Player was BURNED!");
+            }
         }
 
 		// 連鎖爆炸

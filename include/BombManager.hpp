@@ -15,7 +15,7 @@ class BombManager {
 public:
     // void PlaceBomb(int gridX, int gridY, int firepower, Util::Renderer& root);
     void PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root);
-    void Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::shared_ptr<Player>& player);
+    void Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players);
     void Clear(Util::Renderer& root);
     bool IsBombAt(int gridX, int gridY) const;
 

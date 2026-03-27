@@ -18,34 +18,42 @@ void InteractableManager::AttachToRoot(Util::Renderer& root) {
     }
 }
 
-void InteractableManager::Update(std::shared_ptr<Player>& player, Util::Renderer& root) {
-    if (player->IsDead())
-        return;
-
+void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root) {
     for (auto it = m_Interactables.begin(); it != m_Interactables.end(); ) {
         auto item = *it;
+        bool itemErased = false;
 
-        if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY()) {
+        for (auto& player : players) {
+            if (player->IsDead())
+                continue;
 
-            if (auto key = std::dynamic_pointer_cast<Key>(item)) {
-                if (!player->HasKey()) {
-                    player->SetKey(true);
-                    LOG_INFO("Player picked up the Key!");
+            if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY() && player->GetTeam() == Team::ATTACKER) {
 
-                    root.RemoveChild(item);
-                    it = m_Interactables.erase(it);
-                    continue;
+                if (auto key = std::dynamic_pointer_cast<Key>(item)) {
+                    if (!player->HasKey()) {
+                        player->SetKey(true);
+                        LOG_INFO("Player picked up the Key!");
+
+                        root.RemoveChild(item);
+                        it = m_Interactables.erase(it);
+
+                        itemErased = true;
+                        break;
+                    }
                 }
-            }
-            else if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
-                if (!chest->IsOpened() && player->HasKey()) {
-                    chest->Open();
-                    player->SetKey(false);
-                    LOG_INFO("Chest Opened! Check victory condition here.");
+                else if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
+                    if (!chest->IsOpened() && player->HasKey()) {
+                        chest->Open();
+                        player->SetKey(false);
+                        LOG_INFO("Chest Opened! Check victory condition here.");
+                    }
                 }
             }
         }
-        ++it;
+
+        if (!itemErased) {
+            ++it;
+        }
     }
 }
 
@@ -83,4 +91,11 @@ bool InteractableManager::IsAllChestOpened() const {
         }
     }
     return true;
+}
+
+void InteractableManager::DropKey(int gridX, int gridY, Util::Renderer& root) {
+    auto key = std::make_shared<Key>(gridX, gridY);
+    m_Interactables.push_back(key);
+
+    root.AddChild(key);
 }

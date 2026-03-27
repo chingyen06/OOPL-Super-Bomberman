@@ -10,6 +10,7 @@
 #include "Player.hpp"
 #include "BombManager.hpp"
 #include "InteractableManager.hpp"
+#include "UIManager.hpp"
 
 class App {
 public:
@@ -62,6 +63,8 @@ private:
 	InteractableManager m_InteractableManager;  // 管理互動物件
 
 	int m_GameTime = -1;  // 遊戲時間
+
+	UIManager m_UIManager;  // 管理 UI 顯示
 };
 
 #endif

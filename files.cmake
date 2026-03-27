@@ -8,6 +8,7 @@ set(SRC_FILES
     BombManager.cpp
     InteractableManager.cpp
     Interactable.cpp
+    UIManager.cpp
 )
 
 set(INCLUDE_FILES
@@ -22,6 +23,7 @@ set(INCLUDE_FILES
     InteractableManager.hpp
     Interactable.hpp
     ScreenImage.hpp
+    UIManager.hpp
 )
 
 set(TEST_FILES

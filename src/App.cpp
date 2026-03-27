@@ -51,6 +51,8 @@ void App::LoadLevel(int levelIndex) {
     m_Root.AddChild(p2);
 
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
+
+    m_UIManager.Init(m_Root);
 }
 
 void App::Update() {
@@ -95,6 +97,7 @@ void App::Update() {
 
         m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
         m_InteractableManager.Update(m_Players, m_Root);
+        m_UIManager.Update(m_GameTime, m_Players);
 
         for (auto& player : m_Players) {
             player->Update(m_LevelManager, m_BombManager, m_InteractableManager);
@@ -118,7 +121,7 @@ void App::Update() {
         m_InteractableManager.Clear(m_Root);
         m_BombManager.Clear(m_Root);
         m_LevelManager.DetachFromRoot(m_Root);
-        m_InteractableManager.Clear(m_Root);
+        m_UIManager.Clear(m_Root);
 
         for (auto& player : m_Players)
             m_Root.RemoveChild(player);
@@ -128,6 +131,7 @@ void App::Update() {
 
             m_Root.RemoveChild(m_AttackImage);
             m_Root.RemoveChild(m_DefenseImage);
+            m_UIManager.Clear(m_Root);
 
             m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
 

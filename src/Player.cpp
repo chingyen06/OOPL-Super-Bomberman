@@ -115,8 +115,7 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         m_GridX = std::round(m_Pos.x / 32.0f) + 12;
         m_GridY = 8 - std::round(m_Pos.y / 32.0f);
 
-        if (m_IgnoreBombX != -1) {  // 如果正在忽略炸彈，檢查是否已經離開那個格子
-            // 取得目前碰撞箱的四個邊界所在的網格座標
+        if (!m_IgnoreBombs.empty()) {
             float radius = 9.0f;
             auto getGX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
             auto getGY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
@@ -126,18 +125,19 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
             int gyt = getGY(m_Pos.y + radius);
             int gyb = getGY(m_Pos.y - radius);
 
-            // 檢查有沒有任何角落還在被忽略的炸彈格內
-            bool isStillTouching = false;
-            if ((gxl == m_IgnoreBombX || gxr == m_IgnoreBombX) &&
-                (gyt == m_IgnoreBombY || gyb == m_IgnoreBombY)) {
-                isStillTouching = true;
-            }
+            for (auto it = m_IgnoreBombs.begin(); it != m_IgnoreBombs.end(); ) {
+                bool isStillTouching = false;
+                if ((gxl == it->first || gxr == it->first) &&
+                    (gyt == it->second || gyb == it->second)) {
+                    isStillTouching = true;
+                }
 
-            // 只有當四個角落都完全離開了該格子，才恢復卡位
-            if (!isStillTouching) {
-                m_IgnoreBombX = -1;
-                m_IgnoreBombY = -1;
-                // LOG_INFO("Successfully exited bomb at (" + std::to_string(m_IgnoreBombX) + ")");
+                if (!isStillTouching) {
+                    it = m_IgnoreBombs.erase(it);
+                }
+                else {
+                    ++it;
+                }
             }
         }
     }
@@ -189,9 +189,20 @@ bool Player::IsColliding(float nextX, float nextY, const LevelManager& levelMana
         // bool isChest = interactableManager.IsChestAt(gx, gy);
 
         // 如果是炸彈，但該座標等於 m_IgnoreBombX/Y，則視為可穿透
-        if (gx == m_IgnoreBombX && gy == m_IgnoreBombY) {
+        /*if (gx == m_IgnoreBombX && gy == m_IgnoreBombY) {
+            return isMapObstacle;
+        }*/
+        bool isIgnored = false;
+        for (const auto& ig : m_IgnoreBombs) {
+            if (gx == ig.first && gy == ig.second) {
+                isIgnored = true;
+                break;
+            }
+        }
+        if (isIgnored) {
             return isMapObstacle;
         }
+
         return isMapObstacle || isBomb;
     };
 

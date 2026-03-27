@@ -5,6 +5,8 @@
 #include "Util/Image.hpp"
 #include "Util/Keycode.hpp"
 #include <memory>
+#include <vector>
+#include <utility>
 #include "glm/vec2.hpp"
 #include "LevelManager.hpp"
 
@@ -50,7 +52,7 @@ public:
 
 	Direction GetDirection() const { return m_CurrentDir; }  // 取得當前方向
 
-	void SetIgnoreBomb(int gx, int gy) { m_IgnoreBombX = gx; m_IgnoreBombY = gy; }  // 設定放置炸彈後暫時忽略的座標
+	void SetIgnoreBomb(int gx, int gy) { m_IgnoreBombs.push_back({ gx, gy }); }  // 設定放置炸彈後暫時忽略的座標
 
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }
@@ -83,8 +85,9 @@ private:
     int m_CurrentBombs = 0;    // 當前場上炸彈數量
 
 	// 暫時忽略的炸彈座標
-    int m_IgnoreBombX = -1;
-    int m_IgnoreBombY = -1;
+    // int m_IgnoreBombX = -1;
+    // int m_IgnoreBombY = -1;
+    std::vector<std::pair<int, int>> m_IgnoreBombs;
 
     int m_Invincible = -1;  // 無敵時間
 

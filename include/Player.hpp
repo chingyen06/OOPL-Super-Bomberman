@@ -40,6 +40,9 @@ public:
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
 
+    // 取得角色像素座標
+    glm::vec2 GetPixelPos() const { return m_Pos; }
+
     bool IsDead() const { return m_IsDead; }
     void Kill();
 

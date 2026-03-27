@@ -97,7 +97,7 @@ void App::Update() {
 
         m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
         m_InteractableManager.Update(m_Players, m_Root);
-        m_UIManager.Update(m_GameTime, m_Players);
+        m_UIManager.Update(m_GameTime, m_Players, m_Root);
 
         for (auto& player : m_Players) {
             player->Update(m_LevelManager, m_BombManager, m_InteractableManager);

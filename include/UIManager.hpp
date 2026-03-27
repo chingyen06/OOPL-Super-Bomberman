@@ -14,6 +14,8 @@
 class UIImage : public Util::GameObject {
 public:
     UIImage(const std::string& imagePath, int x, int y);
+
+    void SetPosition(float x, float y);
 };
 
 class UIText : public Util::GameObject {
@@ -27,12 +29,13 @@ private:
 class UIManager {
 public:
     void Init(Util::Renderer& root);
-    void Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players);
+    void Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root);
     void Clear(Util::Renderer& root);
 
 private:
     std::shared_ptr<UIImage> m_TimerBackground;
     std::shared_ptr<UIText> m_TimerText;
+    std::vector<std::shared_ptr<UIImage>> m_KeyIndicators;
 };
 
 #endif

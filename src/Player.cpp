@@ -238,6 +238,7 @@ void Player::Kill() {
         return;
 
     m_IsDead = true;
+    m_IgnoreBombs.clear();
     m_DeathCountdown = 30;
 
     LOG_INFO("Player died");

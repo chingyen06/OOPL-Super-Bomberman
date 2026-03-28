@@ -28,9 +28,9 @@ Player::Player(int startGridX, int startGridY, Team team, Control control) : m_G
 }
 
 void Player::Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager) {
-    float speed = 3.0f;  // 移動速度
-    float dx = 0.0f;  // x 方向移動
-    float dy = 0.0f;  // y 方向移動
+    float speed = 3.0f;
+    float dx = 0.0f;
+    float dy = 0.0f;
     float nextX = m_Pos.x;
     float nextY = m_Pos.y;
     //bool moved = false;
@@ -39,7 +39,7 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         if (m_DeathCountdown > 0) {
             m_DeathCountdown--;
             if (m_DeathCountdown == 0) {
-                SetVisible(false);  // 將角色從畫面上隱藏
+                SetVisible(false);
                 m_RespawnTimer = 90;
                 m_DeathCountdown = -1;
             }
@@ -47,7 +47,7 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         else if (m_RespawnTimer > 0) {
             m_RespawnTimer--;
             if (m_RespawnTimer == 0) {
-                Respawn(); // 呼叫重生
+                Respawn();
                 m_RespawnTimer = -1;
             }
         }

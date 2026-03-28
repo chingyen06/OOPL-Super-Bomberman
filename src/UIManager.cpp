@@ -52,13 +52,13 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         if (player->HasKey() && !player->IsDead()) {
             if (activeKeysNeeded >= m_KeyIndicators.size()) {
                 auto newIndicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
-                newIndicator->SetZIndex(105);
+                // newIndicator->SetZIndex(105);
                 root.AddChild(newIndicator);
                 m_KeyIndicators.push_back(newIndicator);
             }
 
             auto pos = player->GetPixelPos();
-            m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 50.0f);
+            m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 48.0f);
 
             activeKeysNeeded++;
         }

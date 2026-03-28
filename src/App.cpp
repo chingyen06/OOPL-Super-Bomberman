@@ -42,7 +42,7 @@ void App::LoadLevel(int levelIndex) {
         Util::Keycode::KP_ENTER
     };
 
-    auto p1 = std::make_shared<Player>(1, 1, Team::DEFENDER, ctrl1P);
+    auto p1 = std::make_shared<Player>(1, 1, Team::ATTACKER, ctrl1P);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 
@@ -125,13 +125,13 @@ void App::Update() {
 
         for (auto& player : m_Players)
             m_Root.RemoveChild(player);
+        m_Players.clear();
 
         if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
             LOG_INFO("Return to Title Screen");
 
             m_Root.RemoveChild(m_AttackImage);
             m_Root.RemoveChild(m_DefenseImage);
-            m_UIManager.Clear(m_Root);
 
             m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
 

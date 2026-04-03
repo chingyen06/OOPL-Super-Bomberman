@@ -107,3 +107,10 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
     m_Tiles.push_back(newGround);
     root.AddChild(newGround);
 }
+
+void LevelManager::Clear(Util::Renderer& root) {
+    DetachFromRoot(root);
+
+    m_Tiles.clear();
+    m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
+}

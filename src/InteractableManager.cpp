@@ -80,6 +80,8 @@ bool InteractableManager::BlocksFireAt(int gridX, int gridY) const {
             return interactable->IsBlocksFire();
         }
     }
+
+	return false;
 }
 
 bool InteractableManager::IsAllChestOpened() const {

@@ -22,6 +22,7 @@ void App::LoadLevel(int levelIndex) {
 
     std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
 
+    m_LevelManager.Clear(m_Root);
     m_LevelManager.LoadLevel(levelPath, m_InteractableManager);  // 載入關卡
     m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
     m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件

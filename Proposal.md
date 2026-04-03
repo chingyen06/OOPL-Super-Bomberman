@@ -144,70 +144,150 @@
           └── Spirit                      # 源石精靈 (Week 11 預定：電腦控制之防禦單位)
 ```
 
+# 繼承關係
+```mermaid
+classDiagram
+    direction TB
+    class GameObject["Util::GameObject"]
+    class Interactable
+    class Tile
+
+    GameObject <|-- Player
+    GameObject <|-- Bomb
+    GameObject <|-- Explosion
+    GameObject <|-- BackgroundImage
+    GameObject <|-- UIImage
+    GameObject <|-- UIText
+
+    GameObject <|-- Tile
+    Tile <|-- Ground
+    Tile <|-- Wall
+    Tile <|-- Brick
+
+    GameObject <|-- Interactable
+    Interactable <|-- Key
+    Interactable <|-- Chest
+```
+
+
+
+### 介面
+
 ```mermaid
 classDiagram
     direction TB
 
-    %% 基底層 (Engine Layer)
-    class GameObject["Util::GameObject"] {
-        +m_Transform
-        +SetDrawable()
-        +SetZIndex()
-    }
-
-    %% 核心控制層 (App Layer)
+    %% --- 管理層 (Managers) ---
     class App {
         -State m_CurrentState
+        -GameState m_GameState
         -Util::Renderer m_Root
+        -int m_GameTime
+        -vector~shared_ptr~Player~~ m_Players
         +Start()
         +Update()
         +LoadLevel(levelIndex)
+        +End()
     }
 
-    %% 管理層 (Managers - 聚合關係)
     class LevelManager {
         -vector~shared_ptr~Tile~~ m_Tiles
-        +LoadLevel()
-        +IsWalkable()
-        +IsBrick()
-    }
-    class BombManager {
-        -vector~shared_ptr~Bomb~~ m_Bombs
-        +PlaceBomb()
-        +Update()
-    }
-    class InteractableManager {
-        -vector~shared_ptr~Interactable~~ m_Interactables
-        +Update()
-        +IsAllChestOpened()
-    }
-    class UIManager {
-        +Init()
-        +Update()
+        -vector~vector~shared_ptr~Tile~~~ m_TileGrid
+        +LoadLevel(filepath, interactableManager)
+        +AttachToRoot(root)
+        +DetachFromRoot(root)
+        +Clear(root)
+        +IsWalkable(gridX, gridY) bool
+        +IsBrick(gridX, gridY) bool
+        +DestroyBrick(gridX, gridY, root)
     }
 
-    %% 實體層 (Entities - 繼承自 GameObject)
-    class Player {
-        -int m_GridX
-        -int m_CurrentBombs
-        +Update(LevelManager, BombManager, InteractableManager)
-        +IsColliding()
-        +HasKey()
+    class BombManager {
+        -vector~shared_ptr~Bomb~~ m_Bombs
+        -vector~shared_ptr~Explosion~~ m_Explosions
+        +PlaceBomb(player, levelManager, interactableManager, root)
+        +Update(levelManager, interactableManager, root, players)
+        +Clear(root)
+        +IsBombAt(gridX, gridY) bool
     }
-    
+
+    class InteractableManager {
+        -vector~shared_ptr~Interactable~~ m_Interactables
+        +AddKey(gridX, gridY)
+        +AddChest(gridX, gridY)
+        +DropKey(gridX, gridY, root)
+        +Update(players, root)
+        +Clear(root)
+        +AttachToRoot(root)
+        +IsInteractableAt(gridX, gridY) bool
+        +BlocksFireAt(gridX, gridY) bool
+        +IsAllChestOpened() bool
+    }
+
+    class UIManager {
+        -shared_ptr~UIImage~ m_TimerBackground
+        -shared_ptr~UIText~ m_TimerText
+        -vector~shared_ptr~UIImage~~ m_KeyIndicators
+        +Init(root)
+        +Update(gameTimeTicks, players, root)
+        +Clear(root)
+    }
+
+    %% --- 實體層 (Entities) ---
+    class Player {
+        -int m_PlayerID
+        -Team m_Team
+        -int m_GridX
+        -int m_GridY
+        -int m_MaxBombs
+        -int m_CurrentBombs
+        -bool m_IsDead
+        -bool m_HasKey
+        +Update(levelManager, bombManager, interactableManager)
+        +Kill()
+        +Respawn()
+        +AddBombCount()
+        +DecBombCount()
+        +CanPlaceBomb() bool
+        +GetPlayerID() int
+        +HasKey() bool
+        +SetKey(bool)
+    }
+
     class Bomb {
-        -State m_State
+        -int m_OwnerID
+        -int m_GridX
+        -int m_GridY
         -int m_Firepower
-        -weak_ptr~Player~ m_Owner
+        -State m_State
         +Update()
         +ForceDetonate()
+        +GetOwnerID() int
     }
+
+    %% --- 多型繼承樹 (Polymorphic Hierarchies) ---
+    class Tile {
+        <<interface>>
+        +IsPassable()* bool
+    }
+    class Ground {
+        +IsPassable() true
+    }
+    class Wall {
+        +IsPassable() false
+    }
+    class Brick {
+        +IsPassable() false
+    }
+    Tile <|-- Ground
+    Tile <|-- Wall
+    Tile <|-- Brick
 
     class Interactable {
         <<interface>>
-        +GetGridX()*
-        +GetGridY()*
-        +IsBlocksFire()*
+        +GetGridX()* int
+        +GetGridY()* int
+        +IsBlocksFire()* bool
     }
     class Key {
         +IsBlocksFire() false
@@ -215,25 +295,38 @@ classDiagram
     class Chest {
         -bool m_Opened
         +Open()
+        +IsOpened() bool
         +IsBlocksFire() true
     }
-
-    %% 繼承關係
-    GameObject <|-- Player
-    GameObject <|-- Bomb
-    GameObject <|-- Interactable
     Interactable <|-- Key
     Interactable <|-- Chest
 
-    %% 聚合/依賴關係
+
+    %% --- 系統聚合與依賴關係 ---
     App *-- LevelManager
     App *-- BombManager
     App *-- InteractableManager
     App *-- UIManager
     App o-- Player : manages
-    BombManager o-- Bomb : manages
-    InteractableManager o-- Interactable : manages
 
-    Player ..> BombManager : requests placement
-    Bomb ..> Player : weak reference
+    Player ..> BombManager : Accesses
+    Player ..> LevelManager : Accesses
+    Player ..> InteractableManager : Accesses
+    
+    BombManager o-- Bomb : manages
+    LevelManager o-- Tile : manages
+    InteractableManager o-- Interactable : manages
 ```
+
+### 圖層
+| Z-Index | 名稱 | 物件 |
+| :--- | :--- | :--- |
+| **100** | **開始畫面、計時文字** | `BackgroundImage`, `UIText` |
+| **99** | **計時器、鑰匙顯示** | `UIImage` |
+| **20** | **玩家** | `Player` |
+| **15** | **無敵牆** | `Wall` |
+| **10** | **火焰** | `Bomb` |
+| **6** | **鑰匙** | `Key` |
+| **5** | **寶箱、磚塊** | `Chest`, `Brick` |
+| **4** | **炸彈** | `BackgroundImage` |
+| **1** | **草地** | `Ground` |

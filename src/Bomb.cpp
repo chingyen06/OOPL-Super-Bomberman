@@ -1,7 +1,7 @@
 #include "Bomb.hpp"
 
-Bomb::Bomb(int gridX, int gridY, int firepower, std::shared_ptr<Player> owner) : m_GridX(gridX), m_GridY(gridY), m_Firepower(firepower), 
-           m_Tick(180), m_State(State::COUNTDOWN), m_Owner(owner) {
+Bomb::Bomb(int gridX, int gridY, int firepower, int ownerID) : m_GridX(gridX), m_GridY(gridY), m_Firepower(firepower),
+           m_Tick(180), m_State(State::COUNTDOWN), m_OwnerID(ownerID) {
     auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/bomb.png");
     SetDrawable(image);
     SetZIndex(4); // 草地上，主角與牆壁下方

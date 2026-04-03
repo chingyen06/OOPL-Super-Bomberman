@@ -6,8 +6,8 @@
 #include "Util/Logger.hpp"
 #include <cmath>
 
-Player::Player(int startGridX, int startGridY, Team team, Control control) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
-    m_CurrentDir(Direction::DOWN), m_Team(team), m_Control(control) {
+Player::Player(int startGridX, int startGridY, Team team, Control control, int id) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
+    m_CurrentDir(Direction::DOWN), m_Team(team), m_Control(control), m_PlayerID(id) {
 
     m_ImgUp = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_up.png");
     m_ImgDown = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_down.png");

@@ -11,7 +11,7 @@ class Bomb : public Util::GameObject {
 public:
     enum class State { COUNTDOWN, DONE };
 
-    Bomb(int gridX, int gridY, int firepower, std::shared_ptr<Player> owner);
+    Bomb(int gridX, int gridY, int firepower, int ownerID);
 
     void Update();
 
@@ -20,7 +20,7 @@ public:
     int GetGridY() const { return m_GridY; }
     int GetFirepower() const { return m_Firepower; }
 
-    std::shared_ptr<Player> GetOwner() const { return m_Owner; }
+    int GetOwnerID() const { return m_OwnerID; }
 
 	void ForceDetonate() { m_State = State::DONE; }  // 強制引爆（被其他炸彈的火焰引爆）
 
@@ -31,7 +31,7 @@ private:
     int m_Tick;
     State m_State;
 
-    std::shared_ptr<Player> m_Owner;
+    int m_OwnerID;
 };
 
 #endif

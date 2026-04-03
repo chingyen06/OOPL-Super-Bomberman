@@ -31,7 +31,7 @@ public:
     enum class Direction { UP, DOWN, LEFT, RIGHT };
 
     // Player(int startGridX, int startGridY);
-    Player(int startGridX, int startGridY, Team m_Team, Control m_Control);
+    Player(int startGridX, int startGridY, Team m_Team, Control m_Control, int id);
 
     // void Update(const LevelManager& levelManager);
     void Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
@@ -62,6 +62,8 @@ public:
 
     Util::Keycode GetBombKey() const { return m_Control.PLACEBOMB; }
 	Team GetTeam() const { return m_Team; }
+
+    int GetPlayerID() const { return m_PlayerID; };
 
 private:
     int m_GridX;
@@ -103,6 +105,8 @@ private:
     int m_SpawnY;
     int m_DeathCountdown = -1;
     int m_RespawnTimer = -1;
+
+    int m_PlayerID;
 };
 
 #endif

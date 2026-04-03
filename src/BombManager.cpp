@@ -14,7 +14,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
     // 檢查目標位置是否是草地且沒有其他炸彈
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {
-        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2, player); // 火力固定 2
+        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2, player->GetPlayerID()); // 火力固定 2
         m_Bombs.push_back(newBomb);
         root.AddChild(newBomb);
 
@@ -45,21 +45,6 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
             int dx[] = { 0, 0, -1, 1 };
             int dy[] = { -1, 1, 0, 0 };
 
-            //for (int dir = 0; dir < 4; dir++) {
-            //    for (int step = 1; step <= fp; step++) {
-            //        int targetX = bx + dx[dir] * step;
-            //        int targetY = by + dy[dir] * step;
-
-            //        if (!levelManager.IsWalkable(targetX, targetY)) {
-            //            break; // 撞牆停止蔓延
-            //        }
-
-            //        auto fire = std::make_shared<Explosion>(targetX, targetY);
-            //        m_Explosions.push_back(fire);
-            //        root.AddChild(fire);
-            //    }
-            //}
-
             for (int dir = 0; dir < 4; dir++) {
                 for (int step = 1; step <= fp; step++) {
                     int targetX = bx + dx[dir] * step;
@@ -86,7 +71,14 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                 }
             }
 
-            ((*it)->GetOwner())->DecBombCount();  // 減少計數
+
+            for (auto& player : players) {
+                if (player->GetPlayerID() == (*it)->GetOwnerID()) {
+                    player->DecBombCount();
+                    break;
+                }
+            }
+
             root.RemoveChild(*it);
             it = m_Bombs.erase(it);
         }

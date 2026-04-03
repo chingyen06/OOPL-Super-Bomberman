@@ -143,3 +143,97 @@
           ├── Defender                    # 防守方玩家 (1 人，具備特殊技能)
           └── Spirit                      # 源石精靈 (Week 11 預定：電腦控制之防禦單位)
 ```
+
+```mermaid
+classDiagram
+    direction TB
+
+    %% 基底層 (Engine Layer)
+    class GameObject["Util::GameObject"] {
+        +m_Transform
+        +SetDrawable()
+        +SetZIndex()
+    }
+
+    %% 核心控制層 (App Layer)
+    class App {
+        -State m_CurrentState
+        -Util::Renderer m_Root
+        +Start()
+        +Update()
+        +LoadLevel(levelIndex)
+    }
+
+    %% 管理層 (Managers - 聚合關係)
+    class LevelManager {
+        -vector~shared_ptr~Tile~~ m_Tiles
+        +LoadLevel()
+        +IsWalkable()
+        +IsBrick()
+    }
+    class BombManager {
+        -vector~shared_ptr~Bomb~~ m_Bombs
+        +PlaceBomb()
+        +Update()
+    }
+    class InteractableManager {
+        -vector~shared_ptr~Interactable~~ m_Interactables
+        +Update()
+        +IsAllChestOpened()
+    }
+    class UIManager {
+        +Init()
+        +Update()
+    }
+
+    %% 實體層 (Entities - 繼承自 GameObject)
+    class Player {
+        -int m_GridX
+        -int m_CurrentBombs
+        +Update(LevelManager, BombManager, InteractableManager)
+        +IsColliding()
+        +HasKey()
+    }
+    
+    class Bomb {
+        -State m_State
+        -int m_Firepower
+        -weak_ptr~Player~ m_Owner
+        +Update()
+        +ForceDetonate()
+    }
+
+    class Interactable {
+        <<interface>>
+        +GetGridX()*
+        +GetGridY()*
+        +IsBlocksFire()*
+    }
+    class Key {
+        +IsBlocksFire() false
+    }
+    class Chest {
+        -bool m_Opened
+        +Open()
+        +IsBlocksFire() true
+    }
+
+    %% 繼承關係
+    GameObject <|-- Player
+    GameObject <|-- Bomb
+    GameObject <|-- Interactable
+    Interactable <|-- Key
+    Interactable <|-- Chest
+
+    %% 聚合/依賴關係
+    App *-- LevelManager
+    App *-- BombManager
+    App *-- InteractableManager
+    App *-- UIManager
+    App o-- Player : manages
+    BombManager o-- Bomb : manages
+    InteractableManager o-- Interactable : manages
+
+    Player ..> BombManager : requests placement
+    Bomb ..> Player : weak reference
+```

@@ -43,7 +43,7 @@ void App::LoadLevel(int levelIndex) {
         Util::Keycode::KP_ENTER
     };
 
-    auto p1 = std::make_shared<Player>(1, 1, Team::ATTACKER, ctrl1P, 0);
+    auto p1 = std::make_shared<Player>(1, 1, Team::DEFENDER, ctrl1P, 0);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 

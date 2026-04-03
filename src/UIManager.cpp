@@ -1,5 +1,6 @@
 #include "UIManager.hpp"
 #include "Util/Image.hpp"
+#include "Util/Logger.hpp"
 #include <cstdio>
 #include <string>
 
@@ -31,6 +32,9 @@ void UIManager::Init(Util::Renderer& root) {
     m_TimerBackground = std::make_shared<UIImage>(RESOURCE_DIR"/Image/timer.png", 0, 320);
     root.AddChild(m_TimerBackground);
 
+    m_CrownImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/crown.png", -1000, -1000);
+    root.AddChild(m_CrownImage);
+
     m_TimerText = std::make_shared<UIText>("03:00", 10, 320);
     root.AddChild(m_TimerText);
 
@@ -46,38 +50,55 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
     snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
     m_TimerText->SetText(std::string(buffer));
 
+	// ¬Ó«a
+    bool defenderFound = false;
+    for (const auto& player : players) {
+        if (player->GetTeam() == Team::DEFENDER && !player->IsDead()) {
+            auto pos = player->GetPixelPos();
+            m_CrownImage->SetPosition(pos.x, pos.y + 42.0f);
+            defenderFound = true;
+            break;
+        }
+    }
+    if (!defenderFound) {
+        m_CrownImage->SetPosition(-1000.0f, -1000.0f);
+    }
+    
+    // Æ_°Í
     int activeKeysNeeded = 0;
-
     for (const auto& player : players) {
         if (player->HasKey() && !player->IsDead()) {
             if (activeKeysNeeded >= m_KeyIndicators.size()) {
                 auto newIndicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
-                // newIndicator->SetZIndex(105);
                 root.AddChild(newIndicator);
                 m_KeyIndicators.push_back(newIndicator);
             }
 
             auto pos = player->GetPixelPos();
-            m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 48.0f);
+            m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 42.0f);
 
             activeKeysNeeded++;
         }
     }
-
     for (size_t i = activeKeysNeeded; i < m_KeyIndicators.size(); i++) {
         m_KeyIndicators[i]->SetPosition(-1000.0f, -1000.0f);
     }
 }
 
 void UIManager::Clear(Util::Renderer& root) {
-    if (m_TimerText) {
-        root.RemoveChild(m_TimerText);
-        m_TimerText.reset();
-    }
-
     if (m_TimerBackground) {
         root.RemoveChild(m_TimerBackground);
         m_TimerBackground.reset();
+    }
+
+    if (m_CrownImage) {
+        root.RemoveChild(m_CrownImage);
+        m_CrownImage.reset();
+    }
+
+    if (m_TimerText) {
+        root.RemoveChild(m_TimerText);
+        m_TimerText.reset();
     }
 
     for (auto& indicator : m_KeyIndicators) {

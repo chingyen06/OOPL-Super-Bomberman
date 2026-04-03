@@ -34,6 +34,7 @@ public:
 
 private:
     std::shared_ptr<UIImage> m_TimerBackground;
+    std::shared_ptr<UIImage> m_CrownImage;
     std::shared_ptr<UIText> m_TimerText;
     std::vector<std::shared_ptr<UIImage>> m_KeyIndicators;
 };

@@ -28,6 +28,10 @@ public:
 
     void DropKey(int gridX, int gridY, Util::Renderer& root);
 
+    int GetTotalChestCount() const;
+
+    std::vector<bool> GetChestStatusList() const;
+
 private:
     /*std::vector<std::shared_ptr<Key>> m_Keys;
     std::vector<std::shared_ptr<Chest>> m_Chests;*/

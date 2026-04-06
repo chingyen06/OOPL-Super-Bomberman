@@ -55,7 +55,7 @@
 - Week 10：UI
   - [x] 設計持有鑰匙的人物提示
   - [x] 設計倒數計時提示
-  - [ ] 設計剩餘寶箱提示
+  - [x] 設計剩餘寶箱提示
 - Week 11：防守方機制
   - [ ] 設計源石精靈移動機制
   - [ ] 設計防守方武器與用途
@@ -222,11 +222,18 @@ classDiagram
         +IsInteractableAt(gridX, gridY) bool
         +BlocksFireAt(gridX, gridY) bool
         +IsAllChestOpened() bool
+        +GetTotalChestCount() int
+        +GetChestStatusList() vector~bool~
     }
 
     class UIManager {
         -shared_ptr~UIImage~ m_TimerBackground
+        -shared_ptr~UIImage~ m_CrownImage
         -shared_ptr~UIText~ m_TimerText
+        -std::vector~std::shared_ptr~UIImage~~ m_KeyIndicators
+        -std::vector~std::shared_ptr~UIImage~~m_ChestPool
+        -std::vector~bool~~ m_LastChestStatus
+        -int m_LastSeconds
         -vector~shared_ptr~UIImage~~ m_KeyIndicators
         +Init(root)
         +Update(gameTimeTicks, players, root)
@@ -251,7 +258,7 @@ classDiagram
         +CanPlaceBomb() bool
         +GetPlayerID() int
         +HasKey() bool
-        +SetKey(bool)
+        +SetKey() bool
     }
 
     class Bomb {
@@ -312,6 +319,8 @@ classDiagram
     Player ..> BombManager : Accesses
     Player ..> LevelManager : Accesses
     Player ..> InteractableManager : Accesses
+
+    UIManager ..> InteractableManager : Accesses
     
     BombManager o-- Bomb : manages
     LevelManager o-- Tile : manages
@@ -322,7 +331,7 @@ classDiagram
 | Z-Index | 名稱 | 物件 |
 | :--- | :--- | :--- |
 | **100** | **開始畫面、計時文字** | `BackgroundImage`, `UIText` |
-| **99** | **計時器、鑰匙顯示** | `UIImage` |
+| **99** | **計時器、鑰匙顯示、防守方皇冠** | `UIImage` |
 | **20** | **玩家** | `Player` |
 | **15** | **無敵牆** | `Wall` |
 | **10** | **火焰** | `Bomb` |

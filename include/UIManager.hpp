@@ -28,8 +28,8 @@ private:
 
 class UIManager {
 public:
-    void Init(Util::Renderer& root);
-    void Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root);
+    void Init(Util::Renderer& root, int totalChests);
+    void Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, const std::vector<bool>& chestStatus, Util::Renderer& root);
     void Clear(Util::Renderer& root);
 
 private:
@@ -37,6 +37,9 @@ private:
     std::shared_ptr<UIImage> m_CrownImage;
     std::shared_ptr<UIText> m_TimerText;
     std::vector<std::shared_ptr<UIImage>> m_KeyIndicators;
+    std::vector<std::shared_ptr<UIImage>> m_ChestPool;
+    std::vector<bool> m_LastChestStatus; // 標記快取
+    int m_LastSeconds = -1;
 };
 
 #endif

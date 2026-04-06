@@ -101,3 +101,23 @@ void InteractableManager::DropKey(int gridX, int gridY, Util::Renderer& root) {
 
     root.AddChild(key);
 }
+
+int InteractableManager::GetTotalChestCount() const {
+    int count = 0;
+    for (const auto& item : m_Interactables) {
+        if (std::dynamic_pointer_cast<Chest>(item)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+std::vector<bool> InteractableManager::GetChestStatusList() const {
+    std::vector<bool> statusList;
+    for (const auto& item : m_Interactables) {
+        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
+            statusList.push_back(chest->IsOpened());
+        }
+    }
+    return statusList;
+}

@@ -26,6 +26,8 @@ void App::LoadLevel(int levelIndex) {
     m_LevelManager.LoadLevel(levelPath, m_InteractableManager);  // 載入關卡
     m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
     m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
+    int totalChests = m_InteractableManager.GetTotalChestCount();  // 取得寶箱總數
+    m_UIManager.Init(m_Root, totalChests);
 
     Control ctrl1P = {
         Util::Keycode::W, 
@@ -52,8 +54,6 @@ void App::LoadLevel(int levelIndex) {
     m_Root.AddChild(p2);
 
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
-
-    m_UIManager.Init(m_Root);
 }
 
 void App::Update() {
@@ -98,7 +98,8 @@ void App::Update() {
 
         m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
         m_InteractableManager.Update(m_Players, m_Root);
-        m_UIManager.Update(m_GameTime, m_Players, m_Root);
+        auto statusList = m_InteractableManager.GetChestStatusList();
+        m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
 
         for (auto& player : m_Players) {
             player->Update(m_LevelManager, m_BombManager, m_InteractableManager);

@@ -28,7 +28,9 @@ void UIText::SetText(const std::string& text) {
     m_Text->SetText(text);
 }
 
-void UIManager::Init(Util::Renderer& root) {
+void UIManager::Init(Util::Renderer& root, int totalChests) {
+    Clear(root);
+
     m_TimerBackground = std::make_shared<UIImage>(RESOURCE_DIR"/Image/timer.png", 0, 320);
     root.AddChild(m_TimerBackground);
 
@@ -38,10 +40,24 @@ void UIManager::Init(Util::Renderer& root) {
     m_TimerText = std::make_shared<UIText>("03:00", 10, 320);
     root.AddChild(m_TimerText);
 
-    m_KeyIndicators.clear();
+    for (int i = 0; i < 15; i++) {
+        auto indicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
+        root.AddChild(indicator);
+        m_KeyIndicators.push_back(indicator);
+    }
+
+    m_ChestPool.clear();
+    float startX = -30.0f;
+    float startY = 285.0f;
+
+    for (int i = 0; i < totalChests; i++) {
+        auto chest = std::make_shared<UIImage>(RESOURCE_DIR"/Image/chest_closed.png", startX + (i * 30), startY);
+        root.AddChild(chest);
+        m_ChestPool.push_back(chest);
+    }
 }
 
-void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root) {
+void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, const std::vector<bool>& chestStatus, Util::Renderer& root) {
     int totalSeconds = gameTimeTicks / 60;
     int minutes = totalSeconds / 60;
     int seconds = totalSeconds % 60;
@@ -68,20 +84,28 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
     int activeKeysNeeded = 0;
     for (const auto& player : players) {
         if (player->HasKey() && !player->IsDead()) {
-            if (activeKeysNeeded >= m_KeyIndicators.size()) {
-                auto newIndicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
-                root.AddChild(newIndicator);
-                m_KeyIndicators.push_back(newIndicator);
+            if (activeKeysNeeded < m_KeyIndicators.size()) {
+                auto pos = player->GetPixelPos();
+                m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 42.0);
+                activeKeysNeeded++;
             }
-
-            auto pos = player->GetPixelPos();
-            m_KeyIndicators[activeKeysNeeded]->SetPosition(pos.x, pos.y + 42.0f);
-
-            activeKeysNeeded++;
         }
     }
     for (size_t i = activeKeysNeeded; i < m_KeyIndicators.size(); i++) {
         m_KeyIndicators[i]->SetPosition(-1000.0f, -1000.0f);
+    }
+
+	// 寶箱
+    if (chestStatus != m_LastChestStatus) {
+        size_t loopSize = std::min(chestStatus.size(), m_ChestPool.size());
+
+        for (size_t i = 0; i < loopSize; i++) {
+            if (chestStatus[i]) {
+                auto openedImg = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
+                m_ChestPool[i]->SetDrawable(openedImg);
+            }
+        }
+        m_LastChestStatus = chestStatus; // 更新快取
     }
 }
 
@@ -105,4 +129,9 @@ void UIManager::Clear(Util::Renderer& root) {
         root.RemoveChild(indicator);
     }
     m_KeyIndicators.clear();
+
+    for (auto& chest : m_ChestPool) {
+        root.RemoveChild(chest);
+    }
+    m_ChestPool.clear();
 }

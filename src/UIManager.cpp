@@ -59,12 +59,17 @@ void UIManager::Init(Util::Renderer& root, int totalChests) {
 
 void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, const std::vector<bool>& chestStatus, Util::Renderer& root) {
     int totalSeconds = gameTimeTicks / 60;
-    int minutes = totalSeconds / 60;
-    int seconds = totalSeconds % 60;
 
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
-    m_TimerText->SetText(std::string(buffer));
+    if (totalSeconds != m_LastSeconds) {
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+
+        char buffer[32];
+        snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
+        m_TimerText->SetText(std::string(buffer));
+
+        m_LastSeconds = totalSeconds; // 更新快取
+    }
 
 	// 皇冠
     bool defenderFound = false;

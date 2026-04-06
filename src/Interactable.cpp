@@ -11,6 +11,15 @@ Key::Key(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
 }
 
+bool Key::OnInteract(std::shared_ptr<Player>& player) {
+    if (!player->HasKey()) {
+        player->SetKey(true);
+        LOG_INFO("Player picked up the Key!");
+        return true;
+    }
+    return false;
+}
+
 Chest::Chest(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {
     m_ClosedImage = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_closed.png");
     m_OpenedImage = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
@@ -29,4 +38,13 @@ void Chest::Open() {
     m_Opened = true;
     SetDrawable(m_OpenedImage);
     LOG_INFO("Chest opened at (" + std::to_string(m_GridX) + ", " + std::to_string(m_GridY) + ")");
+}
+
+bool Chest::OnInteract(std::shared_ptr<Player>& player) {
+    if (!m_Opened && player->HasKey()) {
+        Open();
+        player->SetKey(false);
+        LOG_INFO("Chest Opened! Check victory condition here.");
+    }
+    return false;
 }

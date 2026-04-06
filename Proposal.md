@@ -169,15 +169,11 @@ classDiagram
     Interactable <|-- Chest
 ```
 
-
-
 ### 介面
-
 ```mermaid
 classDiagram
     direction TB
 
-    %% --- 管理層 (Managers) ---
     class App {
         -State m_CurrentState
         -GameState m_GameState
@@ -205,7 +201,7 @@ classDiagram
     class BombManager {
         -vector~shared_ptr~Bomb~~ m_Bombs
         -vector~shared_ptr~Explosion~~ m_Explosions
-        +PlaceBomb(player, levelManager, interactableManager, root)
+        +PlaceBomb(player, levelManager, interactableManager, root, players)
         +Update(levelManager, interactableManager, root, players)
         +Clear(root)
         +IsBombAt(gridX, gridY) bool
@@ -213,6 +209,8 @@ classDiagram
 
     class InteractableManager {
         -vector~shared_ptr~Interactable~~ m_Interactables
+        -vector~bool~ m_ChestStatusCache
+        -UpdateChestStatusCache()
         +AddKey(gridX, gridY)
         +AddChest(gridX, gridY)
         +DropKey(gridX, gridY, root)
@@ -223,24 +221,22 @@ classDiagram
         +BlocksFireAt(gridX, gridY) bool
         +IsAllChestOpened() bool
         +GetTotalChestCount() int
-        +GetChestStatusList() vector~bool~
+        +GetChestStatusList() const vector~bool~&
     }
 
     class UIManager {
         -shared_ptr~UIImage~ m_TimerBackground
         -shared_ptr~UIImage~ m_CrownImage
         -shared_ptr~UIText~ m_TimerText
-        -std::vector~std::shared_ptr~UIImage~~ m_KeyIndicators
-        -std::vector~std::shared_ptr~UIImage~~m_ChestPool
-        -std::vector~bool~~ m_LastChestStatus
-        -int m_LastSeconds
         -vector~shared_ptr~UIImage~~ m_KeyIndicators
-        +Init(root)
-        +Update(gameTimeTicks, players, root)
+        -vector~shared_ptr~UIImage~~ m_ChestPool
+        -vector~bool~ m_LastChestStatus
+        -int m_LastSeconds
+        +Init(root, totalChests)
+        +Update(gameTimeTicks, players, chestStatus, root)
         +Clear(root)
     }
 
-    %% --- 實體層 (Entities) ---
     class Player {
         -int m_PlayerID
         -Team m_Team
@@ -272,7 +268,6 @@ classDiagram
         +GetOwnerID() int
     }
 
-    %% --- 多型繼承樹 (Polymorphic Hierarchies) ---
     class Tile {
         <<interface>>
         +IsPassable()* bool
@@ -295,21 +290,23 @@ classDiagram
         +GetGridX()* int
         +GetGridY()* int
         +IsBlocksFire()* bool
+        +OnInteract(player)* bool
     }
     class Key {
         +IsBlocksFire() false
+        +OnInteract(player) bool
     }
     class Chest {
         -bool m_Opened
         +Open()
         +IsOpened() bool
         +IsBlocksFire() true
+        +OnInteract(player) bool
     }
     Interactable <|-- Key
     Interactable <|-- Chest
 
 
-    %% --- 系統聚合與依賴關係 ---
     App *-- LevelManager
     App *-- BombManager
     App *-- InteractableManager
@@ -331,7 +328,7 @@ classDiagram
 | Z-Index | 名稱 | 物件 |
 | :--- | :--- | :--- |
 | **100** | **開始畫面、計時文字** | `BackgroundImage`, `UIText` |
-| **99** | **計時器、鑰匙顯示、防守方皇冠** | `UIImage` |
+| **99** | **計時器、鑰匙提示、寶箱提示、防守方皇冠** | `UIImage` |
 | **20** | **玩家** | `Player` |
 | **15** | **無敵牆** | `Wall` |
 | **10** | **火焰** | `Bomb` |

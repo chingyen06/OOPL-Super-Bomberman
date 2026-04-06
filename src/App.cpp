@@ -23,6 +23,10 @@ void App::LoadLevel(int levelIndex) {
     std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
 
     m_LevelManager.Clear(m_Root);
+    m_InteractableManager.Clear(m_Root);
+    m_BombManager.Clear(m_Root);
+    m_UIManager.Clear(m_Root);
+
     m_LevelManager.LoadLevel(levelPath, m_InteractableManager);  // 載入關卡
     m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
     m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
@@ -106,7 +110,7 @@ void App::Update() {
 
             if (!player->IsDead()) {
                 if (Util::Input::IsKeyDown(player->GetBombKey())) {
-                    m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root);
+                    m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root, m_Players);
                 }
             }
             else {

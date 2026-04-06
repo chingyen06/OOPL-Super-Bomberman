@@ -29,24 +29,11 @@ void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, 
 
             if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY() && player->GetTeam() == Team::ATTACKER) {
 
-                if (auto key = std::dynamic_pointer_cast<Key>(item)) {
-                    if (!player->HasKey()) {
-                        player->SetKey(true);
-                        LOG_INFO("Player picked up the Key!");
-
-                        root.RemoveChild(item);
-                        it = m_Interactables.erase(it);
-
-                        itemErased = true;
-                        break;
-                    }
-                }
-                else if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
-                    if (!chest->IsOpened() && player->HasKey()) {
-                        chest->Open();
-                        player->SetKey(false);
-                        LOG_INFO("Chest Opened! Check victory condition here.");
-                    }
+                if (item->OnInteract(player)) {
+                    root.RemoveChild(item);
+                    it = m_Interactables.erase(it);
+                    itemErased = true;
+                    break;
                 }
             }
         }

@@ -3,7 +3,10 @@
 
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
+#include "Player.hpp"
 #include <memory>
+
+class player;
 
 class Interactable : public Util::GameObject {
 public:
@@ -12,6 +15,8 @@ public:
     virtual int GetGridY() const = 0;
 
     virtual bool IsBlocksFire() const = 0;
+
+    virtual bool OnInteract(std::shared_ptr<Player>& player) = 0;
 };
 
 class Key : public Interactable {
@@ -22,6 +27,8 @@ public:
     int GetGridY() const { return m_GridY; }
 
     bool IsBlocksFire() const override { return false; }
+
+    bool OnInteract(std::shared_ptr<Player>& player) override;
 
 private:
     int m_GridX;
@@ -37,6 +44,8 @@ public:
     bool IsOpened() const { return m_Opened; }
 
     bool IsBlocksFire() const override { return true; }
+
+    bool OnInteract(std::shared_ptr<Player>& player) override;
 
     void Open();
 

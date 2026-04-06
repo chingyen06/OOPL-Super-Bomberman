@@ -4,13 +4,20 @@
 #include "Util/Logger.hpp"
 
 // 放置炸彈
-void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root) {
+void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, const std::vector<std::shared_ptr<Player>>& players) {
     if (!player->CanPlaceBomb())  // 玩家不能放炸彈
         return;
 
-    // 計算玩家方向
+    // 計算玩家座標
     int targetX = player->GetGridX();
     int targetY = player->GetGridY();
+
+    for (const auto& p : players) {
+        if (p->GetGridX() == targetX && p->GetGridY() == targetY && p->GetPlayerID() != player->GetPlayerID()) {
+            LOG_INFO("Cannot place bomb: Another player is on the same tile.");
+            return;  // 不能放炸彈，因為有其他玩家在同一格
+		}
+    }
 
     // 檢查目標位置是否是草地且沒有其他炸彈
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {

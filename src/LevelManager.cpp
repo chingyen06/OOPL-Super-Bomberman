@@ -86,7 +86,7 @@ bool LevelManager::IsBrick(int gridX, int gridY) const {
 }
 
 // 摧毀磚塊並長出草地
-void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
+void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root, InteractableManager& interactableManager) {
     if (!IsBrick(gridX, gridY)) return;
 
     auto oldBrick = m_TileGrid[gridY][gridX];  // 待摧毀的方塊
@@ -104,6 +104,8 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root) {
     m_TileGrid[gridY][gridX] = newGround; 
     m_Tiles.push_back(newGround);
     root.AddChild(newGround);
+
+	interactableManager.OnBrickDestroyed(gridX, gridY, root);  // 讓互動物件管理器知道磚塊被摧毀了
 }
 
 void LevelManager::Clear(Util::Renderer& root) {

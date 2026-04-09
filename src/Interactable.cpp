@@ -12,6 +12,9 @@ Key::Key(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {
 }
 
 bool Key::OnInteract(std::shared_ptr<Player>& player) {
+    if (player->GetTeam() != Team::ATTACKER)
+        return false;
+
     if (!player->HasKey()) {
         player->SetKey(true);
         LOG_INFO("Player picked up the Key!");
@@ -41,10 +44,31 @@ void Chest::Open() {
 }
 
 bool Chest::OnInteract(std::shared_ptr<Player>& player) {
+    if (player->GetTeam() != Team::ATTACKER)
+        return false;
+
     if (!m_Opened && player->HasKey()) {
         Open();
         player->SetKey(false);
         LOG_INFO("Chest Opened! Check victory condition here.");
     }
     return false;
+}
+
+
+PowerUp::PowerUp(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {}
+
+
+SpeedItem::SpeedItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
+    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_speedup.png");
+    SetDrawable(image);
+    SetZIndex(6);
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
+    m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
+}
+
+bool SpeedItem::OnInteract(std::shared_ptr<Player>& player) {
+    player->ActivateSpeedBoost(); // 啟動 5 秒計時器
+    LOG_INFO("Player picked up SPEED_UP! (Temporary 5s boost)");
+    return true;
 }

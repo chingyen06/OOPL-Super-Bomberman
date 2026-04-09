@@ -9,9 +9,17 @@
 #include "Util/Logger.hpp"
 
 class Player;
+class InteractableFactory;
+
+struct LootEntry {
+    int weight; // 掉落權重
+    std::shared_ptr<InteractableFactory> factory;
+};
 
 class InteractableManager {
 public:
+    InteractableManager();
+
     void AddKey(int gridX, int gridY);
     void AddChest(int gridX, int gridY);
 
@@ -32,6 +40,12 @@ public:
 
     std::vector<bool> GetChestStatusList() const;
 
+    std::vector<std::shared_ptr<Interactable>>& GetInteractables() { return m_Interactables; }
+
+    void RemoveItem(std::vector<std::shared_ptr<Interactable>>::iterator& it, Util::Renderer& root);
+
+    void OnBrickDestroyed(int gridX, int gridY, Util::Renderer& root);
+
 private:
     /*std::vector<std::shared_ptr<Key>> m_Keys;
     std::vector<std::shared_ptr<Chest>> m_Chests;*/
@@ -39,6 +53,8 @@ private:
     std::vector<std::shared_ptr<Interactable>> m_Interactables;
     std::vector<bool> m_ChestStatusCache;  // 內部快取
     void UpdateChestStatusCache();
+
+	std::vector<LootEntry> m_LootTable;  // 掉落表
 };
 
 #endif

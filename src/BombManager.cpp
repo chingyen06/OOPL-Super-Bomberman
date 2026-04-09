@@ -57,6 +57,15 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
             m_Explosions.push_back(centerFire);
             root.AddChild(centerFire);
 
+            // 物件燒毀判定 (如果放在生物那會造成剛生成就銷毀)
+            auto& interactables = interactableManager.GetInteractables();
+            for (auto itI = interactables.begin(); itI != interactables.end(); ) {
+                if ((*itI)->GetGridX() == bx && (*itI)->GetGridY() == by && (*itI)->IsDestroyedByFire()) {
+                    interactableManager.RemoveItem(itI, root);
+                }
+                else { ++itI; }
+            }
+
             // 火焰延伸
             int dx[] = { 0, 0, -1, 1 };
             int dy[] = { -1, 1, 0, 0 };
@@ -75,7 +84,8 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                             root.AddChild(fire);
 
                             // 破壞磚塊
-                            levelManager.DestroyBrick(targetX, targetY, root);
+                            levelManager.DestroyBrick(targetX, targetY, root, interactableManager);
+
                         }
 
                         break;

@@ -1,6 +1,13 @@
+#include <random>
 #include "InteractableManager.hpp"
 #include "Player.hpp"
 #include "Util/Logger.hpp"
+
+InteractableManager::InteractableManager() {
+    // 70 的權重掉落空氣，30 的權重掉落加速鞋
+    m_LootTable.push_back({ 70, std::make_shared<EmptyDropFactory>() });
+    m_LootTable.push_back({ 30, std::make_shared<SpeedItemFactory>() });
+}
 
 void InteractableManager::AddKey(int gridX, int gridY) {
     auto key = std::make_shared<Key>(gridX, gridY);
@@ -27,7 +34,7 @@ void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, 
             if (player->IsDead())
                 continue;
 
-            if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY() && player->GetTeam() == Team::ATTACKER) {
+            if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY()) {
 
                 if (item->OnInteract(player)) {
                     root.RemoveChild(item);
@@ -116,6 +123,37 @@ void InteractableManager::UpdateChestStatusCache() {
     for (const auto& item : m_Interactables) {
         if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
             m_ChestStatusCache.push_back(chest->IsOpened());
+        }
+    }
+}
+
+void InteractableManager::RemoveItem(std::vector<std::shared_ptr<Interactable>>::iterator& it, Util::Renderer& root) {
+    root.RemoveChild(*it);
+    it = m_Interactables.erase(it);
+}
+
+void InteractableManager::OnBrickDestroyed(int gridX, int gridY, Util::Renderer& root) {
+    int totalWeight = 0;
+    for (const auto& entry : m_LootTable) {
+        totalWeight += entry.weight;
+    }
+
+    // 亂數引擎
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(1, totalWeight);
+    int roll = dist(gen);
+
+    // 隨機抽
+    for (const auto& entry : m_LootTable) {
+        roll -= entry.weight;
+        if (roll <= 0) {
+            auto item = entry.factory->Create(gridX, gridY);
+            if (item != nullptr) {
+                m_Interactables.push_back(item);
+                root.AddChild(item);
+            }
+            break;
         }
     }
 }

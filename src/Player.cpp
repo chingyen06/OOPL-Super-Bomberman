@@ -35,6 +35,14 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     float nextY = m_Pos.y;
     //bool moved = false;
 
+    if (m_SpeedBoostTimer > 0) {
+        m_SpeedBoostTimer--;
+		speed = 5.0f;  // 速度提升
+    }
+    else {
+		speed = 3.0f;
+    }
+
     if (m_IsDead) {
         if (m_DeathCountdown > 0) {
             m_DeathCountdown--;

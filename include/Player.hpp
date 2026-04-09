@@ -65,6 +65,8 @@ public:
 
     int GetPlayerID() const { return m_PlayerID; };
 
+    void ActivateSpeedBoost() { m_SpeedBoostTimer = 300;}
+
 private:
     int m_GridX;
     int m_GridY;
@@ -80,7 +82,6 @@ private:
 
     void ChangeDirection(Direction dir);
 
-    //bool IsColliding(float nextX, float nextY, const LevelManager& levelManager);  // 確認是否可以移動
     // 確認是否可以移動
     bool IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
 
@@ -90,8 +91,6 @@ private:
     int m_CurrentBombs = 0;    // 當前場上炸彈數量
 
 	// 暫時忽略的炸彈座標
-    // int m_IgnoreBombX = -1;
-    // int m_IgnoreBombY = -1;
     std::vector<std::pair<int, int>> m_IgnoreBombs;
 
     int m_Invincible = -1;  // 無敵時間
@@ -107,6 +106,8 @@ private:
     int m_RespawnTimer = -1;
 
     int m_PlayerID;
+
+	int m_SpeedBoostTimer = -1;  // 速度提升計時器
 };
 
 #endif

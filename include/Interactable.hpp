@@ -15,6 +15,7 @@ public:
     virtual int GetGridY() const = 0;
 
     virtual bool IsBlocksFire() const = 0;
+    virtual bool IsDestroyedByFire() const = 0;
 
     virtual bool OnInteract(std::shared_ptr<Player>& player) = 0;
 };
@@ -27,6 +28,7 @@ public:
     int GetGridY() const { return m_GridY; }
 
     bool IsBlocksFire() const override { return false; }
+    bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
 
@@ -44,6 +46,7 @@ public:
     bool IsOpened() const { return m_Opened; }
 
     bool IsBlocksFire() const override { return true; }
+    bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
 
@@ -56,6 +59,52 @@ private:
 
     std::shared_ptr<Util::Image> m_ClosedImage;
     std::shared_ptr<Util::Image> m_OpenedImage;
+};
+
+// 道具
+class PowerUp : public Interactable {
+public:
+    PowerUp(int gridX, int gridY);
+    int GetGridX() const override { return m_GridX; }
+    int GetGridY() const override { return m_GridY; }
+
+    // 道具不會擋火，但會被火燒毀
+    bool IsBlocksFire() const override { return false; }
+    bool IsDestroyedByFire() const override { return true; }
+
+protected:
+    int m_GridX;
+    int m_GridY;
+};
+
+// 加速鞋道具
+class SpeedItem : public PowerUp {
+public:
+    SpeedItem(int gridX, int gridY);
+    bool OnInteract(std::shared_ptr<Player>& player) override;
+};
+
+// Factory Pattern for Interactables
+class InteractableFactory {
+public:
+    virtual ~InteractableFactory() = default;
+    virtual std::shared_ptr<Interactable> Create(int gridX, int gridY) = 0;
+};
+
+// 加速鞋
+class SpeedItemFactory : public InteractableFactory {
+public:
+    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
+        return std::make_shared<SpeedItem>(gridX, gridY);
+    }
+};
+
+// 空氣
+class EmptyDropFactory : public InteractableFactory {
+public:
+    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
+        return nullptr; // 什麼都不掉
+    }
 };
 
 #endif

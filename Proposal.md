@@ -39,13 +39,13 @@
 - Week 5：傷害判定與地形破壞
   - [x] 設計不同方塊遭爆炸波及的反應
   - [x] 設計角色的死亡機制（爆炸波及）
-  - [ ] 設計破壞方塊後的道具隨機掉落機制（低重要性：視開發進度遞延）
+  - [x] 設計破壞方塊後的道具隨機掉落機制（低重要性：視開發進度遞延）
 - Week 6：角色重生
   - [x] 設計死亡判定與重生機制
 - Week 7：城堡模式核心機制
   - [x] 設計鑰匙與寶箱互動機制
   - [x] 設計死亡鑰匙掉落機制
-  - [ ] 設計道具拾取與角色狀態強化機制（低重要性：視開發進度遞延）
+  - [x] 設計道具拾取與角色狀態強化機制（低重要性：視開發進度遞延）
 - Week 8：遊戲關卡切換
   - [x] 設計勝利條件判定（倒計時結束 vs 箱子已全部開啟）
   - [x] 設計過關畫面
@@ -88,6 +88,7 @@
 │   ├── LevelManager                # 關卡與地圖管理 (載入、破壞、碰撞查詢)
 │   ├── BombManager                 # 炸彈管理 (生成、爆炸範圍計算、傷害判定)
 │   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
+│   └── UIManager                   # 遊戲介面管理
 │
 └── Util::GameObject
      │
@@ -100,7 +101,9 @@
      │
      ├── Interactable                # 互動物件
      │   ├── Key                         # 鑰匙
-     │   └── Chest                       # 寶箱
+     │   ├── Chest                       # 寶箱
+     │   └── PowerUp                     # 掉落道具
+     │          └── SpeedItem               # 加速鞋道具
      │
      ├── Bomb                        # 炸彈
      └── Explosion                   # 火焰
@@ -151,6 +154,7 @@ classDiagram
     class GameObject["Util::GameObject"]
     class Interactable
     class Tile
+    class PowerUp
 
     GameObject <|-- Player
     GameObject <|-- Bomb
@@ -167,6 +171,9 @@ classDiagram
     GameObject <|-- Interactable
     Interactable <|-- Key
     Interactable <|-- Chest
+    Interactable <|-- PowerUp
+    
+    PowerUp <|-- SpeedItem
 ```
 
 ### 介面
@@ -174,6 +181,24 @@ classDiagram
 classDiagram
     direction TB
 
+    %% --- 系統聚合與依賴關係 ---
+    App *-- LevelManager
+    App *-- BombManager
+    App *-- InteractableManager
+    App *-- UIManager
+    App o-- Player : manages
+
+    Player ..> BombManager : Accesses
+    Player ..> LevelManager : Accesses
+    Player ..> InteractableManager : Accesses
+
+    UIManager ..> InteractableManager : Accesses
+    
+    BombManager o-- Bomb : manages
+    LevelManager o-- Tile : manages
+    InteractableManager o-- Interactable : manages
+
+    %% --- 管理層 (Managers) ---
     class App {
         -State m_CurrentState
         -GameState m_GameState
@@ -197,7 +222,7 @@ classDiagram
         +Clear(root)
         +IsWalkable(gridX, gridY) bool
         +IsBrick(gridX, gridY) bool
-        +DestroyBrick(gridX, gridY, root)
+        +DestroyBrick(gridX, gridY, root, interactableManager)
         +GetDefenderSpawn() pair~int, int~
         +GetAttackerSpawns() vector~pair~int, int~~
     }
@@ -214,10 +239,11 @@ classDiagram
     class InteractableManager {
         -vector~shared_ptr~Interactable~~ m_Interactables
         -vector~bool~ m_ChestStatusCache
+        -vector~LootEntry~ m_LootTable
         -UpdateChestStatusCache()
+        +InteractableManager()
         +AddKey(gridX, gridY)
         +AddChest(gridX, gridY)
-        +AddDynamicItem(item, root)
         +DropKey(gridX, gridY, root)
         +Update(players, root)
         +Clear(root)
@@ -226,7 +252,10 @@ classDiagram
         +BlocksFireAt(gridX, gridY) bool
         +IsAllChestOpened() bool
         +GetTotalChestCount() int
-        +GetChestStatusList() const vector~bool~&
+        +GetChestStatusList() vector~bool~
+        +GetInteractables() vector~shared_ptr~Interactable~~&
+        +RemoveItem(iterator, root)
+        +OnBrickDestroyed(gridX, gridY, root)
     }
 
     class UIManager {
@@ -242,6 +271,7 @@ classDiagram
         +Clear(root)
     }
 
+    %% --- 實體層 (Entities) ---
     class Player {
         -int m_PlayerID
         -Team m_Team
@@ -249,7 +279,7 @@ classDiagram
         -int m_GridY
         -int m_MaxBombs
         -int m_CurrentBombs
-        -int m_Firepower
+        -int m_SpeedBoostTimer
         -bool m_IsDead
         -bool m_HasKey
         +Update(levelManager, bombManager, interactableManager)
@@ -257,12 +287,11 @@ classDiagram
         +Respawn()
         +AddBombCount()
         +DecBombCount()
-        +AddMaxBomb()
-        +AddFirepower()
         +CanPlaceBomb() bool
         +GetPlayerID() int
         +HasKey() bool
         +SetKey() bool
+        +ActivateSpeedBoost()
     }
 
     class Bomb {
@@ -276,19 +305,14 @@ classDiagram
         +GetOwnerID() int
     }
 
+    %% --- 多型繼承樹與工廠模式 ---
     class Tile {
         <<interface>>
         +IsPassable()* bool
     }
-    class Ground {
-        +IsPassable() true
-    }
-    class Wall {
-        +IsPassable() false
-    }
-    class Brick {
-        +IsPassable() false
-    }
+    class Ground { +IsPassable() true }
+    class Wall { +IsPassable() false }
+    class Brick { +IsPassable() false }
     Tile <|-- Ground
     Tile <|-- Wall
     Tile <|-- Brick
@@ -298,10 +322,12 @@ classDiagram
         +GetGridX()* int
         +GetGridY()* int
         +IsBlocksFire()* bool
+        +IsDestroyedByFire()* bool
         +OnInteract(player)* bool
     }
     class Key {
         +IsBlocksFire() false
+        +IsDestroyedByFire() false
         +OnInteract(player) bool
     }
     class Chest {
@@ -309,44 +335,38 @@ classDiagram
         +Open()
         +IsOpened() bool
         +IsBlocksFire() true
+        +IsDestroyedByFire() false
         +OnInteract(player) bool
     }
     class PowerUp {
         <<abstract>>
         #m_GridX int
         #m_GridY int
-        +GetGridX() int
-        +GetGridY() int
         +IsBlocksFire() false
+        +IsDestroyedByFire() true
     }
-    class FirepowerItem {
+    class SpeedItem {
         +OnInteract(player) bool
     }
-    class BombItem {
-        +OnInteract(player) bool
-    }
-
     Interactable <|-- Key
     Interactable <|-- Chest
     Interactable <|-- PowerUp
-    PowerUp <|-- FirepowerItem
-    PowerUp <|-- BombItem
+    PowerUp <|-- SpeedItem
 
-    App *-- LevelManager
-    App *-- BombManager
-    App *-- InteractableManager
-    App *-- UIManager
-    App o-- Player : manages
-
-    Player ..> BombManager : Accesses
-    Player ..> LevelManager : Accesses
-    Player ..> InteractableManager : Accesses
-
-    UIManager ..> InteractableManager : Accesses
+    class InteractableFactory {
+        <<interface>>
+        +Create(gridX, gridY)* shared_ptr~Interactable~
+    }
+    class SpeedItemFactory {
+        +Create(gridX, gridY) shared_ptr~Interactable~
+    }
+    class EmptyDropFactory {
+        +Create(gridX, gridY) shared_ptr~Interactable~
+    }
+    InteractableFactory <|-- SpeedItemFactory
+    InteractableFactory <|-- EmptyDropFactory
     
-    BombManager o-- Bomb : manages
-    LevelManager o-- Tile : manages
-    InteractableManager o-- Interactable : manages
+    InteractableManager o-- InteractableFactory : uses
 ```
 
 ### 圖層
@@ -357,7 +377,7 @@ classDiagram
 | **20** | **玩家** | `Player` |
 | **15** | **無敵牆** | `Wall` |
 | **10** | **火焰** | `Explosion` |
-| **6** | **鑰匙** | `Key` |
+| **6** | **鑰匙、加速鞋** | `Key`, `SpeedItem` |
 | **5** | **寶箱、磚塊** | `Chest`, `Brick` |
 | **4** | **炸彈** | `Bomb` |
 | **1** | **草地** | `Ground` |

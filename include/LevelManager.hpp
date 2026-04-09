@@ -18,7 +18,7 @@ public:
     void DetachFromRoot(Util::Renderer& root);
     bool IsWalkable(int gridX, int gridY) const;  // 琩高琌簿笆 (gridX, gridY)
 	bool IsBrick(int gridX, int gridY) const;  // 琩高 (gridX, gridY) 琌縥遏
-	void DestroyBrick(int gridX, int gridY, Util::Renderer& root);  // 篟反 (gridX, gridY) 縥遏
+	void DestroyBrick(int gridX, int gridY, Util::Renderer& root, InteractableManager& interactableManager);  // 篟反 (gridX, gridY) 縥遏
 	void Clear(Util::Renderer& root);
 
     std::pair<int, int> GetDefenderSpawn() const { return m_DefenderSpawn; }

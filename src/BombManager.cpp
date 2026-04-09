@@ -57,15 +57,6 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
             m_Explosions.push_back(centerFire);
             root.AddChild(centerFire);
 
-            // ン縉反﹚ (狦ネê穦硑ΘネΘ碞綪反)
-            auto& interactables = interactableManager.GetInteractables();
-            for (auto itI = interactables.begin(); itI != interactables.end(); ) {
-                if ((*itI)->GetGridX() == bx && (*itI)->GetGridY() == by && (*itI)->IsDestroyedByFire()) {
-                    interactableManager.RemoveItem(itI, root);
-                }
-                else { ++itI; }
-            }
-
             // 礙┑
             int dx[] = { 0, 0, -1, 1 };
             int dy[] = { -1, 1, 0, 0 };
@@ -76,7 +67,6 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                     int targetY = by + dy[dir] * step;
 
                     if (!levelManager.IsWalkable(targetX, targetY)) {
-
                         if (levelManager.IsBrick(targetX, targetY)) {
                             // 縥遏ま脄刮礙
                             auto fire = std::make_shared<Explosion>(targetX, targetY);
@@ -89,6 +79,15 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                         }
 
                         break;
+                    }
+
+                    // ン縉反﹚ (狦ネê穦硑ΘネΘ碞綪反)
+                    auto& interactables = interactableManager.GetInteractables();
+                    for (auto itI = interactables.begin(); itI != interactables.end(); ) {
+                        if ((*itI)->GetGridX() == targetX && (*itI)->GetGridY() == targetY && (*itI)->IsDestroyedByFire()) {
+                            interactableManager.RemoveItem(itI, root);
+                        }
+                        else { ++itI; }
                     }
 
                     auto fire = std::make_shared<Explosion>(targetX, targetY);

@@ -105,7 +105,10 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         size_t loopSize = std::min(chestStatus.size(), m_ChestPool.size());
 
         for (size_t i = 0; i < loopSize; i++) {
-            if (chestStatus[i]) {
+            bool wasOpened = (m_LastChestStatus.size() > i) ? m_LastChestStatus[i] : false;
+            bool isOpened = chestStatus[i];
+
+            if (isOpened && !wasOpened) {
                 auto openedImg = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
                 m_ChestPool[i]->SetDrawable(openedImg);
             }

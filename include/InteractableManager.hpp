@@ -37,6 +37,8 @@ private:
     std::vector<std::shared_ptr<Chest>> m_Chests;*/
 
     std::vector<std::shared_ptr<Interactable>> m_Interactables;
+    std::vector<bool> m_ChestStatusCache;  // 內部快取
+    void UpdateChestStatusCache();
 };
 
 #endif

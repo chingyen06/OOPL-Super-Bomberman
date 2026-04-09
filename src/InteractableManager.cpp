@@ -42,6 +42,8 @@ void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, 
             ++it;
         }
     }
+
+    UpdateChestStatusCache();
 }
 
 void InteractableManager::Clear(Util::Renderer& root) {
@@ -107,4 +109,13 @@ std::vector<bool> InteractableManager::GetChestStatusList() const {
         }
     }
     return statusList;
+}
+
+void InteractableManager::UpdateChestStatusCache() {
+    m_ChestStatusCache.clear(); // 保留 Capacity 的高效清空
+    for (const auto& item : m_Interactables) {
+        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
+            m_ChestStatusCache.push_back(chest->IsOpened());
+        }
+    }
 }

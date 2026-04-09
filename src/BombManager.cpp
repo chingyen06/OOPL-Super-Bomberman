@@ -12,11 +12,15 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
     int targetX = player->GetGridX();
     int targetY = player->GetGridY();
 
+    float bombPixelX = (targetX - 12) * 32.0f;
+    float bombPixelY = (8 - targetY) * 32.0f;
+
     for (const auto& p : players) {
-        if (p->GetGridX() == targetX && p->GetGridY() == targetY && p->GetPlayerID() != player->GetPlayerID()) {
-            LOG_INFO("Cannot place bomb: Another player is on the same tile.");
-            return;  // 不能放炸彈，因為有其他玩家在同一格
-		}
+        if (p->GetPlayerID() == player->GetPlayerID() || p->IsDead()) continue;
+        if (std::abs(p->GetPixelPos().x - bombPixelX) < 25.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 25.0f) {
+            LOG_INFO("Cannot place bomb: Another player is occupying the grid.");
+            return;
+        }
     }
 
     // 檢查目標位置是否是草地且沒有其他炸彈
@@ -27,7 +31,12 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
         player->AddBombCount(); // 增加計數
 
-        player->SetIgnoreBomb(targetX, targetY);  // 放置後暫時忽略這格子，避免卡住
+        for (const auto& p : players) {  // 放置後暫時忽略這格子，避免卡住
+            if (p->IsDead()) continue;
+            if (std::abs(p->GetPixelPos().x - bombPixelX) < 25.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 25.0f) {
+                p->SetIgnoreBomb(targetX, targetY);
+            }
+        }
 
         LOG_INFO("Bomb placed at (" + std::to_string(targetX) + ", " + std::to_string(targetY) + ")");
     }

@@ -1,5 +1,7 @@
 #include "App.hpp"
-
+#include <algorithm>
+#include <random>
+#include <chrono>
 #include "Util/Image.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
@@ -33,6 +35,14 @@ void App::LoadLevel(int levelIndex) {
     int totalChests = m_InteractableManager.GetTotalChestCount();  // 取得寶箱總數
     m_UIManager.Init(m_Root, totalChests);
 
+    // 出生點
+    auto defSpawn = m_LevelManager.GetDefenderSpawn();
+    auto atkSpawns = m_LevelManager.GetAttackerSpawns();
+    // 隨機洗牌
+    static std::random_device rd;
+    static std::mt19937 g(rd());   // Mersenne Twister
+    std::shuffle(atkSpawns.begin(), atkSpawns.end(), g);
+
     Control ctrl1P = {
         Util::Keycode::W, 
         Util::Keycode::S,
@@ -49,11 +59,11 @@ void App::LoadLevel(int levelIndex) {
         Util::Keycode::KP_ENTER
     };
 
-    auto p1 = std::make_shared<Player>(1, 1, Team::DEFENDER, ctrl1P, 0);
+    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, ctrl1P, 0);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 
-    auto p2 = std::make_shared<Player>(23, 15, Team::ATTACKER, ctrl2P, 1);
+    auto p2 = std::make_shared<Player>(atkSpawns[0].first, atkSpawns[0].second, Team::ATTACKER, ctrl2P, 1);
     m_Players.push_back(p2);
     m_Root.AddChild(p2);
 

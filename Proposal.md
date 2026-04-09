@@ -189,6 +189,8 @@ classDiagram
     class LevelManager {
         -vector~shared_ptr~Tile~~ m_Tiles
         -vector~vector~shared_ptr~Tile~~~ m_TileGrid
+        -pair~int, int~ m_DefenderSpawn
+        -vector~pair~int, int~~ m_AttackerSpawns
         +LoadLevel(filepath, interactableManager)
         +AttachToRoot(root)
         +DetachFromRoot(root)
@@ -196,6 +198,8 @@ classDiagram
         +IsWalkable(gridX, gridY) bool
         +IsBrick(gridX, gridY) bool
         +DestroyBrick(gridX, gridY, root)
+        +GetDefenderSpawn() pair~int, int~
+        +GetAttackerSpawns() vector~pair~int, int~~
     }
 
     class BombManager {
@@ -213,6 +217,7 @@ classDiagram
         -UpdateChestStatusCache()
         +AddKey(gridX, gridY)
         +AddChest(gridX, gridY)
+        +AddDynamicItem(item, root)
         +DropKey(gridX, gridY, root)
         +Update(players, root)
         +Clear(root)
@@ -244,6 +249,7 @@ classDiagram
         -int m_GridY
         -int m_MaxBombs
         -int m_CurrentBombs
+        -int m_Firepower
         -bool m_IsDead
         -bool m_HasKey
         +Update(levelManager, bombManager, interactableManager)
@@ -251,6 +257,8 @@ classDiagram
         +Respawn()
         +AddBombCount()
         +DecBombCount()
+        +AddMaxBomb()
+        +AddFirepower()
         +CanPlaceBomb() bool
         +GetPlayerID() int
         +HasKey() bool
@@ -303,9 +311,26 @@ classDiagram
         +IsBlocksFire() true
         +OnInteract(player) bool
     }
+    class PowerUp {
+        <<abstract>>
+        #m_GridX int
+        #m_GridY int
+        +GetGridX() int
+        +GetGridY() int
+        +IsBlocksFire() false
+    }
+    class FirepowerItem {
+        +OnInteract(player) bool
+    }
+    class BombItem {
+        +OnInteract(player) bool
+    }
+
     Interactable <|-- Key
     Interactable <|-- Chest
-
+    Interactable <|-- PowerUp
+    PowerUp <|-- FirepowerItem
+    PowerUp <|-- BombItem
 
     App *-- LevelManager
     App *-- BombManager

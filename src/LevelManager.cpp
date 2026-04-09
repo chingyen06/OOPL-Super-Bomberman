@@ -15,22 +15,14 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
     m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
 
     m_Tiles.clear();
+    m_AttackerSpawns.clear();
+
     for (int y=0;y<17;y++) {
         for (int x=0;x<25;x++) {
             char type; 
             file >> type;
 
-            // m_MapData[y][x] = type;  // 存地圖方塊
             std::shared_ptr<Tile> tile;  // 這個地圖方塊
-            
-            //m_Tiles.push_back(std::make_shared<Ground>(x, y));  // 鋪設草地
-            //
-            //if (type == '1') {  // 鋪設無敵牆
-            //    m_Tiles.push_back(std::make_shared<Wall>(x, y));
-            //}
-            //else if (type == '2') {  // 鋪設磚塊
-            //    m_Tiles.push_back(std::make_shared<Brick>(x, y));
-            //}
 
             if (type == '1') {  // 鋪設無敵牆
                 tile = std::make_shared<Wall>(x, y);
@@ -46,6 +38,12 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
                 }
                 else if (type == '9') {   // 寶箱
                     interactableManager.AddChest(x, y); // 生成寶箱
+                }
+                else if (type == 'F') {
+                    m_DefenderSpawn = { x, y };
+                }
+                else if (type == 'A') {
+                    m_AttackerSpawns.push_back({ x, y });
                 }
             }
 

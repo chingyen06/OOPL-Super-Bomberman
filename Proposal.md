@@ -123,6 +123,11 @@
 │   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
 │   ├── UIManager                   # 遊戲介面管理 (Week 10 預定：計時器、鑰匙提示)
 │   └── AIManager                   # AI 管理 (Week 12 預定：尋路演算法與躲避邏輯)
+│I
+├── InteractableFactory 	        # 互動物件工廠
+│   ├── SpeedItemFactory            # 加速鞋道具工廠
+│   ├── BombItemFactory             # 炸彈道具工廠
+│   └── EmptyDropFactory            # 空掉落工廠 (沒有道具掉落)
 │
 └── Util::GameObject             # PTSD 中的遊戲物件
      │
@@ -405,7 +410,7 @@ classDiagram
 | **20** | **玩家** | `Player` |
 | **15** | **無敵牆** | `Wall` |
 | **10** | **火焰** | `Explosion` |
-| **6** | **鑰匙、加速鞋** | `Key`, `SpeedItem` |
+| **6** | **鑰匙、加速鞋、炸彈道具** | `Key`, `SpeedItem`, `BombItem` |
 | **5** | **寶箱、磚塊** | `Chest`, `Brick` |
 | **4** | **炸彈** | `Bomb` |
 | **1** | **草地** | `Ground` |

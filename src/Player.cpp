@@ -261,6 +261,7 @@ void Player::Respawn() {
     m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
     m_IsDead = false;
     m_CurrentBombs = 0;
+    m_MaxBombs = 3;
     SetVisible(true);
 
     m_Invincible = 180;  // 無敵時間
@@ -275,4 +276,11 @@ void Player::Kill() {
     m_DeathCountdown = 30;
 
     LOG_INFO("Player died");
+}
+
+void Player::IncreaseMaxBombs() {
+    if (m_MaxBombs < 10) {
+        m_MaxBombs++;
+        LOG_INFO("Player's max bombs increased to " + std::to_string(m_MaxBombs));
+	}
 }

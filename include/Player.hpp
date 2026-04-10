@@ -67,6 +67,8 @@ public:
 
     void ActivateSpeedBoost() { m_SpeedBoostTimer = 300;}
 
+    void IncreaseMaxBombs();
+
     // AI
     void SetBot(bool isBot) { m_IsBot = isBot; }
     bool IsBot() const { return m_IsBot; }

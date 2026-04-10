@@ -72,3 +72,17 @@ bool SpeedItem::OnInteract(std::shared_ptr<Player>& player) {
     LOG_INFO("Player picked up SPEED_UP! (Temporary 5s boost)");
     return true;
 }
+
+BombItem::BombItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
+    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_bombup.png");
+    SetDrawable(image);
+    SetZIndex(6);
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
+    m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
+}
+
+bool BombItem::OnInteract(std::shared_ptr<Player>& player) {
+    player->IncreaseMaxBombs();
+    LOG_INFO("Player picked up BOMB_UP! Max bombs increased to " + std::to_string(player->CanPlaceBomb()));
+    return true;
+}

@@ -119,7 +119,7 @@ std::vector<bool> InteractableManager::GetChestStatusList() const {
 }
 
 void InteractableManager::UpdateChestStatusCache() {
-    m_ChestStatusCache.clear(); // 保留 Capacity 的高效清空
+    m_ChestStatusCache.clear();
     for (const auto& item : m_Interactables) {
         if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
             m_ChestStatusCache.push_back(chest->IsOpened());
@@ -138,7 +138,7 @@ void InteractableManager::OnBrickDestroyed(int gridX, int gridY, Util::Renderer&
         totalWeight += entry.weight;
     }
 
-    // 亂數引擎
+    // 亂數
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(1, totalWeight);

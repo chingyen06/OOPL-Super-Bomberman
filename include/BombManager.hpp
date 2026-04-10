@@ -18,6 +18,7 @@ public:
     void Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players);
     void Clear(Util::Renderer& root);
     bool IsBombAt(int gridX, int gridY) const;
+    bool HasExplosionAt(int gridX, int gridY) const;
 
 private:
     std::vector<std::shared_ptr<Bomb>> m_Bombs;

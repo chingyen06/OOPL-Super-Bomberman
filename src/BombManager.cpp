@@ -161,3 +161,10 @@ bool BombManager::IsBombAt(int gridX, int gridY) const {
     }
     return false;
 }
+
+bool BombManager::HasExplosionAt(int gridX, int gridY) const {
+    for (const auto& e : m_Explosions) {
+        if (e->GetGridX() == gridX && e->GetGridY() == gridY) return true;
+    }
+    return false;
+}

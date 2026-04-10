@@ -66,20 +66,32 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     float centerX = (m_GridX - 12) * 32.0f;
     float centerY = (8 - m_GridY) * 32.0f;
 
-    if (Util::Input::IsKeyPressed(m_Control.UP)) {
+    bool isUpPressed = Util::Input::IsKeyPressed(m_Control.UP);
+    bool isDownPressed = Util::Input::IsKeyPressed(m_Control.DOWN);
+    bool isLeftPressed = Util::Input::IsKeyPressed(m_Control.LEFT);
+    bool isRightPressed = Util::Input::IsKeyPressed(m_Control.RIGHT);
+
+    if (m_IsBot) {
+        isUpPressed = m_BotUp;
+        isDownPressed = m_BotDown;
+        isLeftPressed = m_BotLeft;
+        isRightPressed = m_BotRight;
+    }
+
+    if (isUpPressed) {
         dy += speed;
         ChangeDirection(Direction::UP);
     }
-    else if (Util::Input::IsKeyPressed(m_Control.DOWN)) {
+    else if (isDownPressed) {
         dy -= speed;
         ChangeDirection(Direction::DOWN);
     }
 
-    if (Util::Input::IsKeyPressed(m_Control.LEFT)) {
+    if (isLeftPressed) {
         dx -= speed;
         ChangeDirection(Direction::LEFT);
     }
-    else if (Util::Input::IsKeyPressed(m_Control.RIGHT)) {
+    else if (isRightPressed) {
         dx += speed;
         ChangeDirection(Direction::RIGHT);
     }
@@ -124,6 +136,19 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         m_GridY = 8 - std::round(m_Pos.y / 32.0f);
 
         if (!m_IgnoreBombs.empty()) {
+            for (auto it = m_IgnoreBombs.begin(); it != m_IgnoreBombs.end(); ) {
+                float bombPixelX = (it->first - 12) * 32.0f;
+                float bombPixelY = (8 - it->second) * 32.0f;
+
+                if (std::abs(m_Pos.x - bombPixelX) >= 40.0f || std::abs(m_Pos.y - bombPixelY) >= 40.0f) {
+                    it = m_IgnoreBombs.erase(it);
+                }
+                else {
+                    ++it;
+                }
+            }
+        }
+        /*if (!m_IgnoreBombs.empty()) {
             float radius = 9.0f;
             auto getGX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
             auto getGY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
@@ -147,7 +172,7 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
                     ++it;
                 }
             }
-        }
+        }*/
     }
 
     // 無敵時間

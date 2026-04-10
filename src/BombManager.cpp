@@ -17,7 +17,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
     for (const auto& p : players) {
         if (p->GetPlayerID() == player->GetPlayerID() || p->IsDead()) continue;
-        if (std::abs(p->GetPixelPos().x - bombPixelX) < 25.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 25.0f) {
+        if (std::abs(p->GetPixelPos().x - bombPixelX) < 32.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 32.0f) {
             LOG_INFO("Cannot place bomb: Another player is occupying the grid.");
             return;
         }
@@ -33,7 +33,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
         for (const auto& p : players) {  // 放置後暫時忽略這格子，避免卡住
             if (p->IsDead()) continue;
-            if (std::abs(p->GetPixelPos().x - bombPixelX) < 25.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 25.0f) {
+            if (std::abs(p->GetPixelPos().x - bombPixelX) < 40.0f && std::abs(p->GetPixelPos().y - bombPixelY) < 40.0f) {
                 p->SetIgnoreBomb(targetX, targetY);
             }
         }

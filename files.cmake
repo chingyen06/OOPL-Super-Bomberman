@@ -9,6 +9,7 @@ set(SRC_FILES
     InteractableManager.cpp
     Interactable.cpp
     UIManager.cpp
+    AIManager.cpp
 )
 
 set(INCLUDE_FILES
@@ -24,6 +25,7 @@ set(INCLUDE_FILES
     Interactable.hpp
     ScreenImage.hpp
     UIManager.hpp
+    AIManager.hpp
 )
 
 set(TEST_FILES

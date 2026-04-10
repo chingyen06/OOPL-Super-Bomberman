@@ -67,6 +67,14 @@ public:
 
     void ActivateSpeedBoost() { m_SpeedBoostTimer = 300;}
 
+    // AI
+    void SetBot(bool isBot) { m_IsBot = isBot; }
+    bool IsBot() const { return m_IsBot; }
+    void SetBotInput(bool up, bool down, bool left, bool right, bool placeBomb) {
+        m_BotUp = up; m_BotDown = down; m_BotLeft = left; m_BotRight = right; m_BotPlaceBomb = placeBomb;
+    }
+    bool IsBotPlaceBomb() const { return m_BotPlaceBomb; }
+
 private:
     int m_GridX;
     int m_GridY;
@@ -108,6 +116,14 @@ private:
     int m_PlayerID;
 
 	int m_SpeedBoostTimer = -1;  // 速度提升計時器
+
+    // AI
+    bool m_IsBot = false;
+    bool m_BotUp = false;
+    bool m_BotDown = false;
+    bool m_BotLeft = false;
+    bool m_BotRight = false;
+    bool m_BotPlaceBomb = false;
 };
 
 #endif

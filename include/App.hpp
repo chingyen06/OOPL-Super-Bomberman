@@ -11,6 +11,7 @@
 #include "BombManager.hpp"
 #include "InteractableManager.hpp"
 #include "UIManager.hpp"
+#include "AIManager.hpp"
 
 class App {
 public:
@@ -65,6 +66,8 @@ private:
 	int m_GameTime = -1;  // 遊戲時間
 
 	UIManager m_UIManager;  // 管理 UI 顯示
+
+    AIManager m_AIManager;
 };
 
 #endif

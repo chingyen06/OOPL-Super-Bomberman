@@ -41,6 +41,7 @@ public:
     std::vector<bool> GetChestStatusList() const;
 
     std::vector<std::shared_ptr<Interactable>>& GetInteractables() { return m_Interactables; }
+    const std::vector<std::shared_ptr<Interactable>>& GetInteractables() const { return m_Interactables; }
 
     void RemoveItem(std::vector<std::shared_ptr<Interactable>>::iterator& it, Util::Renderer& root);
 

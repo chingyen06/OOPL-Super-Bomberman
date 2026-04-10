@@ -64,6 +64,7 @@ void App::LoadLevel(int levelIndex) {
     m_Root.AddChild(p1);
 
     auto p2 = std::make_shared<Player>(atkSpawns[0].first, atkSpawns[0].second, Team::ATTACKER, ctrl2P, 1);
+    p2->SetBot(true);
     m_Players.push_back(p2);
     m_Root.AddChild(p2);
 
@@ -114,12 +115,13 @@ void App::Update() {
         m_InteractableManager.Update(m_Players, m_Root);
         auto statusList = m_InteractableManager.GetChestStatusList();
         m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
+        m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager);
 
         for (auto& player : m_Players) {
             player->Update(m_LevelManager, m_BombManager, m_InteractableManager);
 
             if (!player->IsDead()) {
-                if (Util::Input::IsKeyDown(player->GetBombKey())) {
+                if ((player->IsBot() && player->IsBotPlaceBomb()) || (!player->IsBot() && Util::Input::IsKeyDown(player->GetBombKey()))) {
                     m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root, m_Players);
                 }
             }

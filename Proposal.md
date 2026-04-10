@@ -84,11 +84,12 @@
 ├── Core
 │   └── App
 │
-├── Systems                      # 系統層
+├── Systems                         # 系統層
 │   ├── LevelManager                # 關卡與地圖管理 (載入、破壞、碰撞查詢)
 │   ├── BombManager                 # 炸彈管理 (生成、爆炸範圍計算、傷害判定)
 │   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
 │   └── UIManager                   # 遊戲介面管理
+│   └── AIManager                   # AI 決策大腦 (行為樹、泛用型 A*、BFS 求生系統)
 │
 └── Util::GameObject
      │
@@ -103,10 +104,12 @@
      │   ├── Key                         # 鑰匙
      │   ├── Chest                       # 寶箱
      │   └── PowerUp                     # 掉落道具
-     │          └── SpeedItem               # 加速鞋道具
+     │        └── SpeedItem               # 加速鞋道具
      │
      ├── Bomb                        # 炸彈
-     └── Explosion                   # 火焰
+     ├── Explosion                   # 火焰
+     │
+     └── Player                      # 玩家
 ```
 
 # 預定架構
@@ -176,7 +179,7 @@ classDiagram
     PowerUp <|-- SpeedItem
 ```
 
-### 介面
+# 介面
 ```mermaid
 classDiagram
     direction TB
@@ -186,6 +189,7 @@ classDiagram
     App *-- BombManager
     App *-- InteractableManager
     App *-- UIManager
+    App *-- AIManager
     App o-- Player : manages
 
     Player ..> BombManager : Accesses
@@ -193,8 +197,14 @@ classDiagram
     Player ..> InteractableManager : Accesses
 
     UIManager ..> InteractableManager : Accesses
+
+    AIManager ..> Player : Controls (Virtual Joystick)
+    AIManager ..> LevelManager : Queries
+    AIManager ..> BombManager : Queries
+    AIManager ..> InteractableManager : Queries
     
     BombManager o-- Bomb : manages
+    BombManager o-- Explosion : manages
     LevelManager o-- Tile : manages
     InteractableManager o-- Interactable : manages
 
@@ -209,6 +219,11 @@ classDiagram
         +Update()
         +LoadLevel(levelIndex)
         +End()
+    }
+
+    class AIManager {
+        +Update(players, levelManager, bombManager, interactableManager)
+        -FindPath(startX, startY, targetX, targetY, costFunc) vector~pair~int, int~~
     }
 
     class LevelManager {
@@ -234,6 +249,7 @@ classDiagram
         +Update(levelManager, interactableManager, root, players)
         +Clear(root)
         +IsBombAt(gridX, gridY) bool
+        +HasExplosionAt(gridX, gridY) bool
     }
 
     class InteractableManager {
@@ -282,6 +298,7 @@ classDiagram
         -int m_SpeedBoostTimer
         -bool m_IsDead
         -bool m_HasKey
+        -bool m_IsBot
         +Update(levelManager, bombManager, interactableManager)
         +Kill()
         +Respawn()
@@ -292,6 +309,8 @@ classDiagram
         +HasKey() bool
         +SetKey() bool
         +ActivateSpeedBoost()
+        +SetBot(isBot)
+        +SetBotInput(up, down, left, right, placeBomb)
     }
 
     class Bomb {
@@ -303,6 +322,15 @@ classDiagram
         +Update()
         +ForceDetonate()
         +GetOwnerID() int
+    }
+    
+    class Explosion {
+        -int m_GridX
+        -int m_GridY
+        -int m_Tick
+        -bool m_Done
+        +Update()
+        +IsDone() bool
     }
 
     %% --- 多型繼承樹與工廠模式 ---

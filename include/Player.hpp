@@ -66,8 +66,9 @@ public:
     int GetPlayerID() const { return m_PlayerID; };
 
     void ActivateSpeedBoost() { m_SpeedBoostTimer = 300;}
-
     void IncreaseMaxBombs();
+    int GetFirepower() const { return m_Firepower; }
+    void IncreaseFirepower();
 
     // AI
     void SetBot(bool isBot) { m_IsBot = isBot; }
@@ -118,6 +119,8 @@ private:
     int m_PlayerID;
 
 	int m_SpeedBoostTimer = -1;  // 速度提升計時器
+
+	int m_Firepower = 2;  // 炸彈火力，初始為 2，最大為 5
 
     // AI
     bool m_IsBot = false;

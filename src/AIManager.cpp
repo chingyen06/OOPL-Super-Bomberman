@@ -72,96 +72,100 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
     const auto& interactables = interactableManager.GetInteractables();
 
-    // 致命區域判定 (十字火海預測 + 真實火焰)
-    auto isLethal = [&](int tx, int ty, int pretendX = -1, int pretendY = -1) {
-        if (bombManager.HasExplosionAt(tx, ty)) return true;
-
-        auto checkCross = [&](int bx, int by) {
-            if (tx == bx && ty == by) return true;
-            int dx[] = { 0, 0, -1, 1 };
-            int dy[] = { -1, 1, 0, 0 };
-            for (int dir = 0; dir < 4; dir++) {
-                for (int step = 1; step <= 2; step++) { // 預設火力 2
-                    int cx = bx + dx[dir] * step;
-                    int cy = by + dy[dir] * step;
-                    if (cx == tx && cy == ty) return true;
-                    if (!levelManager.IsWalkable(cx, cy)) break;
-                }
-            }
-            return false;
-            };
-
-        for (int y = 0; y < 17; y++) {
-            for (int x = 0; x < 25; x++) {
-                if (bombManager.IsBombAt(x, y)) {
-                    if (checkCross(x, y)) return true;
-                }
-            }
-        }
-        if (pretendX != -1 && pretendY != -1) {
-            if (checkCross(pretendX, pretendY)) return true;
-        }
-        return false;
-        };
-
-    // BFS 求生預測系統
-    struct SafeSpot { int x, y, dist; bool found; };
-    auto findSafeSpotBFS = [&](int startX, int startY, int pretendBombX = -1, int pretendBombY = -1) -> SafeSpot {
-        if (!isLethal(startX, startY, pretendBombX, pretendBombY)) return { startX, startY, 0, true };
-
-        bool visited[17][25] = { false };
-        std::queue<std::pair<int, int>> q;
-        std::queue<int> dist_q;
-
-        q.push({ startX, startY }); dist_q.push(0);
-        visited[startY][startX] = true;
-        int dx[] = { 0, 0, -1, 1 }; int dy[] = { -1, 1, 0, 0 };
-
-        while (!q.empty()) {
-            auto [cx, cy] = q.front(); q.pop();
-            int dist = dist_q.front(); dist_q.pop();
-
-            if (!isLethal(cx, cy, pretendBombX, pretendBombY)) return { cx, cy, dist, true };
-
-            for (int i = 0; i < 4; i++) {
-                int nx = cx + dx[i]; int ny = cy + dy[i];
-                if (nx >= 0 && nx < 25 && ny >= 0 && ny < 17) {
-                    bool isBomb = bombManager.IsBombAt(nx, ny) || bombManager.HasExplosionAt(nx, ny);
-                    if (nx == pretendBombX && ny == pretendBombY) isBomb = true;
-                    if (!visited[ny][nx] && levelManager.IsWalkable(nx, ny) && (!isBomb || (nx == startX && ny == startY))) {
-                        visited[ny][nx] = true;
-                        q.push({ nx, ny }); dist_q.push(dist + 1);
-                    }
-                }
-            }
-        }
-        return { -1, -1, 999, false };
-        };
-
-    // 移動執行器：嚴格單軸驅動 + 像素對齊防卡死
-    auto ExecuteMove = [&](std::shared_ptr<Player>& bot, int bX, int bY, int nX, int nY, bool placeBomb) {
-        bool up = false, down = false, left = false, right = false;
-        float targetPixelX = (nX - 12) * 32.0f; float targetPixelY = (8 - nY) * 32.0f;
-        glm::vec2 pos = bot->GetPixelPos();
-
-        if (nX != bX) {
-            if (pos.y < targetPixelY - 2.0f) up = true;
-            else if (pos.y > targetPixelY + 2.0f) down = true;
-            else { if (nX > bX) right = true; if (nX < bX) left = true; }
-        }
-        else if (nY != bY) {
-            if (pos.x < targetPixelX - 2.0f) right = true;
-            else if (pos.x > targetPixelX + 2.0f) left = true;
-            else { if (nY > bY) down = true; if (nY < bY) up = true; }
-        }
-        bot->SetBotInput(up, down, left, right, placeBomb);
-        };
-
     for (auto& bot : players) {
         if (!bot->IsBot() || bot->IsDead()) continue;
 
         int botX = bot->GetGridX();
         int botY = bot->GetGridY();
+        int botFirepower = bot->GetFirepower();
+
+        // 致命區域判定 (十字火海預測 + 真實火焰)
+        auto isLethal = [&](int tx, int ty, int pretendX = -1, int pretendY = -1, int pretendFp = 0) {
+            if (bombManager.HasExplosionAt(tx, ty)) return true;
+
+            // 傳入 fp 以判斷不同炸彈的威力
+            auto checkCross = [&](int bx, int by, int fp) {
+                if (tx == bx && ty == by) return true;
+                int dx[] = { 0, 0, -1, 1 };
+                int dy[] = { -1, 1, 0, 0 };
+                for (int dir = 0; dir < 4; dir++) {
+                    for (int step = 1; step <= fp; step++) { // 使用動態火力 fp
+                        int cx = bx + dx[dir] * step;
+                        int cy = by + dy[dir] * step;
+                        if (cx == tx && cy == ty) return true;
+                        if (!levelManager.IsWalkable(cx, cy)) break;
+                    }
+                }
+                return false;
+                };
+
+            for (int y = 0; y < 17; y++) {
+                for (int x = 0; x < 25; x++) {
+                    if (bombManager.IsBombAt(x, y)) {
+                        int bombFp = bombManager.GetFirepowerAt(x, y); // 正確取得地圖上該炸彈的火力
+                        if (checkCross(x, y, bombFp)) return true;
+                    }
+                }
+            }
+            if (pretendX != -1 && pretendY != -1) {
+                if (checkCross(pretendX, pretendY, pretendFp)) return true;
+            }
+            return false;
+            };
+
+        // BFS 求生預測系統
+        struct SafeSpot { int x, y, dist; bool found; };
+        auto findSafeSpotBFS = [&](int startX, int startY, int pretendBombX = -1, int pretendBombY = -1) -> SafeSpot {
+            // 預測時傳入 AI 當前火力
+            if (!isLethal(startX, startY, pretendBombX, pretendBombY, botFirepower)) return { startX, startY, 0, true };
+
+            bool visited[17][25] = { false };
+            std::queue<std::pair<int, int>> q;
+            std::queue<int> dist_q;
+
+            q.push({ startX, startY }); dist_q.push(0);
+            visited[startY][startX] = true;
+            int dx[] = { 0, 0, -1, 1 }; int dy[] = { -1, 1, 0, 0 };
+
+            while (!q.empty()) {
+                auto [cx, cy] = q.front(); q.pop();
+                int dist = dist_q.front(); dist_q.pop();
+
+                if (!isLethal(cx, cy, pretendBombX, pretendBombY, botFirepower)) return { cx, cy, dist, true };
+
+                for (int i = 0; i < 4; i++) {
+                    int nx = cx + dx[i]; int ny = cy + dy[i];
+                    if (nx >= 0 && nx < 25 && ny >= 0 && ny < 17) {
+                        bool isBomb = bombManager.IsBombAt(nx, ny) || bombManager.HasExplosionAt(nx, ny);
+                        if (nx == pretendBombX && ny == pretendBombY) isBomb = true;
+                        if (!visited[ny][nx] && levelManager.IsWalkable(nx, ny) && (!isBomb || (nx == startX && ny == startY))) {
+                            visited[ny][nx] = true;
+                            q.push({ nx, ny }); dist_q.push(dist + 1);
+                        }
+                    }
+                }
+            }
+            return { -1, -1, 999, false };
+            };
+
+        // 移動執行器：嚴格單軸驅動 + 像素對齊防卡死
+        auto ExecuteMove = [&](std::shared_ptr<Player>& bot, int bX, int bY, int nX, int nY, bool placeBomb) {
+            bool up = false, down = false, left = false, right = false;
+            float targetPixelX = (nX - 12) * 32.0f; float targetPixelY = (8 - nY) * 32.0f;
+            glm::vec2 pos = bot->GetPixelPos();
+
+            if (nX != bX) {
+                if (pos.y < targetPixelY - 2.0f) up = true;
+                else if (pos.y > targetPixelY + 2.0f) down = true;
+                else { if (nX > bX) right = true; if (nX < bX) left = true; }
+            }
+            else if (nY != bY) {
+                if (pos.x < targetPixelX - 2.0f) right = true;
+                else if (pos.x > targetPixelX + 2.0f) left = true;
+                else { if (nY > bY) down = true; if (nY < bY) up = true; }
+            }
+            bot->SetBotInput(up, down, left, right, placeBomb);
+            };
 
         // 節點 1：我有危險嗎？ (Survival Override)
         bool inDanger = isLethal(botX, botY);

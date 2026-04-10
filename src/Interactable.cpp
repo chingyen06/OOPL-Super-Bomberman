@@ -86,3 +86,17 @@ bool BombItem::OnInteract(std::shared_ptr<Player>& player) {
     LOG_INFO("Player picked up BOMB_UP! Max bombs increased to " + std::to_string(player->CanPlaceBomb()));
     return true;
 }
+
+FireItem::FireItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
+    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_fireup.png");
+    SetDrawable(image);
+    SetZIndex(6);
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
+    m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
+}
+
+bool FireItem::OnInteract(std::shared_ptr<Player>& player) {
+    player->IncreaseFirepower();
+    LOG_INFO("Player picked up FIRE_UP! Firepower increased to " + std::to_string(player->GetFirepower()));
+    return true;
+}

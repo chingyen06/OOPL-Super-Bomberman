@@ -19,6 +19,7 @@ public:
     void Clear(Util::Renderer& root);
     bool IsBombAt(int gridX, int gridY) const;
     bool HasExplosionAt(int gridX, int gridY) const;
+    int GetFirepowerAt(int gridX, int gridY) const;
 
 private:
     std::vector<std::shared_ptr<Bomb>> m_Bombs;

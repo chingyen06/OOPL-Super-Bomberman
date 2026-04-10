@@ -262,6 +262,7 @@ void Player::Respawn() {
     m_IsDead = false;
     m_CurrentBombs = 0;
     m_MaxBombs = 3;
+    m_Firepower = 2;
     SetVisible(true);
 
     m_Invincible = 180;  // 無敵時間
@@ -282,5 +283,12 @@ void Player::IncreaseMaxBombs() {
     if (m_MaxBombs < 10) {
         m_MaxBombs++;
         LOG_INFO("Player's max bombs increased to " + std::to_string(m_MaxBombs));
+	}
+}
+
+void Player::IncreaseFirepower() {
+    if (m_Firepower < 5) {
+        m_Firepower++;
+        LOG_INFO("Player's firepower increased to " + std::to_string(m_Firepower));
 	}
 }

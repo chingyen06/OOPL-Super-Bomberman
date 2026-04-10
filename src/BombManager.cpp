@@ -25,7 +25,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 
     // 檢查目標位置是否是草地且沒有其他炸彈
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {
-        auto newBomb = std::make_shared<Bomb>(targetX, targetY, 2, player->GetPlayerID()); // 火力固定 2
+        auto newBomb = std::make_shared<Bomb>(targetX, targetY, player->GetFirepower(), player->GetPlayerID());
         m_Bombs.push_back(newBomb);
         root.AddChild(newBomb);
 
@@ -167,4 +167,11 @@ bool BombManager::HasExplosionAt(int gridX, int gridY) const {
         if (e->GetGridX() == gridX && e->GetGridY() == gridY) return true;
     }
     return false;
+}
+
+int BombManager::GetFirepowerAt(int gridX, int gridY) const {
+    for (const auto& b : m_Bombs) {
+        if (b->GetGridX() == gridX && b->GetGridY() == gridY) return b->GetFirepower();
+    }
+    return 0; // 沒炸彈火力為 0
 }

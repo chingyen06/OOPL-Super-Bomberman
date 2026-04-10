@@ -4,11 +4,12 @@
 #include "Util/Logger.hpp"
 
 InteractableManager::InteractableManager() {
-	// 50% 掉落空氣，30% 掉落加速鞋, 20% 掉落炸彈道具
+	// 55% 掉落空氣，15% 掉落加速鞋，15% 掉落炸彈道具，15% 掉落火焰道具
     m_LootTable.clear();
-    m_LootTable.push_back({ 50, std::make_shared<EmptyDropFactory>() });
-    m_LootTable.push_back({ 30, std::make_shared<SpeedItemFactory>() });
-    m_LootTable.push_back({ 20, std::make_shared<BombItemFactory>() });
+    m_LootTable.push_back({ 55, std::make_shared<EmptyDropFactory>() });
+    m_LootTable.push_back({ 15, std::make_shared<SpeedItemFactory>() });
+    m_LootTable.push_back({ 15, std::make_shared<BombItemFactory>() });
+    m_LootTable.push_back({ 15, std::make_shared<FireItemFactory>() });
 }
 
 void InteractableManager::AddKey(int gridX, int gridY) {

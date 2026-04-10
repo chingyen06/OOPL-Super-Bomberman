@@ -91,6 +91,13 @@ public:
     bool OnInteract(std::shared_ptr<Player>& player) override;
 };
 
+// 火焰道具
+class FireItem : public PowerUp {
+public:
+    FireItem(int gridX, int gridY);
+    bool OnInteract(std::shared_ptr<Player>& player) override;
+};
+
 // Factory Pattern for Interactables
 class InteractableFactory {
 public:
@@ -106,10 +113,19 @@ public:
     }
 };
 
+// 炸彈道具
 class BombItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
         return std::make_shared<BombItem>(gridX, gridY);
+    }
+};
+
+//火焰道具
+class FireItemFactory : public InteractableFactory {
+public:
+    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
+        return std::make_shared<FireItem>(gridX, gridY);
     }
 };
 

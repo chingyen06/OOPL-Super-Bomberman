@@ -148,7 +148,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             return { -1, -1, 999, false };
             };
 
-        // 移動執行器：嚴格單軸驅動 + 像素對齊防卡死
+        // 移動
         auto ExecuteMove = [&](std::shared_ptr<Player>& bot, int bX, int bY, int nX, int nY, bool placeBomb) {
             bool up = false, down = false, left = false, right = false;
             float targetPixelX = (nX - 12) * 32.0f; float targetPixelY = (8 - nY) * 32.0f;
@@ -165,7 +165,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 else { if (nY > bY) down = true; if (nY < bY) up = true; }
             }
             bot->SetBotInput(up, down, left, right, placeBomb);
-            };
+        };
 
         // 節點 1：我有危險嗎？ (Survival Override)
         bool inDanger = isLethal(botX, botY);
@@ -179,6 +179,19 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 if (!path.empty()) ExecuteMove(bot, botX, botY, path[0].first, path[0].second, false);
             }
             continue;
+        }
+
+        // 戰鬥雷達掃描
+        std::shared_ptr<Player> targetDefender = nullptr;
+        int defenderDist = 999;
+        for (const auto& p : players) {
+            if (p->GetTeam() == Team::DEFENDER && !p->IsDead()) {
+                int dist = std::abs(p->GetGridX() - botX) + std::abs(p->GetGridY() - botY);
+                if (dist < defenderDist) {
+                    defenderDist = dist;
+                    targetDefender = p;
+                }
+            }
         }
 
         // 節點 2：確定最終目標 (Target Selection)
@@ -195,18 +208,30 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             };
 
         auto nearestItem = findNearest([](const std::shared_ptr<Interactable>& item) { return std::dynamic_pointer_cast<PowerUp>(item) != nullptr; });
-        if (nearestItem) { targetX = nearestItem->GetGridX(); targetY = nearestItem->GetGridY(); }
-        else if (bot->HasKey()) {
-            auto chest = findNearest([](const std::shared_ptr<Interactable>& item) { auto c = std::dynamic_pointer_cast<Chest>(item); return c != nullptr && !c->IsOpened(); });
-            if (chest) { targetX = chest->GetGridX(); targetY = chest->GetGridY(); }
+        auto nearestChest = findNearest([](const std::shared_ptr<Interactable>& item) { auto c = std::dynamic_pointer_cast<Chest>(item); return c != nullptr && !c->IsOpened(); });
+        auto nearestKey = findNearest([](const std::shared_ptr<Interactable>& item) { return std::dynamic_pointer_cast<Key>(item) != nullptr; });
+
+        if (bot->HasKey() && nearestChest) {
+            targetX = nearestChest->GetGridX(); targetY = nearestChest->GetGridY();
         }
-        else {
-            auto key = findNearest([](const std::shared_ptr<Interactable>& item) { return std::dynamic_pointer_cast<Key>(item) != nullptr; });
-            if (key) { targetX = key->GetGridX(); targetY = key->GetGridY(); }
+        else if (!bot->HasKey() && nearestKey) {
+            if (nearestItem && (std::abs(nearestItem->GetGridX() - botX) + std::abs(nearestItem->GetGridY() - botY) <= 3)) {
+                targetX = nearestItem->GetGridX(); targetY = nearestItem->GetGridY();
+            }
+            else {
+                targetX = nearestKey->GetGridX(); targetY = nearestKey->GetGridY();
+            }
+        }
+        else if (nearestItem) {
+            targetX = nearestItem->GetGridX(); targetY = nearestItem->GetGridY();
+        }
+        else if (targetDefender) {
+            targetX = targetDefender->GetGridX(); targetY = targetDefender->GetGridY();
         }
 
         if (targetX == -1) {
-            for (const auto& p : players) { if (p->GetTeam() == Team::DEFENDER && !p->IsDead()) { targetX = p->GetGridX(); targetY = p->GetGridY(); break; } }
+            bot->SetBotInput(false, false, false, false, false);
+            continue;
         }
 
         // 節點 3：嘗試安全抵達目標 (Pathfinding: Safe)
@@ -217,22 +242,33 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             });
 
         if (!pathSafe.empty()) {
-            ExecuteMove(bot, botX, botY, pathSafe[0].first, pathSafe[0].second, false);
+            bool placeBomb = false;
+
+            if (targetDefender && targetX == targetDefender->GetGridX() && targetY == targetDefender->GetGridY()) {
+                auto willHitTarget = [&](int bx, int by, int tx, int ty, int fp) {
+                    if (bx == tx && by == ty) return true;
+                    int dx[] = { 0, 0, -1, 1 }; int dy[] = { -1, 1, 0, 0 };
+                    for (int dir = 0; dir < 4; dir++) {
+                        for (int step = 1; step <= fp; step++) {
+                            int cx = bx + dx[dir] * step; int cy = by + dy[dir] * step;
+                            if (cx == tx && cy == ty) return true;
+                            if (!levelManager.IsWalkable(cx, cy)) break;
+                        }
+                    }
+                    return false;
+                    };
+
+                if (willHitTarget(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY(), botFirepower)) {
+                    auto testSafe = findSafeSpotBFS(botX, botY, botX, botY);
+                    if (testSafe.found) placeBomb = true;
+                }
+            }
+
+            ExecuteMove(bot, botX, botY, pathSafe[0].first, pathSafe[0].second, placeBomb);
             continue;
         }
 
-        // 節點 4：路徑受阻分析 - 火焰等待 (Patience Veto)
-        auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
-            if (!levelManager.IsWalkable(x, y)) return -1;
-            return 1;
-            });
-
-        if (!pathIgnoreFire.empty()) {
-            bot->SetBotInput(false, false, false, false, false);
-            continue;
-        }
-
-        // 節點 5：路徑受阻分析 - 磚塊破壞 (Offensive Bombing)
+        // 節點 4：路徑受阻分析 - 磚塊破壞 (側翼包抄)
         auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) && !levelManager.IsBrick(x, y)) return -1;
             if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || isLethal(x, y)) return -1;
@@ -248,7 +284,6 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
 
             if (botX == walkToX && botY == walkToY) {
-                // 防自殺預測
                 auto testSafe = findSafeSpotBFS(botX, botY, botX, botY);
                 if (testSafe.found) bot->SetBotInput(false, false, false, false, true);
                 else bot->SetBotInput(false, false, false, false, false);
@@ -261,9 +296,43 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 if (!pathToBrick.empty()) ExecuteMove(bot, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
                 else bot->SetBotInput(false, false, false, false, false);
             }
+            continue;
         }
-        else {
-            bot->SetBotInput(false, false, false, false, false);
+
+        // 節點 5：路徑受阻分析 - 火焰等待與反制 (壓制火力)
+        auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
+            if (!levelManager.IsWalkable(x, y)) return -1;
+            return 1;
+            });
+
+        if (!pathIgnoreFire.empty()) {
+            bool placeBomb = false;
+
+            // 視線內有敵人且距離近，放炸彈
+            if (targetDefender) {
+                auto hasLineOfSight = [&](int bx, int by, int tx, int ty) {
+                    if (bx != tx && by != ty) return false;
+                    int stepX = (tx > bx) ? 1 : (tx < bx) ? -1 : 0;
+                    int stepY = (ty > by) ? 1 : (ty < by) ? -1 : 0;
+                    int cx = bx + stepX, cy = by + stepY;
+                    while (cx != tx || cy != ty) {
+                        if (!levelManager.IsWalkable(cx, cy)) return false;
+                        cx += stepX; cy += stepY;
+                    }
+                    return true;
+                    };
+
+                if (defenderDist <= 5 && hasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+                    auto testSafe = findSafeSpotBFS(botX, botY, botX, botY);
+                    if (testSafe.found) placeBomb = true;
+                }
+            }
+
+            bot->SetBotInput(false, false, false, false, placeBomb);
+            continue;
         }
+
+        // 都沒辦法，只能發呆
+        bot->SetBotInput(false, false, false, false, false);
     }
 }

@@ -12,7 +12,7 @@ class Player;
 class InteractableFactory;
 
 struct LootEntry {
-    int weight; // ±¼¸¨Åv­«
+    int weight; // æ‰è½æ¬Šé‡
     std::shared_ptr<InteractableFactory> factory;
 };
 
@@ -27,7 +27,8 @@ public:
 
     void Clear(Util::Renderer& root);
 
-    bool IsInteractableAt(int gridX, int gridY) const;
+
+    bool IsBlocksBombAt(int gridX, int gridY) const;
     bool BlocksFireAt(int gridX, int gridY) const;
 
     void AttachToRoot(Util::Renderer& root);
@@ -47,15 +48,18 @@ public:
 
     void OnBrickDestroyed(int gridX, int gridY, Util::Renderer& root);
 
+    glm::vec2 GetForceAt(int gridX, int gridY) const;
+    void AddConveyor(int gridX, int gridY, Player::Direction dir);
+
 private:
     /*std::vector<std::shared_ptr<Key>> m_Keys;
     std::vector<std::shared_ptr<Chest>> m_Chests;*/
 
     std::vector<std::shared_ptr<Interactable>> m_Interactables;
-    std::vector<bool> m_ChestStatusCache;  // ¤º³¡§Ö¨ú
+    std::vector<bool> m_ChestStatusCache;  // å…§éƒ¨å¿«å–
     void UpdateChestStatusCache();
 
-	std::vector<LootEntry> m_LootTable;  // ±¼¸¨ªí
+	std::vector<LootEntry> m_LootTable;  // æ‰è½è¡¨
 };
 
 #endif

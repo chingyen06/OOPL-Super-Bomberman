@@ -6,6 +6,9 @@
 #include <memory>
 
 class Player;
+class LevelManager;
+class BombManager;
+class InteractableManager;
 
 class Bomb : public Util::GameObject {
 public:
@@ -13,7 +16,7 @@ public:
 
     Bomb(int gridX, int gridY, int firepower, int ownerID);
 
-    void Update();
+    void Update(const LevelManager& levelManager, const BombManager& bombManager, const InteractableManager& interactableManager);
 
     State GetState() const { return m_State; }
     int GetGridX() const { return m_GridX; }
@@ -30,6 +33,7 @@ private:
     int m_Firepower;
     int m_Tick;
     State m_State;
+    glm::vec2 m_Pos;
 
     int m_OwnerID;
 };

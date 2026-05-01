@@ -107,21 +107,30 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     nextX += dx;
     nextY += dy;
 
-    // 只有單一方向移動才做轉彎輔助對齊
-    if (moveY && !moveX) {
-        if (m_Pos.x < centerX) 
-            nextX += std::min(speed, centerX - m_Pos.x);
-        else if (m_Pos.x > centerX) 
-            nextX -= std::min(speed, m_Pos.x - centerX);
-    }
-    else if (moveX && !moveY) {
-        if (m_Pos.y < centerY) 
-            nextY += std::min(speed, centerY - m_Pos.y);
-        else if (m_Pos.y > centerY) 
-            nextY -= std::min(speed, m_Pos.y - centerY);
+    glm::vec2 envForce = interactableManager.GetForceAt(m_GridX, m_GridY);
+
+    nextX += envForce.x;
+    nextY += envForce.y;
+
+    if (!moveY && envForce.y == 0.0f) {
+        // 有橫向移動 (無論是主動走，還是被推)，把 Y 設到格子中央
+        if (moveX || envForce.x != 0.0f) {
+            if (m_Pos.y < centerY) nextY += std::min(speed, centerY - m_Pos.y);
+            else if (m_Pos.y > centerY) nextY -= std::min(speed, m_Pos.y - centerY);
+        }
     }
 
-    if (moveX || moveY) {  // 正在移動
+    if (!moveX && envForce.x == 0.0f) {
+        // 有縱向移動 (無論是主動走，還是被推)，把 X 設到格子中央
+        if (moveY || envForce.y != 0.0f) {
+            if (m_Pos.x < centerX) nextX += std::min(speed, centerX - m_Pos.x);
+            else if (m_Pos.x > centerX) nextX -= std::min(speed, m_Pos.x - centerX);
+        }
+    }
+
+    bool isForced = (envForce.x != 0.0f || envForce.y != 0.0f);  // 被推動
+
+    if (moveX || moveY || isForced) {  // 正在移動
         if (!IsColliding(nextX, m_Pos.y, levelManager, bombManager, interactableManager)) {  // 如果不會碰撞，可以移動
             m_Pos.x = nextX;
         }

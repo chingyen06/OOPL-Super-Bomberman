@@ -24,7 +24,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
     }
 
     // 檢查目標位置是否是草地且沒有其他炸彈
-    if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsInteractableAt(targetX, targetY)) {
+    if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsBlocksBombAt(targetX, targetY)) {
         auto newBomb = std::make_shared<Bomb>(targetX, targetY, player->GetFirepower(), player->GetPlayerID());
         m_Bombs.push_back(newBomb);
         root.AddChild(newBomb);
@@ -45,7 +45,7 @@ void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& level
 // 更新炸彈與火焰
 void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players) {
     for (auto it = m_Bombs.begin(); it != m_Bombs.end(); ) {  // 炸彈生命週期與火焰延伸
-        (*it)->Update();
+        (*it)->Update(levelManager, *this, interactableManager);
 
         if ((*it)->GetState() == Bomb::State::DONE) {
             int bx = (*it)->GetGridX();
@@ -155,8 +155,9 @@ void BombManager::Clear(Util::Renderer& root) {
     m_Explosions.clear();
 }
 
-bool BombManager::IsBombAt(int gridX, int gridY) const {
+bool BombManager::IsBombAt(int gridX, int gridY, const Bomb* ignore) const {
     for (const auto& b : m_Bombs) {
+        if (b.get() == ignore) continue; // 碰撞忽略自身
         if (b->GetGridX() == gridX && b->GetGridY() == gridY) return true;
     }
     return false;

@@ -58,6 +58,7 @@
   - [x] 設計剩餘寶箱提示
 - Week 11：防守方機制
   - [ ] 設計源石精靈移動機制
+  - [x] 設計防守方陷阱 (已完成：輸送帶)
   - [ ] 設計防守方武器與用途
   - [ ] 設計砲台發射機制
 - Week 12：電腦尋路機制
@@ -109,6 +110,7 @@
      ├── Interactable                # 互動物件
      │   ├── Key                         # 鑰匙
      │   ├── Chest                       # 寶箱
+     │   ├── Conveyor                    # 輸送帶
      │   └── PowerUp                     # 掉落道具
      │        ├── SpeedItem               # 加速鞋道具
      │        ├── BombItem                # 炸彈道具
@@ -118,45 +120,6 @@
      ├── Explosion                   # 火焰
      │
      └── Player                      # 玩家
-```
-
-# 預定架構
-```
-├── Core                         # 核心層
-│   └── App                         # 遊戲 App (狀態機控制、整合所有 Manager 與遊戲主迴圈)
-│
-├── Systems                      # 系統層
-│   ├── LevelManager                # 關卡與地圖管理 (載入、破壞、碰撞查詢)
-│   ├── BombManager                 # 炸彈管理 (生成、爆炸範圍計算、傷害判定)
-│   ├── InteractableManager         # 互動物件管理 (鑰匙、寶箱、道具)
-│   ├── UIManager                   # 遊戲介面管理 (Week 10 預定：計時器、鑰匙提示)
-│   └── AIManager                   # AI 管理 (Week 12 預定：尋路演算法與躲避邏輯)
-│I
-│
-└── Util::GameObject             # PTSD 中的遊戲物件
-     │
-     ├── BackgroundImage             # 開始畫面
-     │
-     ├── Tile                        # 地圖基底 (多型介面：IsPassable)
-     │   ├── Ground                      # 草地
-     │   ├── Wall                        # 無敵牆
-     │   └── Brick                       # 磚塊
-     │
-     ├── Interactable                # 互動物件基底
-     │   ├── Key                         # 鑰匙
-     │   └── Chest                       # 寶箱
-     │
-     ├── Bomb                        # 炸彈
-     ├── Explosion                   # 火焰
-     │
-     ├── Effect & Item               # 物理特效與掉落物 (不是物件，僅參考用)
-     │   ├── PowerUp                     # 掉落道具 (Week 7 預定：火力、速度提升)
-     │   └── Trap                        # 陷阱與防禦塔 (Week 11 預定)
-     │
-     └── Character                   # 動態生物基底 (整合共用的移動、碰撞與死亡邏輯)
-          ├── Attacker                    # 進攻方玩家 (最多 15 人)
-          ├── Defender                    # 防守方玩家 (1 人，具備特殊技能)
-          └── Spirit                      # 源石精靈 (Week 11 預定：電腦控制之防禦單位)
 ```
 
 # 繼承關係
@@ -183,6 +146,7 @@ classDiagram
     GameObject <|-- Interactable
     Interactable <|-- Key
     Interactable <|-- Chest
+    Interactable <|-- Conveyor
     Interactable <|-- PowerUp
     
     PowerUp <|-- SpeedItem
@@ -205,7 +169,7 @@ classDiagram
 
     Player ..> BombManager : Accesses
     Player ..> LevelManager : Accesses
-    Player ..> InteractableManager : Accesses
+    Player ..> InteractableManager : Accesses (Queries envForce)
 
     UIManager ..> InteractableManager : Accesses
 
@@ -216,6 +180,9 @@ classDiagram
     
     BombManager o-- Bomb : manages
     BombManager o-- Explosion : manages
+    Bomb ..> LevelManager : Accesses (Physics Collision)
+    Bomb ..> InteractableManager : Accesses (Queries envForce)
+    
     LevelManager o-- Tile : manages
     InteractableManager o-- Interactable : manages
 
@@ -254,7 +221,7 @@ classDiagram
         -vector~shared_ptr~Explosion~~ m_Explosions
         +PlaceBomb(player, levelManager, interactableManager, root, players)
         +Update(levelManager, interactableManager, root, players)
-        +IsBombAt(gridX, gridY) bool
+        +IsBombAt(gridX, gridY, ignore) bool
         +HasExplosionAt(gridX, gridY) bool
         +GetFirepowerAt(gridX, gridY) int
     }
@@ -264,11 +231,12 @@ classDiagram
         -vector~bool~ m_ChestStatusCache
         -vector~LootEntry~ m_LootTable
         +Update(players, root)
-        +IsInteractableAt(gridX, gridY) bool
+        +IsBlocksBombAt(gridX, gridY) bool
         +BlocksFireAt(gridX, gridY) bool
         +IsAllChestOpened() bool
         +GetInteractables() vector~shared_ptr~Interactable~~&
         +OnBrickDestroyed(gridX, gridY, root)
+        +GetForceAt(gridX, gridY) glm::vec2
     }
 
     class UIManager {
@@ -298,7 +266,8 @@ classDiagram
     class Bomb {
         -int m_Firepower
         -State m_State
-        +Update()
+        -glm::vec2 m_Pos
+        +Update(levelManager, bombManager, interactableManager)
         +ForceDetonate()
     }
     
@@ -315,9 +284,14 @@ classDiagram
     Tile <|-- Wall
     Tile <|-- Brick
 
-    class Interactable { <<interface>> }
+    class Interactable { 
+        <<interface>> 
+        +IsBlocksBomb() bool
+        +GetForce() glm::vec2
+    }
     class Key { +OnInteract(player) bool }
     class Chest { +OnInteract(player) bool }
+    class Conveyor { +GetForce() glm::vec2 }
     class PowerUp { <<abstract>> }
     class SpeedItem { +OnInteract(player) bool }
     class BombItem { +OnInteract(player) bool }
@@ -325,6 +299,7 @@ classDiagram
     
     Interactable <|-- Key
     Interactable <|-- Chest
+    Interactable <|-- Conveyor
     Interactable <|-- PowerUp
     PowerUp <|-- SpeedItem
     PowerUp <|-- BombItem

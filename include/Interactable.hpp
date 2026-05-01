@@ -3,6 +3,7 @@
 
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
+#include "glm/vec2.hpp"
 #include "Player.hpp"
 #include <memory>
 
@@ -14,10 +15,13 @@ public:
     virtual int GetGridX() const = 0;
     virtual int GetGridY() const = 0;
 
+    virtual bool IsBlocksBomb() const = 0;
     virtual bool IsBlocksFire() const = 0;
     virtual bool IsDestroyedByFire() const = 0;
 
     virtual bool OnInteract(std::shared_ptr<Player>& player) = 0;
+
+    virtual glm::vec2 GetForce() const = 0;
 };
 
 class Key : public Interactable {
@@ -27,10 +31,13 @@ public:
     int GetGridX() const { return m_GridX; }
     int GetGridY() const { return m_GridY; }
 
+    bool IsBlocksBomb() const override { return true; }
     bool IsBlocksFire() const override { return false; }
     bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
+
+    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
 private:
     int m_GridX;
@@ -45,10 +52,13 @@ public:
     int GetGridY() const { return m_GridY; }
     bool IsOpened() const { return m_Opened; }
 
+    bool IsBlocksBomb() const override { return true; }
     bool IsBlocksFire() const override { return true; }
     bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
+
+    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
     void Open();
 
@@ -68,9 +78,12 @@ public:
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
+    bool IsBlocksBomb() const override { return true; }
     // 道具不會擋火，但會被火燒毀
     bool IsBlocksFire() const override { return false; }
     bool IsDestroyedByFire() const override { return true; }
+
+    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
 protected:
     int m_GridX;
@@ -135,6 +148,26 @@ public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
         return nullptr; // 什麼都不掉
     }
+};
+
+// 電扶梯 (傳送帶)
+class Conveyor : public Interactable {
+public:
+    Conveyor(int gridX, int gridY, Player::Direction dir);
+    int GetGridX() const override { return m_GridX; }
+    int GetGridY() const override { return m_GridY; }
+
+    bool IsBlocksBomb() const override { return false; }
+    bool IsBlocksFire() const override { return false; }
+    bool IsDestroyedByFire() const override { return false; }
+    bool OnInteract(std::shared_ptr<Player>& player) override { return false; }
+
+    glm::vec2 GetForce() const override;
+
+private:
+    int m_GridX;
+    int m_GridY;
+    Player::Direction m_Dir;
 };
 
 #endif

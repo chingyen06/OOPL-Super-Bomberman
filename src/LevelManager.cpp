@@ -33,17 +33,29 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
             else {
                 tile = std::make_shared<Ground>(x, y);
 
-                if (type == 'K') {   // 鑰匙
-                    interactableManager.AddKey(x, y); // 生成鑰匙
-                }
-                else if (type == '9') {   // 寶箱
-                    interactableManager.AddChest(x, y); // 生成寶箱
-                }
-                else if (type == 'F') {
+                if (type == 'F') {
                     m_DefenderSpawn = { x, y };
                 }
                 else if (type == 'A') {
                     m_AttackerSpawns.push_back({ x, y });
+                }
+                else if (type == 'K') {   // 鑰匙
+                    interactableManager.AddKey(x, y);
+                }
+                else if (type == '9') {   // 寶箱
+                    interactableManager.AddChest(x, y);
+                }
+                else if (type == 'U') {
+                    interactableManager.AddConveyor(x, y, Player::Direction::UP);
+                }
+                else if (type == 'D') {
+                    interactableManager.AddConveyor(x, y, Player::Direction::DOWN);
+                }
+                else if (type == 'L') {
+                    interactableManager.AddConveyor(x, y, Player::Direction::LEFT);
+                }
+                else if (type == 'R') {
+                    interactableManager.AddConveyor(x, y, Player::Direction::RIGHT);
                 }
             }
 

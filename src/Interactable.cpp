@@ -100,3 +100,44 @@ bool FireItem::OnInteract(std::shared_ptr<Player>& player) {
     LOG_INFO("Player picked up FIRE_UP! Firepower increased to " + std::to_string(player->GetFirepower()));
     return true;
 }
+
+Conveyor::Conveyor(int gridX, int gridY, Player::Direction dir) : m_GridX(gridX), m_GridY(gridY), m_Dir(dir) {
+    std::string imgPath;
+    switch (dir) {
+        case Player::Direction::UP: 
+            imgPath = RESOURCE_DIR"/Image/conveyor_up.png"; 
+            break;
+        case Player::Direction::DOWN: 
+            imgPath = RESOURCE_DIR"/Image/conveyor_down.png"; 
+            break;
+        case Player::Direction::LEFT: 
+            imgPath = RESOURCE_DIR"/Image/conveyor_left.png"; 
+            break;
+        case Player::Direction::RIGHT: 
+            imgPath = RESOURCE_DIR"/Image/conveyor_right.png"; 
+            break;
+    }
+
+    auto image = std::make_shared<Util::Image>(imgPath);
+    SetDrawable(image);
+    SetZIndex(2);  // 4 (¬µ¼u) > 2 > 1 (¯ó¦a)
+
+    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
+    m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
+}
+
+glm::vec2 Conveyor::GetForce() const {
+    float pushSpeed = 1.5f;
+
+    switch (m_Dir) {
+        case Player::Direction::UP: 
+            return { 0.0f, pushSpeed };
+        case Player::Direction::DOWN: 
+            return { 0.0f, -pushSpeed };
+        case Player::Direction::LEFT: 
+            return { -pushSpeed, 0.0f };
+        case Player::Direction::RIGHT: 
+            return { pushSpeed, 0.0f };
+    }
+    return { 0.0f, 0.0f };
+}

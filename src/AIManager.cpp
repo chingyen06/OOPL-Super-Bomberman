@@ -155,14 +155,18 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             glm::vec2 pos = bot->GetPixelPos();
 
             if (nX != bX) {
+                if (nX > bX) right = true;
+                if (nX < bX) left = true;
+
                 if (pos.y < targetPixelY - 2.0f) up = true;
                 else if (pos.y > targetPixelY + 2.0f) down = true;
-                else { if (nX > bX) right = true; if (nX < bX) left = true; }
             }
             else if (nY != bY) {
+                if (nY > bY) down = true;
+                if (nY < bY) up = true;
+
                 if (pos.x < targetPixelX - 2.0f) right = true;
                 else if (pos.x > targetPixelX + 2.0f) left = true;
-                else { if (nY > bY) down = true; if (nY < bY) up = true; }
             }
             bot->SetBotInput(up, down, left, right, placeBomb);
         };

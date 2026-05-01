@@ -4,7 +4,7 @@
 #include "Util/Logger.hpp"
 
 InteractableManager::InteractableManager() {
-	// 55% ±¼¸¨ªÅ®ğ¡A15% ±¼¸¨¥[³t¾c¡A15% ±¼¸¨¬µ¼u¹D¨ã¡A15% ±¼¸¨¤õµK¹D¨ã
+	// 55% æ‰è½ç©ºæ°£ï¼Œ15% æ‰è½åŠ é€Ÿé‹ï¼Œ15% æ‰è½ç‚¸å½ˆé“å…·ï¼Œ15% æ‰è½ç«ç„°é“å…·
     m_LootTable.clear();
     m_LootTable.push_back({ 55, std::make_shared<EmptyDropFactory>() });
     m_LootTable.push_back({ 15, std::make_shared<SpeedItemFactory>() });
@@ -63,13 +63,12 @@ void InteractableManager::Clear(Util::Renderer& root) {
     m_Interactables.clear();
 }
 
-bool InteractableManager::IsInteractableAt(int gridX, int gridY) const {
-    for (const auto& interactable : m_Interactables) {
-        if (interactable->GetGridX() == gridX && interactable->GetGridY() == gridY) {
-            return true;
+bool InteractableManager::IsBlocksBombAt(int gridX, int gridY) const {
+    for (const auto& item : m_Interactables) {
+        if (item->GetGridX() == gridX && item->GetGridY() == gridY) {
+            return item->IsBlocksBomb();
         }
     }
-
     return false;
 }
 
@@ -141,13 +140,13 @@ void InteractableManager::OnBrickDestroyed(int gridX, int gridY, Util::Renderer&
         totalWeight += entry.weight;
     }
 
-    // ¶Ã¼Æ
+    // äº‚æ•¸
     static std::random_device rd;
     static std::mt19937 gen(rd());
     std::uniform_int_distribution<> dist(1, totalWeight);
     int roll = dist(gen);
 
-    // ÀH¾÷©â
+    // éš¨æ©ŸæŠ½
     for (const auto& entry : m_LootTable) {
         roll -= entry.weight;
         if (roll <= 0) {
@@ -159,4 +158,20 @@ void InteractableManager::OnBrickDestroyed(int gridX, int gridY, Util::Renderer&
             break;
         }
     }
+}
+
+glm::vec2 InteractableManager::GetForceAt(int gridX, int gridY) const {
+    glm::vec2 totalForce = { 0.0f, 0.0f };
+    for (const auto& item : m_Interactables) {
+        if (item->GetGridX() == gridX && item->GetGridY() == gridY) {
+            totalForce.x += item->GetForce().x;
+            totalForce.y += item->GetForce().y;
+        }
+    }
+    return totalForce;
+}
+
+void InteractableManager::AddConveyor(int gridX, int gridY, Player::Direction dir) {
+    auto conveyor = std::make_shared<Conveyor>(gridX, gridY, dir);
+    m_Interactables.push_back(conveyor);
 }

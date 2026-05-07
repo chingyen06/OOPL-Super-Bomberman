@@ -9,7 +9,7 @@ public:
     BackgroundImage(const std::string& imagePath) {
         auto image = std::make_shared<Util::Image>(imagePath);
         SetDrawable(image);
-        SetZIndex(100);
+        SetZIndex(99);
 
         float targetWidth = 1280.0f;
         float targetHeight = 720.0f;

@@ -22,6 +22,7 @@ class UIText : public Util::GameObject {
 public:
     UIText(const std::string& text, int x, int y);
     void SetText(const std::string& text);
+    void SetPosition(float x, float y);
 private:
     std::shared_ptr<Util::Text> m_Text;
 };

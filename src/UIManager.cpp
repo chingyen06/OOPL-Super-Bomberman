@@ -25,7 +25,15 @@ UIText::UIText(const std::string& text, int x, int y) {
 }
 
 void UIText::SetText(const std::string& text) {
-    m_Text->SetText(text);
+    // m_Text->SetText(text);
+    m_Text = std::make_shared<Util::Text>(
+        RESOURCE_DIR"/Font/GenJyuuGothicX-Bold.ttf",
+        30,
+        text,
+        Util::Color::FromName(Util::Colors::BLACK)
+    );
+
+    SetDrawable(m_Text);
 }
 
 void UIManager::Init(Util::Renderer& root, int totalChests) {
@@ -142,4 +150,8 @@ void UIManager::Clear(Util::Renderer& root) {
         root.RemoveChild(chest);
     }
     m_ChestPool.clear();
+}
+
+void UIText::SetPosition(float x, float y) {
+    m_Transform.translation = { x, y };
 }

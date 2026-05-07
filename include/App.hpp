@@ -12,6 +12,7 @@
 #include "InteractableManager.hpp"
 #include "UIManager.hpp"
 #include "AIManager.hpp"
+#include "Menu.hpp"
 
 class App {
 public:
@@ -37,6 +38,7 @@ private:
 private:
     enum class GameState {
         TITLE_SCREEN,
+        LEVEL_SELECT,
         GAMEPLAY,
         GAMEEND
     };
@@ -68,6 +70,11 @@ private:
 	UIManager m_UIManager;  // 管理 UI 顯示
 
     AIManager m_AIManager;
+
+    // 選單
+    Menu m_MainMenu;
+    Menu m_LevelMenu;
+    std::shared_ptr<BackgroundImage> m_MenuBg;
 };
 
 #endif

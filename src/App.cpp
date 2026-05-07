@@ -13,8 +13,42 @@ void App::Start() {
     m_CoverImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/cover.jpg");  // 載入封面圖片
     m_DefenseImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/defense_win.png");  // 載入防守方獲勝圖片
     m_AttackImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/attack_win.png");  // 載入防守方獲勝圖片
+	m_MenuBg = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/white.png");  // 選單背景圖
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
     // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
+
+    // 選單
+    m_MainMenu.AddOption("Start Game", [this]() {
+        m_MainMenu.Hide(m_Root);
+        m_LevelMenu.Show(m_Root, 0, 50); // 切換到關卡選單
+    });
+    m_MainMenu.AddOption("Exit Game", [this]() {
+        m_CurrentState = State::END;
+    });
+
+    m_LevelMenu.AddOption("Level 1", [this]() {
+        m_LevelMenu.Hide(m_Root);
+        m_Root.RemoveChild(m_MenuBg);
+        m_GameState = GameState::GAMEPLAY;
+        LoadLevel(1);
+    });
+    /*m_LevelMenu.AddOption("關卡 2", [this]() {
+        m_LevelMenu.Hide(m_Root);
+        m_Root.RemoveChild(m_MenuBg);
+        m_GameState = GameState::GAMEPLAY;
+        LoadLevel(2);
+    });
+    m_LevelMenu.AddOption("關卡 3", [this]() {
+        m_LevelMenu.Hide(m_Root);
+        m_Root.RemoveChild(m_MenuBg);
+        m_GameState = GameState::GAMEPLAY;
+        LoadLevel(3);
+    });*/
+    m_LevelMenu.AddOption("Return", [this]() {
+        m_LevelMenu.Hide(m_Root);
+        m_MainMenu.Show(m_Root, 0, 50);
+    });
+    //
 
     m_CurrentState = State::UPDATE;
 }
@@ -73,18 +107,22 @@ void App::LoadLevel(int levelIndex) {
 
 void App::Update() {
     m_Root.Update();  // 更新場景
-
     if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
-        // m_CoverImage->Draw();  // 繪製封面圖片 (用 Renderer 繪圖，不需要這一行)
-
         if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
-            LOG_INFO("Start Game");
-            m_GameState = GameState::GAMEPLAY;
+            LOG_INFO("Enter Level Select");
+            m_GameState = GameState::LEVEL_SELECT;
 
+            // 進入選單，換掉封面圖，顯示第一層主選單
             m_Root.RemoveChild(m_CoverImage);
-            
-            LoadLevel(1);
+            m_Root.AddChild(m_MenuBg);
+            m_MainMenu.Show(m_Root, 0, 50);
         }
+    }
+	else if (m_GameState == GameState::LEVEL_SELECT) {  // 如果在 LEVEL_SELECT (選單)
+        if (m_MainMenu.IsVisible()) 
+            m_MainMenu.Update();
+        else if (m_LevelMenu.IsVisible()) 
+            m_LevelMenu.Update();
     }
     else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
         if (m_GameTime > 0) 

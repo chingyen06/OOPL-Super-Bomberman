@@ -109,6 +109,7 @@
      │   ├── Key                         # 鑰匙
      │   ├── Chest                       # 寶箱
      │   ├── Conveyor                    # 輸送帶
+     │   ├── BouncePad                   # 彈跳板
      │   └── PowerUp                     # 掉落道具
      │        ├── SpeedItem               # 加速鞋道具
      │        ├── BombItem                # 炸彈道具

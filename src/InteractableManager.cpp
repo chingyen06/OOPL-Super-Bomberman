@@ -31,6 +31,7 @@ void InteractableManager::AttachToRoot(Util::Renderer& root) {
 void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root) {
     for (auto it = m_Interactables.begin(); it != m_Interactables.end(); ) {
         auto item = *it;
+        item->Update();
         bool itemErased = false;
 
         for (auto& player : players) {
@@ -174,4 +175,18 @@ glm::vec2 InteractableManager::GetForceAt(int gridX, int gridY) const {
 void InteractableManager::AddConveyor(int gridX, int gridY, Player::Direction dir) {
     auto conveyor = std::make_shared<Conveyor>(gridX, gridY, dir);
     m_Interactables.push_back(conveyor);
+}
+
+//glm::vec3 InteractableManager::GetBounceAt(int gridX, int gridY) const {
+//    for (const auto& item : m_Interactables) {
+//        if (item->GetGridX() == gridX && item->GetGridY() == gridY) {
+//            return item->GetBounce(); // {dx, dy, dist}
+//        }
+//    }
+//    return { 0.0f, 0.0f, 0.0f };
+//}
+
+void InteractableManager::AddBouncePad(int gridX, int gridY, Player::Direction dir) {
+    auto bouncePad = std::make_shared<BouncePad>(gridX, gridY, dir);
+    m_Interactables.push_back(bouncePad);
 }

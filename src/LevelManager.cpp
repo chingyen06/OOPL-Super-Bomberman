@@ -57,6 +57,18 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
                 else if (type == 'R') {
                     interactableManager.AddConveyor(x, y, Player::Direction::RIGHT);
                 }
+                else if (type == '4') {
+					interactableManager.AddBouncePad(x, y, Player::Direction::UP);
+                }
+                else if (type == '5') {
+                    interactableManager.AddBouncePad(x, y, Player::Direction::DOWN);
+                }
+                else if (type == '6') {
+                    interactableManager.AddBouncePad(x, y, Player::Direction::LEFT);
+                }
+                else if (type == '7') {
+                    interactableManager.AddBouncePad(x, y, Player::Direction::RIGHT);
+				}
             }
 
             m_TileGrid[y][x] = tile;  // 存地圖方塊

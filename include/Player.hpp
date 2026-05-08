@@ -78,6 +78,9 @@ public:
     }
     bool IsBotPlaceBomb() const { return m_BotPlaceBomb; }
 
+    // 彈跳板
+    bool TriggerBounce(Direction dir, int distance);
+
 private:
     int m_GridX;
     int m_GridY;
@@ -129,6 +132,18 @@ private:
     bool m_BotLeft = false;
     bool m_BotRight = false;
     bool m_BotPlaceBomb = false;
+
+    // 彈跳板：飛行狀態
+    bool m_IsBouncing = false;
+    int m_BounceTick = 0;
+    int m_BounceDuration = 30;
+    glm::vec2 m_BounceStart = { 0.0f, 0.0f };  // 起跳座標
+    glm::vec2 m_BounceTarget = { 0.0f, 0.0f }; // 落地座標
+
+    // 彈跳板
+    bool m_PendingBounce = false;
+    Direction m_PendingBounceDir;
+    int m_PendingBounceDist = 0;
 };
 
 #endif

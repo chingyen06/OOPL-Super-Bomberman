@@ -32,19 +32,19 @@ void App::Start() {
         m_GameState = GameState::GAMEPLAY;
         LoadLevel(1);
     });
-    /*m_LevelMenu.AddOption("關卡 2", [this]() {
+    /*m_LevelMenu.AddOption("Level 2", [this]() {
         m_LevelMenu.Hide(m_Root);
         m_Root.RemoveChild(m_MenuBg);
         m_GameState = GameState::GAMEPLAY;
         LoadLevel(2);
     });
-    m_LevelMenu.AddOption("關卡 3", [this]() {
+    m_LevelMenu.AddOption("Level 3", [this]() {
         m_LevelMenu.Hide(m_Root);
         m_Root.RemoveChild(m_MenuBg);
         m_GameState = GameState::GAMEPLAY;
         LoadLevel(3);
     });*/
-    m_LevelMenu.AddOption("Return", [this]() {
+    m_LevelMenu.AddOption("return", [this]() {
         m_LevelMenu.Hide(m_Root);
         m_MainMenu.Show(m_Root, 0, 50);
     });

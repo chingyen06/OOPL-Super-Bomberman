@@ -4,6 +4,7 @@
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
 #include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
 #include "Player.hpp"
 #include <memory>
 
@@ -12,6 +13,8 @@ class player;
 class Interactable : public Util::GameObject {
 public:
     virtual ~Interactable() = default;
+    virtual void Update() {};
+
     virtual int GetGridX() const = 0;
     virtual int GetGridY() const = 0;
 
@@ -150,7 +153,7 @@ public:
     }
 };
 
-// ¹q§ß±è (¶Ç°e±a)
+// ¿é°e±a
 class Conveyor : public Interactable {
 public:
     Conveyor(int gridX, int gridY, Player::Direction dir);
@@ -168,6 +171,30 @@ private:
     int m_GridX;
     int m_GridY;
     Player::Direction m_Dir;
+};
+
+// ¼u¸õªO
+class BouncePad : public Interactable {
+public:
+    BouncePad(int gridX, int gridY, Player::Direction dir);
+    void Update() override;
+
+    int GetGridX() const override { return m_GridX; }
+    int GetGridY() const override { return m_GridY; }
+
+    bool IsBlocksBomb() const override { return false; }
+    bool IsBlocksFire() const override { return false; }
+    bool IsDestroyedByFire() const override { return false; }
+    bool OnInteract(std::shared_ptr<Player>& player) override;
+
+    glm::vec2 GetForce() const override { return { 0.0f, 0.0f }; }
+
+private:
+    int m_GridX;
+    int m_GridY;
+    Player::Direction m_Dir;
+    int m_Distance = 3;
+    int m_Cooldown = 0;
 };
 
 #endif

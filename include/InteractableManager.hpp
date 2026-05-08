@@ -51,6 +51,9 @@ public:
     glm::vec2 GetForceAt(int gridX, int gridY) const;
     void AddConveyor(int gridX, int gridY, Player::Direction dir);
 
+    // glm::vec3 GetBounceAt(int gridX, int gridY) const;
+    void AddBouncePad(int gridX, int gridY, Player::Direction dir);
+
 private:
     /*std::vector<std::shared_ptr<Key>> m_Keys;
     std::vector<std::shared_ptr<Chest>> m_Chests;*/

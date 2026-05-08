@@ -25,15 +25,7 @@ UIText::UIText(const std::string& text, int x, int y) {
 }
 
 void UIText::SetText(const std::string& text) {
-    // m_Text->SetText(text);
-    m_Text = std::make_shared<Util::Text>(
-        RESOURCE_DIR"/Font/GenJyuuGothicX-Bold.ttf",
-        30,
-        text,
-        Util::Color::FromName(Util::Colors::BLACK)
-    );
-
-    SetDrawable(m_Text);
+     m_Text->SetText(text);
 }
 
 void UIManager::Init(Util::Renderer& root, int totalChests) {

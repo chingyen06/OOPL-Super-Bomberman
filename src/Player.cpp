@@ -62,6 +62,29 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
         return;
     }
 
+    if (m_IsBouncing) {
+        m_BounceTick++;
+        float t = static_cast<float>(m_BounceTick) / m_BounceDuration;
+
+        m_Pos.x = m_BounceStart.x + (m_BounceTarget.x - m_BounceStart.x) * t;
+        m_Pos.y = m_BounceStart.y + (m_BounceTarget.y - m_BounceStart.y) * t;
+
+        float jumpHeight = std::sin(t * 3.14159f) * 64.0f;
+        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f + jumpHeight };
+
+        // 落地判定
+        if (m_BounceTick >= m_BounceDuration) {
+            m_IsBouncing = false;
+            m_Pos = m_BounceTarget;
+
+            m_GridX = std::round(m_Pos.x / 32.0f) + 12;
+            m_GridY = 8 - std::round(m_Pos.y / 32.0f);
+            m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
+        }
+
+        return;
+    }
+
     // 取得當前位置的網格中心點座標
     float centerX = (m_GridX - 12) * 32.0f;
     float centerY = (8 - m_GridY) * 32.0f;
@@ -157,31 +180,53 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
                 }
             }
         }
-        /*if (!m_IgnoreBombs.empty()) {
-            float radius = 9.0f;
-            auto getGX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
-            auto getGY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
+    }
 
-            int gxl = getGX(m_Pos.x - radius);
-            int gxr = getGX(m_Pos.x + radius);
-            int gyt = getGY(m_Pos.y + radius);
-            int gyb = getGY(m_Pos.y - radius);
+    if (m_PendingBounce) {
+        m_PendingBounce = false;
 
-            for (auto it = m_IgnoreBombs.begin(); it != m_IgnoreBombs.end(); ) {
-                bool isStillTouching = false;
-                if ((gxl == it->first || gxr == it->first) &&
-                    (gyt == it->second || gyb == it->second)) {
-                    isStillTouching = true;
-                }
+        // 起跳點設為網格中心
+        float centerX = (m_GridX - 12) * 32.0f;
+        float centerY = (8 - m_GridY) * 32.0f;
 
-                if (!isStillTouching) {
-                    it = m_IgnoreBombs.erase(it);
-                }
-                else {
-                    ++it;
-                }
+        float bdx = 0.0f, bdy = 0.0f;
+        switch (m_PendingBounceDir) {
+        case Direction::UP:    bdy = 1.0f;  break;
+        case Direction::DOWN:  bdy = -1.0f; break;
+        case Direction::LEFT:  bdx = -1.0f; break;
+        case Direction::RIGHT: bdx = 1.0f;  break;
+        }
+
+        int actualDist = 0;
+        // 逐格往前
+        for (int i = 1; i <= m_PendingBounceDist; i++) {
+            float testX = centerX + bdx * i * 32.0f;
+            float testY = centerY + bdy * i * 32.0f;
+
+            if (!IsColliding(testX, testY, levelManager, bombManager, interactableManager)) {
+                actualDist = i;
             }
-        }*/
+            else {
+                break; // 撞到障礙物停止
+            }
+        }
+
+        // 彈跳動畫
+        m_IsBouncing = true;
+        m_BounceTick = 0;
+        m_BounceStart = m_Pos; // 從當前位置起飛
+        ChangeDirection(m_PendingBounceDir); // 轉向彈跳方向
+
+        if (actualDist > 0) {
+            m_BounceTarget = { centerX + bdx * actualDist * 32.0f, centerY + bdy * actualDist * 32.0f };
+            m_BounceDuration = 30;
+        }
+        else {
+            // 被擋住原地跳
+            m_BounceTarget = { centerX, centerY };
+            m_BounceDuration = 15;
+            LOG_INFO("Bounce path blocked, bouncing in place.");
+        }
     }
 
     // 無敵時間
@@ -300,4 +345,13 @@ void Player::IncreaseFirepower() {
         m_Firepower++;
         LOG_INFO("Player's firepower increased to " + std::to_string(m_Firepower));
 	}
+}
+
+bool Player::TriggerBounce(Direction dir, int distance) {
+    if (m_IsBouncing || m_PendingBounce) return false;
+
+    m_PendingBounce = true;
+    m_PendingBounceDir = dir;
+    m_PendingBounceDist = distance;
+    return true;
 }

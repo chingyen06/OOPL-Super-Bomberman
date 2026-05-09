@@ -79,17 +79,17 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         int botY = bot->GetGridY();
         int botFirepower = bot->GetFirepower();
 
-        // ­P©R°Ï°ì§P©w (¤Q¦r¤õ®ü¹w´ú + ¯u¹ê¤õµK)
+        // ï¿½Pï¿½Rï¿½Ï°ï¿½Pï¿½w (ï¿½Qï¿½rï¿½ï¿½ï¿½ï¿½ï¿½wï¿½ï¿½ + ï¿½uï¿½ï¿½ï¿½ï¿½K)
         auto isLethal = [&](int tx, int ty, int pretendX = -1, int pretendY = -1, int pretendFp = 0) {
             if (bombManager.HasExplosionAt(tx, ty)) return true;
 
-            // ¶Ç¤J fp ¥H§PÂ_¤£¦P¬µ¼uªº«Â¤O
+            // ï¿½Ç¤J fp ï¿½Hï¿½Pï¿½_ï¿½ï¿½ï¿½Pï¿½ï¿½ï¿½uï¿½ï¿½ï¿½Â¤O
             auto checkCross = [&](int bx, int by, int fp) {
                 if (tx == bx && ty == by) return true;
                 int dx[] = { 0, 0, -1, 1 };
                 int dy[] = { -1, 1, 0, 0 };
                 for (int dir = 0; dir < 4; dir++) {
-                    for (int step = 1; step <= fp; step++) { // ¨Ï¥Î°ÊºA¤õ¤O fp
+                    for (int step = 1; step <= fp; step++) { // ï¿½Ï¥Î°ÊºAï¿½ï¿½ï¿½O fp
                         int cx = bx + dx[dir] * step;
                         int cy = by + dy[dir] * step;
                         if (cx == tx && cy == ty) return true;
@@ -102,7 +102,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             for (int y = 0; y < 17; y++) {
                 for (int x = 0; x < 25; x++) {
                     if (bombManager.IsBombAt(x, y)) {
-                        int bombFp = bombManager.GetFirepowerAt(x, y); // ¥¿½T¨ú±o¦a¹Ï¤W¸Ó¬µ¼uªº¤õ¤O
+                        int bombFp = bombManager.GetFirepowerAt(x, y); // ï¿½ï¿½ï¿½Tï¿½ï¿½ï¿½oï¿½aï¿½Ï¤Wï¿½Ó¬ï¿½ï¿½uï¿½ï¿½ï¿½ï¿½ï¿½O
                         if (checkCross(x, y, bombFp)) return true;
                     }
                 }
@@ -113,10 +113,10 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             return false;
             };
 
-        // BFS ¨D¥Í¹w´ú¨t²Î
+        // BFS ï¿½Dï¿½Í¹wï¿½ï¿½ï¿½tï¿½ï¿½
         struct SafeSpot { int x, y, dist; bool found; };
         auto findSafeSpotBFS = [&](int startX, int startY, int pretendBombX = -1, int pretendBombY = -1) -> SafeSpot {
-            // ¹w´ú®É¶Ç¤J AI ·í«e¤õ¤O
+            // ï¿½wï¿½ï¿½ï¿½É¶Ç¤J AI ï¿½ï¿½ï¿½eï¿½ï¿½ï¿½O
             if (!isLethal(startX, startY, pretendBombX, pretendBombY, botFirepower)) return { startX, startY, 0, true };
 
             bool visited[17][25] = { false };
@@ -148,7 +148,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             return { -1, -1, 999, false };
             };
 
-        // ²¾°Ê
+        // ï¿½ï¿½ï¿½ï¿½
         auto ExecuteMove = [&](std::shared_ptr<Player>& bot, int bX, int bY, int nX, int nY, bool placeBomb) {
             bool up = false, down = false, left = false, right = false;
             float targetPixelX = (nX - 12) * 32.0f; float targetPixelY = (8 - nY) * 32.0f;
@@ -168,10 +168,10 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 if (pos.x < targetPixelX - 2.0f) right = true;
                 else if (pos.x > targetPixelX + 2.0f) left = true;
             }
-            bot->SetBotInput(up, down, left, right, placeBomb);
+            botController->SetInput(up, down, left, right, placeBomb);
         };
 
-        // ¸`ÂI 1¡G§Ú¦³¦MÀI¶Ü¡H (Survival Override)
+        // ï¿½`ï¿½I 1ï¿½Gï¿½Ú¦ï¿½ï¿½Mï¿½Iï¿½Ü¡H (Survival Override)
         bool inDanger = isLethal(botX, botY);
         if (inDanger) {
             auto safeSpot = findSafeSpotBFS(botX, botY);
@@ -185,7 +185,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // ¾Ô°«¹p¹F±½´y
+        // ï¿½Ô°ï¿½ï¿½pï¿½Fï¿½ï¿½ï¿½y
         std::shared_ptr<Player> targetDefender = nullptr;
         int defenderDist = 999;
         for (const auto& p : players) {
@@ -198,7 +198,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
         }
 
-        // ¸`ÂI 2¡G½T©w³Ì²×¥Ø¼Ð (Target Selection)
+        // ï¿½`ï¿½I 2ï¿½Gï¿½Tï¿½wï¿½Ì²×¥Ø¼ï¿½ (Target Selection)
         int targetX = -1, targetY = -1;
         auto findNearest = [&](auto filter) -> std::shared_ptr<Interactable> {
             std::shared_ptr<Interactable> nearest = nullptr; int minDist = 9999;
@@ -234,11 +234,11 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         }
 
         if (targetX == -1) {
-            bot->SetBotInput(false, false, false, false, false);
+            botController->SetInput(false, false, false, false, false);
             continue;
         }
 
-        // ¸`ÂI 3¡G¹Á¸Õ¦w¥þ©è¹F¥Ø¼Ð (Pathfinding: Safe)
+        // ï¿½`ï¿½I 3ï¿½Gï¿½ï¿½ï¿½Õ¦wï¿½ï¿½ï¿½ï¿½Fï¿½Ø¼ï¿½ (Pathfinding: Safe)
         auto pathSafe = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
             if (isLethal(x, y)) return -1;
@@ -272,7 +272,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // ¸`ÂI 4¡G¸ô®|¨üªý¤ÀªR - ¿j¶ô¯}Ãa (°¼Ál¥]§Û)
+        // ï¿½`ï¿½I 4ï¿½Gï¿½ï¿½ï¿½|ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½R - ï¿½jï¿½ï¿½ï¿½}ï¿½a (ï¿½ï¿½ï¿½lï¿½]ï¿½ï¿½)
         auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) && !levelManager.IsBrick(x, y)) return -1;
             if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || isLethal(x, y)) return -1;
@@ -289,8 +289,8 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
             if (botX == walkToX && botY == walkToY) {
                 auto testSafe = findSafeSpotBFS(botX, botY, botX, botY);
-                if (testSafe.found) bot->SetBotInput(false, false, false, false, true);
-                else bot->SetBotInput(false, false, false, false, false);
+                if (testSafe.found) botController->SetInput(false, false, false, false, true);
+                else botController->SetInput(false, false, false, false, false);
             }
             else {
                 auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, [&](int x, int y) {
@@ -298,12 +298,12 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                     return 1;
                     });
                 if (!pathToBrick.empty()) ExecuteMove(bot, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
-                else bot->SetBotInput(false, false, false, false, false);
+                else botController->SetInput(false, false, false, false, false);
             }
             continue;
         }
 
-        // ¸`ÂI 5¡G¸ô®|¨üªý¤ÀªR - ¤õµKµ¥«Ý»P¤Ï¨î (À£¨î¤õ¤O)
+        // ï¿½`ï¿½I 5ï¿½Gï¿½ï¿½ï¿½|ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½R - ï¿½ï¿½ï¿½Kï¿½ï¿½ï¿½Ý»Pï¿½Ï¨ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½O)
         auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y)) return -1;
             return 1;
@@ -312,7 +312,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         if (!pathIgnoreFire.empty()) {
             bool placeBomb = false;
 
-            // µø½u¤º¦³¼Ä¤H¥B¶ZÂ÷ªñ¡A©ñ¬µ¼u
+            // ï¿½ï¿½ï¿½uï¿½ï¿½ï¿½ï¿½ï¿½Ä¤Hï¿½Bï¿½Zï¿½ï¿½ï¿½ï¿½Aï¿½ñ¬µ¼u
             if (targetDefender) {
                 auto hasLineOfSight = [&](int bx, int by, int tx, int ty) {
                     if (bx != tx && by != ty) return false;
@@ -332,11 +332,14 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 }
             }
 
-            bot->SetBotInput(false, false, false, false, placeBomb);
+            botController->SetInput(false, false, false, false, placeBomb);
             continue;
         }
 
-        // ³£¨S¿ìªk¡A¥u¯àµo§b
+        // ï¿½ï¿½ï¿½Sï¿½ï¿½kï¿½Aï¿½uï¿½ï¿½oï¿½b
+        botController->SetInput(false, false, false, false, false);
+    }
+}ï¿½uï¿½ï¿½oï¿½b
         bot->SetBotInput(false, false, false, false, false);
     }
 }

@@ -159,7 +159,7 @@ void App::Update() {
             player->Update(m_LevelManager, m_BombManager, m_InteractableManager);
 
             if (!player->IsDead()) {
-                if ((player->IsBot() && player->IsBotPlaceBomb()) || (!player->IsBot() && Util::Input::IsKeyDown(player->GetBombKey()))) {
+                if (player->GetController() && player->GetController()->IsPlaceBombPressed()) {
                     m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root, m_Players);
                 }
             }

@@ -9,6 +9,7 @@
 #include <utility>
 #include "glm/vec2.hpp"
 #include "LevelManager.hpp"
+#include "Controller/InputController.hpp"
 
 class BombManager;
 class InteractableManager;
@@ -18,20 +19,12 @@ enum class Team {
     DEFENDER
 };
 
-struct Control {
-    Util::Keycode UP;
-    Util::Keycode DOWN;
-    Util::Keycode LEFT;
-    Util::Keycode RIGHT;
-    Util::Keycode PLACEBOMB;
-};
-
 class Player : public Util::GameObject {
 public:
     enum class Direction { UP, DOWN, LEFT, RIGHT };
 
     // Player(int startGridX, int startGridY);
-    Player(int startGridX, int startGridY, Team m_Team, Control m_Control, int id);
+    Player(int startGridX, int startGridY, Team m_Team, std::unique_ptr<InputController> controller, int id);
 
     // void Update(const LevelManager& levelManager);
     void Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
@@ -60,7 +53,6 @@ public:
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }
 
-    Util::Keycode GetBombKey() const { return m_Control.PLACEBOMB; }
 	Team GetTeam() const { return m_Team; }
 
     int GetPlayerID() const { return m_PlayerID; };
@@ -70,13 +62,7 @@ public:
     int GetFirepower() const { return m_Firepower; }
     void IncreaseFirepower();
 
-    // AI
-    void SetBot(bool isBot) { m_IsBot = isBot; }
-    bool IsBot() const { return m_IsBot; }
-    void SetBotInput(bool up, bool down, bool left, bool right, bool placeBomb) {
-        m_BotUp = up; m_BotDown = down; m_BotLeft = left; m_BotRight = right; m_BotPlaceBomb = placeBomb;
-    }
-    bool IsBotPlaceBomb() const { return m_BotPlaceBomb; }
+    InputController* GetController() const { return m_Controller.get(); }
 
     // 彈跳板
     bool TriggerBounce(Direction dir, int distance);
@@ -112,7 +98,7 @@ private:
     bool m_HasKey = false;  // 角色是否有鑰匙
 
     Team m_Team;
-    Control m_Control;
+    std::unique_ptr<InputController> m_Controller;
 
     int m_SpawnX;
     int m_SpawnY;
@@ -124,14 +110,6 @@ private:
 	int m_SpeedBoostTimer = -1;  // 速度提升計時器
 
 	int m_Firepower = 2;  // 炸彈火力，初始為 2，最大為 5
-
-    // AI
-    bool m_IsBot = false;
-    bool m_BotUp = false;
-    bool m_BotDown = false;
-    bool m_BotLeft = false;
-    bool m_BotRight = false;
-    bool m_BotPlaceBomb = false;
 
     // 彈跳板：飛行狀態
     bool m_IsBouncing = false;

@@ -89,16 +89,16 @@ void Player::Update(const LevelManager& levelManager, const class BombManager& b
     float centerX = (m_GridX - 12) * 32.0f;
     float centerY = (8 - m_GridY) * 32.0f;
 
-    bool isUpPressed = Util::Input::IsKeyPressed(m_Control.UP);
-    bool isDownPressed = Util::Input::IsKeyPressed(m_Control.DOWN);
-    bool isLeftPressed = Util::Input::IsKeyPressed(m_Control.LEFT);
-    bool isRightPressed = Util::Input::IsKeyPressed(m_Control.RIGHT);
+    bool isUpPressed = false;
+    bool isDownPressed = false;
+    bool isLeftPressed = false;
+    bool isRightPressed = false;
 
-    if (m_IsBot) {
-        isUpPressed = m_BotUp;
-        isDownPressed = m_BotDown;
-        isLeftPressed = m_BotLeft;
-        isRightPressed = m_BotRight;
+    if (m_Controller) {
+        isUpPressed = m_Controller->IsUpPressed();
+        isDownPressed = m_Controller->IsDownPressed();
+        isLeftPressed = m_Controller->IsLeftPressed();
+        isRightPressed = m_Controller->IsRightPressed();
     }
 
     if (isUpPressed) {

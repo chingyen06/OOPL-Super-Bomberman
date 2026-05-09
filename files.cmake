@@ -28,6 +28,9 @@ set(INCLUDE_FILES
     UIManager.hpp
     AIManager.hpp
     Menu.hpp
+    Controller/InputController.hpp
+    Controller/HumanController.hpp
+    Controller/BotController.hpp
 )
 
 set(TEST_FILES

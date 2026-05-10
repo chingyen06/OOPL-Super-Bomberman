@@ -8,15 +8,16 @@ set(SRC_FILES
     BombManager.cpp
     InteractableManager.cpp
     Interactable.cpp
-    UIManager.cpp
     AIManager.cpp
     Menu.cpp
     GameWorldContext.cpp
+    UI/UIManager.cpp
+    UI/UIImage.cpp
+    UI/UIText.cpp
 )
 
 set(INCLUDE_FILES
     App.hpp
-    BackgroundImage.hpp
     LevelManager.hpp
     MapTiles.hpp
     Player.hpp
@@ -25,8 +26,6 @@ set(INCLUDE_FILES
     BombManager.hpp
     InteractableManager.hpp
     Interactable.hpp
-    ScreenImage.hpp
-    UIManager.hpp
     AIManager.hpp
     Menu.hpp
     Controller/InputController.hpp
@@ -34,6 +33,9 @@ set(INCLUDE_FILES
     Controller/BotController.hpp
     WorldContext.hpp
     GameWorldContext.hpp
+    UI/UIManager.hpp
+    UI/UIImage.hpp
+    UI/UIText.hpp
 )
 
 set(TEST_FILES

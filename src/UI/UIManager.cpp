@@ -1,32 +1,8 @@
-#include "UIManager.hpp"
+#include "UI/UIManager.hpp"
 #include "Util/Image.hpp"
 #include "Util/Logger.hpp"
 #include <cstdio>
 #include <string>
-
-UIImage::UIImage(const std::string& imagePath, int x, int y) {
-    auto image = std::make_shared<Util::Image>(imagePath);
-    SetDrawable(image);
-    SetZIndex(99);
-    m_Transform.translation = { x, y };
-}
-
-void UIImage::SetPosition(float x, float y) {
-    m_Transform.translation = { x, y };
-}
-
-UIText::UIText(const std::string& text, int x, int y) {
-    m_Text = std::make_shared<Util::Text>(RESOURCE_DIR"/Font/GenJyuuGothicX-Bold.ttf", 30, text, Util::Color::FromName(Util::Colors::BLACK));
-
-    SetDrawable(m_Text);
-    SetZIndex(100);
-
-    m_Transform.translation = { x, y };
-}
-
-void UIText::SetText(const std::string& text) {
-     m_Text->SetText(text);
-}
 
 void UIManager::Init(Util::Renderer& root, int totalChests) {
     Clear(root);
@@ -68,10 +44,10 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
         m_TimerText->SetText(std::string(buffer));
 
-        m_LastSeconds = totalSeconds; // §ó·s§Ö¨ú
+        m_LastSeconds = totalSeconds; // ï¿½ï¿½sï¿½Ö¨ï¿½
     }
 
-	// ¬Ó«a
+	// ï¿½Ó«a
     bool defenderFound = false;
     for (const auto& player : players) {
         if (player->GetTeam() == Team::DEFENDER && !player->IsDead()) {
@@ -85,7 +61,7 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         m_CrownImage->SetPosition(-1000.0f, -1000.0f);
     }
     
-    // Æ_°Í
+    // ï¿½_ï¿½ï¿½
     int activeKeysNeeded = 0;
     for (const auto& player : players) {
         if (player->HasKey() && !player->IsDead()) {
@@ -100,7 +76,7 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         m_KeyIndicators[i]->SetPosition(-1000.0f, -1000.0f);
     }
 
-	// Ä_½c
+	// ï¿½_ï¿½c
     if (chestStatus != m_LastChestStatus) {
         size_t loopSize = std::min(chestStatus.size(), m_ChestPool.size());
 
@@ -113,7 +89,7 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
                 m_ChestPool[i]->SetDrawable(openedImg);
             }
         }
-        m_LastChestStatus = chestStatus; // §ó·s§Ö¨ú
+        m_LastChestStatus = chestStatus; // ï¿½ï¿½sï¿½Ö¨ï¿½
     }
 }
 
@@ -142,8 +118,4 @@ void UIManager::Clear(Util::Renderer& root) {
         root.RemoveChild(chest);
     }
     m_ChestPool.clear();
-}
-
-void UIText::SetPosition(float x, float y) {
-    m_Transform.translation = { x, y };
 }

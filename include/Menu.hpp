@@ -5,7 +5,7 @@
 #include <string>
 #include <functional>
 #include <memory>
-#include "UIManager.hpp"
+#include "UI/UIManager.hpp"
 #include "Util/Renderer.hpp"
 
 class Menu {

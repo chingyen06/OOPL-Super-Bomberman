@@ -5,12 +5,12 @@
 #include <memory>
 
 #include "Util/Renderer.hpp"
-#include "BackgroundImage.hpp"
+#include "UI/UIImage.hpp"
 #include "LevelManager.hpp"
 #include "Player.hpp"
 #include "BombManager.hpp"
 #include "InteractableManager.hpp"
-#include "UIManager.hpp"
+#include "UI/UIManager.hpp"
 #include "AIManager.hpp"
 #include "Menu.hpp"
 
@@ -49,9 +49,9 @@ private:
     Util::Renderer m_Root;  // 場景的根節點
 
 	// 背景圖片
-    std::shared_ptr<BackgroundImage> m_CoverImage;
-	std::shared_ptr<BackgroundImage> m_DefenseImage;
-    std::shared_ptr<BackgroundImage> m_AttackImage;
+    std::shared_ptr<UIImage> m_CoverImage;
+	std::shared_ptr<UIImage> m_DefenseImage;
+    std::shared_ptr<UIImage> m_AttackImage;
 
     LevelManager m_LevelManager;  // 管理關卡
 
@@ -74,7 +74,7 @@ private:
     // 選單
     Menu m_MainMenu;
     Menu m_LevelMenu;
-    std::shared_ptr<BackgroundImage> m_MenuBg;
+    std::shared_ptr<UIImage> m_MenuBg;
 };
 
 #endif

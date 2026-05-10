@@ -13,10 +13,14 @@
 void App::Start() {
     LOG_TRACE("Start");
 
-    m_CoverImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/cover.jpg");  // 載入封面圖片
-    m_DefenseImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/defense_win.png");  // 載入防守方獲勝圖片
-    m_AttackImage = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/attack_win.png");  // 載入防守方獲勝圖片
-	m_MenuBg = std::make_shared<BackgroundImage>(RESOURCE_DIR"/Image/white.png");  // 選單背景圖
+    m_CoverImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/cover.jpg");  // 載入封面圖片
+    m_CoverImage->SetFullScreen();
+    m_DefenseImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/defense_win.png");  // 載入防守方獲勝圖片
+    m_DefenseImage->SetFullScreen();
+    m_AttackImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/attack_win.png");  // 載入進攻方獲勝圖片
+    m_AttackImage->SetFullScreen();
+	m_MenuBg = std::make_shared<UIImage>(RESOURCE_DIR"/Image/white.png");  // 選單背景圖
+    m_MenuBg->SetFullScreen();
     m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
     // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
 

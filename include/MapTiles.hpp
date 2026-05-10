@@ -6,6 +6,7 @@
 class Tile : public Util::GameObject {
 public:
     virtual bool IsPassable() const = 0;
+    virtual bool IsDestructible() const { return false; }
 };
 
 // 草地
@@ -33,6 +34,9 @@ public:
     bool IsPassable() const override {
         return false;
     };
+    bool IsDestructible() const override {
+        return true;
+    }
 };
 
 #endif

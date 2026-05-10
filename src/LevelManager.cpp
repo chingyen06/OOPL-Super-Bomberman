@@ -2,6 +2,8 @@
 #include "InteractableManager.hpp"
 #include "MapTiles.hpp"
 #include <fstream>
+#include <unordered_map>
+#include <functional>
 #include "Util/Logger.hpp"
 
 void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& interactableManager) {
@@ -11,7 +13,22 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
         return;
     }
 
-    // m_MapData.assign(17, std::vector<char>(25, '0'));
+    // 定義字元與對應的處理邏輯
+    std::unordered_map<char, std::function<void(int, int)>> featureHandlers = {
+        {'F', [&](int x, int y) { m_DefenderSpawn = { x, y }; }},
+        {'A', [&](int x, int y) { m_AttackerSpawns.push_back({ x, y }); }},
+        {'K', [&](int x, int y) { interactableManager.AddKey(x, y); }},
+        {'9', [&](int x, int y) { interactableManager.AddChest(x, y); }},
+        {'U', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::UP); }},
+        {'D', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::DOWN); }},
+        {'L', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::LEFT); }},
+        {'R', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::RIGHT); }},
+        {'4', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::UP); }},
+        {'5', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::DOWN); }},
+        {'6', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::LEFT); }},
+        {'7', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::RIGHT); }}
+    };
+
     m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
 
     m_Tiles.clear();
@@ -31,44 +48,14 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
                 tile = std::make_shared<Brick>(x, y);
             }
             else {
+                // 預設為草地
                 tile = std::make_shared<Ground>(x, y);
-
-                if (type == 'F') {
-                    m_DefenderSpawn = { x, y };
+                
+                // 檢查是否有對應的特殊物件或設定
+                auto it = featureHandlers.find(type);
+                if (it != featureHandlers.end()) {
+                    it->second(x, y);
                 }
-                else if (type == 'A') {
-                    m_AttackerSpawns.push_back({ x, y });
-                }
-                else if (type == 'K') {   // 鑰匙
-                    interactableManager.AddKey(x, y);
-                }
-                else if (type == '9') {   // 寶箱
-                    interactableManager.AddChest(x, y);
-                }
-                else if (type == 'U') {
-                    interactableManager.AddConveyor(x, y, Player::Direction::UP);
-                }
-                else if (type == 'D') {
-                    interactableManager.AddConveyor(x, y, Player::Direction::DOWN);
-                }
-                else if (type == 'L') {
-                    interactableManager.AddConveyor(x, y, Player::Direction::LEFT);
-                }
-                else if (type == 'R') {
-                    interactableManager.AddConveyor(x, y, Player::Direction::RIGHT);
-                }
-                else if (type == '4') {
-					interactableManager.AddBouncePad(x, y, Player::Direction::UP);
-                }
-                else if (type == '5') {
-                    interactableManager.AddBouncePad(x, y, Player::Direction::DOWN);
-                }
-                else if (type == '6') {
-                    interactableManager.AddBouncePad(x, y, Player::Direction::LEFT);
-                }
-                else if (type == '7') {
-                    interactableManager.AddBouncePad(x, y, Player::Direction::RIGHT);
-				}
             }
 
             m_TileGrid[y][x] = tile;  // 存地圖方塊
@@ -106,7 +93,7 @@ bool LevelManager::IsBrick(int gridX, int gridY) const {
     if (gridX < 0 || gridX >= 25 || gridY < 0 || gridY >= 17) 
         return false;
 
-    return std::dynamic_pointer_cast<Brick>(m_TileGrid[gridY][gridX]) != nullptr;
+    return m_TileGrid[gridY][gridX]->IsDestructible();
 }
 
 // 摧毀磚塊並長出草地

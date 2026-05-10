@@ -16,9 +16,9 @@ public:
     void LoadLevel(const std::string& filepath, InteractableManager& interactableManager);
     void AttachToRoot(Util::Renderer& root);
     void DetachFromRoot(Util::Renderer& root);
-    bool IsWalkable(int gridX, int gridY) const;  // ¬d¸ß¬O§_¥i²¾°Ê¦Ü (gridX, gridY)
-	bool IsBrick(int gridX, int gridY) const;  // ¬d¸ß (gridX, gridY) ¬O§_¬°¿j¶ô
-	void DestroyBrick(int gridX, int gridY, Util::Renderer& root, InteractableManager& interactableManager);  // ºR·´ (gridX, gridY) ªº¿j¶ô
+    bool IsWalkable(int gridX, int gridY) const;  // ï¿½dï¿½ß¬Oï¿½_ï¿½iï¿½ï¿½ï¿½Ê¦ï¿½ (gridX, gridY)
+	bool IsBrick(int gridX, int gridY) const;  // ï¿½dï¿½ï¿½ (gridX, gridY) ï¿½Oï¿½_ï¿½ï¿½ï¿½jï¿½ï¿½
+	void DestroyBrick(int gridX, int gridY, Util::Renderer& root, InteractableManager& interactableManager);  // ï¿½Rï¿½ï¿½ (gridX, gridY) ï¿½ï¿½ï¿½jï¿½ï¿½
 	void Clear(Util::Renderer& root);
 
     std::pair<int, int> GetDefenderSpawn() const { return m_DefenderSpawn; }
@@ -26,11 +26,11 @@ public:
     
 private:
     std::vector<std::shared_ptr<Tile>> m_Tiles;
-    //std::vector<std::vector<char>> m_MapData;  // ¦s¦a¹Ï¤è¶ô
-    std::vector<std::vector<std::shared_ptr<Tile>>> m_TileGrid;  // ¦s¦a¹Ï¤è¶ô
+    //std::vector<std::vector<char>> m_MapData;  // ï¿½sï¿½aï¿½Ï¤ï¿½ï¿½
+    std::vector<std::vector<std::shared_ptr<Tile>>> m_TileGrid;  // ï¿½sï¿½aï¿½Ï¤ï¿½ï¿½
 
-    std::pair<int, int> m_DefenderSpawn = { 1, 1 };  // ¨¾¦uÂI
-    std::vector<std::pair<int, int>> m_AttackerSpawns;  // ¶i§ðÂI
+    std::pair<int, int> m_DefenderSpawn = { 1, 1 };  // ï¿½ï¿½ï¿½uï¿½I
+    std::vector<std::pair<int, int>> m_AttackerSpawns;  // ï¿½iï¿½ï¿½ï¿½I
 };
 
 #endif

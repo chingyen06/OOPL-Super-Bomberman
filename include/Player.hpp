@@ -8,11 +8,8 @@
 #include <vector>
 #include <utility>
 #include "glm/vec2.hpp"
-#include "LevelManager.hpp"
+#include "WorldContext.hpp"
 #include "Controller/InputController.hpp"
-
-class BombManager;
-class InteractableManager;
 
 enum class Team {
     ATTACKER,
@@ -27,7 +24,7 @@ public:
     Player(int startGridX, int startGridY, Team m_Team, std::unique_ptr<InputController> controller, int id);
 
     // void Update(const LevelManager& levelManager);
-    void Update(const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
+    void Update(const IWorldContext& worldContext);
 
     // 取得角色真正的座標
     int GetGridX() const { return m_GridX; }
@@ -83,7 +80,7 @@ private:
     void ChangeDirection(Direction dir);
 
     // 確認是否可以移動
-    bool IsColliding(float nextX, float nextY, const LevelManager& levelManager, const class BombManager& bombManager, const InteractableManager& interactableManager);
+    bool IsColliding(float nextX, float nextY, const IWorldContext& worldContext);
 
 	bool m_IsDead = false;  // 角色是否死亡
 

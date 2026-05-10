@@ -8,6 +8,7 @@
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
+#include "GameWorldContext.hpp"
 
 void App::Start() {
     LOG_TRACE("Start");
@@ -150,8 +151,10 @@ void App::Update() {
         m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
         m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager);
 
+        GameWorldContext worldContext(m_LevelManager, m_BombManager, m_InteractableManager);
+
         for (auto& player : m_Players) {
-            player->Update(m_LevelManager, m_BombManager, m_InteractableManager);
+            player->Update(worldContext);
 
             if (!player->IsDead()) {
                 if (player->GetController() && player->GetController()->IsPlaceBombPressed()) {

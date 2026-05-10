@@ -11,6 +11,7 @@ set(SRC_FILES
     UIManager.cpp
     AIManager.cpp
     Menu.cpp
+    GameWorldContext.cpp
 )
 
 set(INCLUDE_FILES
@@ -31,6 +32,8 @@ set(INCLUDE_FILES
     Controller/InputController.hpp
     Controller/HumanController.hpp
     Controller/BotController.hpp
+    WorldContext.hpp
+    GameWorldContext.hpp
 )
 
 set(TEST_FILES

@@ -1,5 +1,6 @@
 #include "AIManager.hpp"
 #include "Interactable.hpp"
+#include "Controller/BotController.hpp"
 #include <queue>
 #include <cmath>
 #include <algorithm>
@@ -73,7 +74,9 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     const auto& interactables = interactableManager.GetInteractables();
 
     for (auto& bot : players) {
-        if (!bot->IsBot() || bot->IsDead()) continue;
+        if (bot->IsDead()) continue;
+        auto botController = dynamic_cast<BotController*>(bot->GetController());
+        if (!botController) continue;
 
         int botX = bot->GetGridX();
         int botY = bot->GetGridY();
@@ -336,10 +339,6 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // ���S��k�A�u��o�b
         botController->SetInput(false, false, false, false, false);
-    }
-}�u��o�b
-        bot->SetBotInput(false, false, false, false, false);
     }
 }

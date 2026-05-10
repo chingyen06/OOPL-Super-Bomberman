@@ -1,4 +1,6 @@
 #include "App.hpp"
+#include "Controller/HumanController.hpp"
+#include "Controller/BotController.hpp"
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -77,28 +79,21 @@ void App::LoadLevel(int levelIndex) {
     static std::mt19937 g(rd());   // Mersenne Twister
     std::shuffle(atkSpawns.begin(), atkSpawns.end(), g);
 
-    Control ctrl1P = {
+    auto ctrl1P = std::make_unique<HumanController>(Control{
         Util::Keycode::W, 
         Util::Keycode::S,
         Util::Keycode::A, 
         Util::Keycode::D,
         Util::Keycode::SPACE
-    };
+    });
 
-    Control ctrl2P = {
-        Util::Keycode::UP,
-        Util::Keycode::DOWN,
-        Util::Keycode::LEFT,
-        Util::Keycode::RIGHT,
-        Util::Keycode::KP_ENTER
-    };
+    auto ctrl2P = std::make_unique<BotController>();
 
-    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, ctrl1P, 0);
+    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 
-    auto p2 = std::make_shared<Player>(atkSpawns[0].first, atkSpawns[0].second, Team::ATTACKER, ctrl2P, 1);
-    p2->SetBot(true);
+    auto p2 = std::make_shared<Player>(atkSpawns[0].first, atkSpawns[0].second, Team::ATTACKER, std::move(ctrl2P), 1);
     m_Players.push_back(p2);
     m_Root.AddChild(p2);
 

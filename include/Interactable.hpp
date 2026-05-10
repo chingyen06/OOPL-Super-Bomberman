@@ -8,8 +8,6 @@
 #include "Player.hpp"
 #include <memory>
 
-class player;
-
 class Interactable : public Util::GameObject {
 public:
     virtual ~Interactable() = default;
@@ -18,13 +16,13 @@ public:
     virtual int GetGridX() const = 0;
     virtual int GetGridY() const = 0;
 
-    virtual bool IsBlocksBomb() const = 0;
-    virtual bool IsBlocksFire() const = 0;
-    virtual bool IsDestroyedByFire() const = 0;
+    virtual bool IsBlocksBomb() const { return false; }
+    virtual bool IsBlocksFire() const { return false; }
+    virtual bool IsDestroyedByFire() const { return false; }
 
     virtual bool OnInteract(std::shared_ptr<Player>& player) = 0;
 
-    virtual glm::vec2 GetForce() const = 0;
+    virtual glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 };
 
 class Key : public Interactable {
@@ -35,12 +33,8 @@ public:
     int GetGridY() const { return m_GridY; }
 
     bool IsBlocksBomb() const override { return true; }
-    bool IsBlocksFire() const override { return false; }
-    bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
-
-    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
 private:
     int m_GridX;
@@ -57,11 +51,8 @@ public:
 
     bool IsBlocksBomb() const override { return true; }
     bool IsBlocksFire() const override { return true; }
-    bool IsDestroyedByFire() const override { return false; }
 
     bool OnInteract(std::shared_ptr<Player>& player) override;
-
-    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
     void Open();
 
@@ -74,7 +65,7 @@ private:
     std::shared_ptr<Util::Image> m_OpenedImage;
 };
 
-// ¹D¨ã
+// ï¿½Dï¿½ï¿½
 class PowerUp : public Interactable {
 public:
     PowerUp(int gridX, int gridY);
@@ -82,32 +73,28 @@ public:
     int GetGridY() const override { return m_GridY; }
 
     bool IsBlocksBomb() const override { return true; }
-    // ¹D¨ã¤£·|¾×¤õ¡A¦ý·|³Q¤õ¿N·´
-    bool IsBlocksFire() const override { return false; }
     bool IsDestroyedByFire() const override { return true; }
-
-    glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 
 protected:
     int m_GridX;
     int m_GridY;
 };
 
-// ¥[³t¾c¹D¨ã
+// ï¿½[ï¿½tï¿½cï¿½Dï¿½ï¿½
 class SpeedItem : public PowerUp {
 public:
     SpeedItem(int gridX, int gridY);
     bool OnInteract(std::shared_ptr<Player>& player) override;
 };
 
-// ¬µ¼u¹D¨ã 
+// ï¿½ï¿½ï¿½uï¿½Dï¿½ï¿½ 
 class BombItem : public PowerUp {
 public:
     BombItem(int gridX, int gridY);
     bool OnInteract(std::shared_ptr<Player>& player) override;
 };
 
-// ¤õµK¹D¨ã
+// ï¿½ï¿½ï¿½Kï¿½Dï¿½ï¿½
 class FireItem : public PowerUp {
 public:
     FireItem(int gridX, int gridY);
@@ -121,7 +108,7 @@ public:
     virtual std::shared_ptr<Interactable> Create(int gridX, int gridY) = 0;
 };
 
-// ¥[³t¾c
+// ï¿½[ï¿½tï¿½c
 class SpeedItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -129,7 +116,7 @@ public:
     }
 };
 
-// ¬µ¼u¹D¨ã
+// ï¿½ï¿½ï¿½uï¿½Dï¿½ï¿½
 class BombItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -137,7 +124,7 @@ public:
     }
 };
 
-//¤õµK¹D¨ã
+//ï¿½ï¿½ï¿½Kï¿½Dï¿½ï¿½
 class FireItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -145,24 +132,21 @@ public:
     }
 };
 
-// ªÅ®ð
+// ï¿½Å®ï¿½
 class EmptyDropFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
-        return nullptr; // ¤°»ò³£¤£±¼
+        return nullptr; // ï¿½ï¿½ï¿½ò³£¤ï¿½ï¿½ï¿½
     }
 };
 
-// ¿é°e±a
+// ï¿½ï¿½eï¿½a
 class Conveyor : public Interactable {
 public:
     Conveyor(int gridX, int gridY, Player::Direction dir);
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
-    bool IsBlocksBomb() const override { return false; }
-    bool IsBlocksFire() const override { return false; }
-    bool IsDestroyedByFire() const override { return false; }
     bool OnInteract(std::shared_ptr<Player>& player) override { return false; }
 
     glm::vec2 GetForce() const override;
@@ -173,7 +157,7 @@ private:
     Player::Direction m_Dir;
 };
 
-// ¼u¸õªO
+// ï¿½uï¿½ï¿½ï¿½O
 class BouncePad : public Interactable {
 public:
     BouncePad(int gridX, int gridY, Player::Direction dir);
@@ -182,12 +166,7 @@ public:
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
-    bool IsBlocksBomb() const override { return false; }
-    bool IsBlocksFire() const override { return false; }
-    bool IsDestroyedByFire() const override { return false; }
     bool OnInteract(std::shared_ptr<Player>& player) override;
-
-    glm::vec2 GetForce() const override { return { 0.0f, 0.0f }; }
 
 private:
     int m_GridX;

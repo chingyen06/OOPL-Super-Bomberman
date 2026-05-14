@@ -14,6 +14,7 @@
 #include "AIManager.hpp"
 #include "Menu.hpp"
 #include "Spirit.hpp"
+#include "Turret/TurretManager.hpp"
 
 class App {
 public:
@@ -73,6 +74,8 @@ private:
     AIManager m_AIManager;
 
     std::vector<std::shared_ptr<Spirit>> m_Spirits;
+
+	TurretManager m_TurretManager;  // 管理砲台
 
     // 選單
     Menu m_MainMenu;

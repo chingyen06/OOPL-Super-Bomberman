@@ -15,6 +15,9 @@ set(SRC_FILES
     UI/UIImage.cpp
     UI/UIText.cpp
     Spirit.cpp
+    Turret/Projectile.cpp
+    Turret/TurretManager.cpp
+    Turret/Turret.cpp
 )
 
 set(INCLUDE_FILES
@@ -38,6 +41,9 @@ set(INCLUDE_FILES
     UI/UIImage.hpp
     UI/UIText.hpp
     Spirit.hpp
+    Turret/Projectile.hpp
+    Turret/TurretManager.hpp
+    Turret/Turret.hpp
 )
 
 set(TEST_FILES

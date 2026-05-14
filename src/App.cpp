@@ -110,6 +110,12 @@ void App::LoadLevel(int levelIndex) {
         m_Root.AddChild(spirit);
     }
 
+    // 砲台
+    m_TurretManager.Clear(m_Root);
+    for (const auto& sp : m_LevelManager.GetTurretSpawns()) {
+        m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Player::Direction::DOWN), m_Root);
+    }
+
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
 }
 
@@ -162,6 +168,7 @@ void App::Update() {
         auto statusList = m_InteractableManager.GetChestStatusList();
         m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
         m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager);
+        m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_Root);
 
         GameWorldContext worldContext(m_LevelManager, m_BombManager, m_InteractableManager);
 
@@ -202,6 +209,7 @@ void App::Update() {
         m_BombManager.Clear(m_Root);
         m_LevelManager.DetachFromRoot(m_Root);
         m_UIManager.Clear(m_Root);
+        m_TurretManager.Clear(m_Root);
 
         for (auto& s : m_Spirits) 
             m_Root.RemoveChild(s);

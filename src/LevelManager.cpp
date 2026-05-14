@@ -27,7 +27,8 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
         {'5', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::DOWN); }},
         {'6', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::LEFT); }},
         {'7', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::RIGHT); }},
-        {'S', [&](int x, int y) { m_SpiritSpawns.push_back({ x, y }); }}
+        {'S', [&](int x, int y) { m_SpiritSpawns.push_back({ x, y }); }},
+        {'B', [&](int x, int y) { m_TurretSpawns.push_back({ x, y }); }},
     };
 
     m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
@@ -126,5 +127,6 @@ void LevelManager::Clear(Util::Renderer& root) {
     m_Tiles.clear();
     m_AttackerSpawns.clear();
     m_SpiritSpawns.clear();
+    m_TurretSpawns.clear();
     m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
 }

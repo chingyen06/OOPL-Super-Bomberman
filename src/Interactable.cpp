@@ -147,33 +147,45 @@ glm::vec2 Conveyor::GetForce() const {
 BouncePad::BouncePad(int gridX, int gridY, Player::Direction dir)
     : m_GridX(gridX), m_GridY(gridY), m_Dir(dir) {
 
-    std::string imgPath;
+    std::string activePath;
+    std::string inactivePath;
+
     switch (dir) {
-    case Player::Direction::UP:
-        imgPath = RESOURCE_DIR"/Image/bouncepad_up.png";
-        break;
-    case Player::Direction::DOWN:
-        imgPath = RESOURCE_DIR"/Image/bouncepad_down.png";
-        break;
-    case Player::Direction::LEFT:
-        imgPath = RESOURCE_DIR"/Image/bouncepad_left.png";
-        break;
-    case Player::Direction::RIGHT:
-        imgPath = RESOURCE_DIR"/Image/bouncepad_right.png";
-        break;
+        case Player::Direction::UP:
+            activePath = RESOURCE_DIR"/Image/bouncepad_up.png";
+            inactivePath = RESOURCE_DIR"/Image/bouncepad_up_gray.png";
+            break;
+        case Player::Direction::DOWN:
+            activePath = RESOURCE_DIR"/Image/bouncepad_down.png";
+            inactivePath = RESOURCE_DIR"/Image/bouncepad_down_gray.png";
+            break;
+        case Player::Direction::LEFT:
+            activePath = RESOURCE_DIR"/Image/bouncepad_left.png";
+            inactivePath = RESOURCE_DIR"/Image/bouncepad_left_gray.png";
+            break;
+        case Player::Direction::RIGHT:
+            activePath = RESOURCE_DIR"/Image/bouncepad_right.png";
+            inactivePath = RESOURCE_DIR"/Image/bouncepad_right_gray.png";
+            break;
     }
 
-    auto image = std::make_shared<Util::Image>(imgPath);
-    SetDrawable(image);
+    m_ActiveImage = std::make_shared<Util::Image>(activePath);
+    m_InactiveImage = std::make_shared<Util::Image>(inactivePath);
+
+    SetDrawable(m_ActiveImage);
     SetZIndex(2);
 
-    m_Transform.scale = { 32.0f / image->GetSize().x, 32.0f / image->GetSize().y };
+    m_Transform.scale = { 32.0f / m_ActiveImage->GetSize().x, 32.0f / m_ActiveImage->GetSize().y };
     m_Transform.translation = { (gridX - 12) * 32.0f, (8 - gridY) * 32.0f };
 }
 
 void BouncePad::Update() {
     if (m_Cooldown > 0) {
         m_Cooldown--;
+
+        if (m_Cooldown == 0) {
+            SetDrawable(m_ActiveImage);
+        }
     }
 }
 
@@ -182,6 +194,7 @@ bool BouncePad::OnInteract(std::shared_ptr<Player>& player) {
 
     if (player->TriggerBounce(m_Dir, m_Distance)) {
         m_Cooldown = 60 * 5;  // 5 ¬í§N«o
+        SetDrawable(m_InactiveImage);
         LOG_INFO("BouncePad triggered! Cooldown started.");
     }
 

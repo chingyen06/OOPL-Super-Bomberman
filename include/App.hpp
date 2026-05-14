@@ -13,6 +13,7 @@
 #include "UI/UIManager.hpp"
 #include "AIManager.hpp"
 #include "Menu.hpp"
+#include "Spirit.hpp"
 
 class App {
 public:
@@ -70,6 +71,8 @@ private:
 	UIManager m_UIManager;  // 管理 UI 顯示
 
     AIManager m_AIManager;
+
+    std::vector<std::shared_ptr<Spirit>> m_Spirits;
 
     // 選單
     Menu m_MainMenu;

@@ -174,6 +174,10 @@ private:
     Player::Direction m_Dir;
     int m_Distance = 3;
     int m_Cooldown = 0;
+
+    std::shared_ptr<Util::Image> m_ActiveImage;
+    std::shared_ptr<Util::Image> m_InactiveImage;
+
 };
 
 #endif

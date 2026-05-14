@@ -23,6 +23,7 @@ public:
 
     std::pair<int, int> GetDefenderSpawn() const { return m_DefenderSpawn; }
     std::vector<std::pair<int, int>> GetAttackerSpawns() const { return m_AttackerSpawns; }
+    std::vector<std::pair<int, int>> GetSpiritSpawns() const { return m_SpiritSpawns; }
     
 private:
     std::vector<std::shared_ptr<Tile>> m_Tiles;
@@ -31,6 +32,7 @@ private:
 
     std::pair<int, int> m_DefenderSpawn = { 1, 1 };  // ���u�I
     std::vector<std::pair<int, int>> m_AttackerSpawns;  // �i���I
+    std::vector<std::pair<int, int>> m_SpiritSpawns;
 };
 
 #endif

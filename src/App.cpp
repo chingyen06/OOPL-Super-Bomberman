@@ -39,7 +39,7 @@ void App::Start() {
         m_GameState = GameState::GAMEPLAY;
         LoadLevel(1);
     });
-    /*m_LevelMenu.AddOption("Level 2", [this]() {
+    m_LevelMenu.AddOption("Level 2", [this]() {
         m_LevelMenu.Hide(m_Root);
         m_Root.RemoveChild(m_MenuBg);
         m_GameState = GameState::GAMEPLAY;
@@ -50,7 +50,7 @@ void App::Start() {
         m_Root.RemoveChild(m_MenuBg);
         m_GameState = GameState::GAMEPLAY;
         LoadLevel(3);
-    });*/
+    });
     m_LevelMenu.AddOption("return", [this]() {
         m_LevelMenu.Hide(m_Root);
         m_MainMenu.Show(m_Root, 0, 50);
@@ -94,13 +94,21 @@ void App::LoadLevel(int levelIndex) {
 
     auto ctrl2P = std::make_unique<BotController>();
 
-    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
+    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::ATTACKER, std::move(ctrl1P), 0);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 
     auto p2 = std::make_shared<Player>(atkSpawns[0].first, atkSpawns[0].second, Team::ATTACKER, std::move(ctrl2P), 1);
     m_Players.push_back(p2);
     m_Root.AddChild(p2);
+
+    // 源石精靈
+    m_Spirits.clear();
+    for (const auto& sp : m_LevelManager.GetSpiritSpawns()) {
+        auto spirit = std::make_shared<Spirit>(sp.first, sp.second);
+        m_Spirits.push_back(spirit);
+        m_Root.AddChild(spirit);
+    }
 
     m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
 }
@@ -173,6 +181,20 @@ void App::Update() {
                 }
             }
         }
+
+        for (auto it = m_Spirits.begin(); it != m_Spirits.end();) {
+            auto& spirit = *it;
+
+            spirit->Update(m_Players, m_LevelManager, m_BombManager);
+
+            if (spirit->ShouldDelete()) {
+                m_Root.RemoveChild(spirit);
+                it = m_Spirits.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
     }
     else if (m_GameState == GameState::GAMEEND) {
         // 清除戰場
@@ -180,6 +202,10 @@ void App::Update() {
         m_BombManager.Clear(m_Root);
         m_LevelManager.DetachFromRoot(m_Root);
         m_UIManager.Clear(m_Root);
+
+        for (auto& s : m_Spirits) 
+            m_Root.RemoveChild(s);
+        m_Spirits.clear();
 
         for (auto& player : m_Players)
             m_Root.RemoveChild(player);

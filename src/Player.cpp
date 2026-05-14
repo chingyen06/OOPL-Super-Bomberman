@@ -229,6 +229,12 @@ void Player::Update(const IWorldContext& worldContext) {
         }
     }
 
+	// 位置更新後，確保畫面座標與像素座標同步
+    m_Transform.translation = {
+        std::round(m_Pos.x),
+        std::round(m_Pos.y + 15.0f)
+    };
+
     // 無敵時間
     if (m_Invincible > 0) {
         m_Invincible--;

@@ -14,6 +14,7 @@ set(SRC_FILES
     UI/UIManager.cpp
     UI/UIImage.cpp
     UI/UIText.cpp
+    Spirit.cpp
 )
 
 set(INCLUDE_FILES
@@ -36,6 +37,7 @@ set(INCLUDE_FILES
     UI/UIManager.hpp
     UI/UIImage.hpp
     UI/UIText.hpp
+    Spirit.hpp
 )
 
 set(TEST_FILES

@@ -61,8 +61,7 @@ public:
 
     InputController* GetController() const { return m_Controller.get(); }
 
-    // 彈跳板
-    bool TriggerBounce(Direction dir, int distance);
+    bool TriggerBounce(Direction dir, int distance);  // 彈跳板
 
 private:
     int m_GridX;

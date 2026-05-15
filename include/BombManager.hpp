@@ -20,6 +20,7 @@ public:
     bool IsBombAt(int gridX, int gridY, const Bomb* ignore = nullptr) const;
     bool HasExplosionAt(int gridX, int gridY) const;
     int GetFirepowerAt(int gridX, int gridY) const;
+    void SpawnBomb(int gridX, int gridY, int firepower, int ownerID, Util::Renderer& root);
 
 private:
     std::vector<std::shared_ptr<Bomb>> m_Bombs;

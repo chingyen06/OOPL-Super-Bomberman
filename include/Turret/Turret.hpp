@@ -8,12 +8,19 @@
 #include <vector>
 #include <memory>
 
+class LevelManager;
+class BombManager;
+class InteractableManager;
+
 class Turret : public Util::GameObject {
 public:
     Turret(int gridX, int gridY, Player::Direction dir);
     virtual ~Turret() = default;
 
-    virtual void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles) = 0;
+    virtual void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets) = 0;
+
+    int GetGridX() const { return m_GridX; }
+    int GetGridY() const { return m_GridY; }
 
 protected:
     int m_GridX;
@@ -25,7 +32,8 @@ protected:
     std::shared_ptr<Util::Image> m_ImgIdle;
 
     void UpdateRotationVisual();
-    void Fire(std::vector<std::shared_ptr<Projectile>>& outProjectiles);
+
+    void Fire(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets);
 };
 
 class RotatingTurret : public Turret {
@@ -33,7 +41,7 @@ public:
     enum class State { IDLE, READY };
 
     RotatingTurret(int gridX, int gridY, Player::Direction startDir);
-    void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles) override;
+    void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets) override;
 
 private:
     State m_State = State::IDLE;

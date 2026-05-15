@@ -2,53 +2,46 @@
 #include "LevelManager.hpp"
 #include "BombManager.hpp"
 #include "Util/Logger.hpp"
+#include <cmath>
 
-Projectile::Projectile(int startGridX, int startGridY, Player::Direction dir)
-    : m_Dir(dir) {
+Projectile::Projectile(int startGridX, int startGridY, int targetGridX, int targetGridY, Player::Direction dir)
+    : m_Dir(dir), m_TargetGridX(targetGridX), m_TargetGridY(targetGridY) {
+
     auto img = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/bomb.png");
     SetDrawable(img);
-    SetZIndex(10);
+    SetZIndex(15);
+
+    m_Transform.scale = { (32.0f / img->GetSize().x) * 0.6f, (32.0f / img->GetSize().y) * 0.6f };
 
     m_Pos.x = (startGridX - 12) * 32.0f;
     m_Pos.y = (8 - startGridY) * 32.0f;
     m_Transform.translation = m_Pos;
+
+    m_TargetPixelX = (targetGridX - 12) * 32.0f;
+    m_TargetPixelY = (8 - targetGridY) * 32.0f;
 }
 
-void Projectile::Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& lm, const BombManager& bm) {
+void Projectile::Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& lm, BombManager& bm, Util::Renderer& root) {
     if (m_IsDead) return;
 
-    // 位移計算
-    float dx = 0.0f, dy = 0.0f;
-    if (m_Dir == Player::Direction::UP) dy = m_Speed;
-    else if (m_Dir == Player::Direction::DOWN) dy = -m_Speed;
-    else if (m_Dir == Player::Direction::LEFT) dx = -m_Speed;
-    else if (m_Dir == Player::Direction::RIGHT) dx = m_Speed;
+    float dx = m_TargetPixelX - m_Pos.x;
+    float dy = m_TargetPixelY - m_Pos.y;
+    float dist = std::sqrt(dx * dx + dy * dy);
 
-    m_Pos.x += dx;
-    m_Pos.y += dy;
-    m_Transform.translation = m_Pos;
-
-    // 碰撞偵測
-    CheckCollision(players, lm, bm);
-}
-
-void Projectile::CheckCollision(std::vector<std::shared_ptr<Player>>& players, const LevelManager& lm, const BombManager& bm) {
-    int currentGridX = std::round(m_Pos.x / 32.0f) + 12;
-    int currentGridY = 8 - std::round(m_Pos.y / 32.0f);
-
-    // 碰到牆壁、磚塊或炸彈即銷毀
-    if (!lm.IsWalkable(currentGridX, currentGridY) || bm.IsBombAt(currentGridX, currentGridY)) {
+    if (dist <= m_Speed) {
+        m_Pos.x = m_TargetPixelX;
+        m_Pos.y = m_TargetPixelY;
+        m_Transform.translation = m_Pos;
         m_IsDead = true;
-        return;
-    }
 
-    // 擊中玩家
-    for (auto& p : players) {
-        if (!p->IsDead() && p->GetGridX() == currentGridX && p->GetGridY() == currentGridY) {
-            p->Kill();
-            LOG_INFO("Player killed by Turret Projectile!");
-            m_IsDead = true;
-            return;
+        if (!bm.IsBombAt(m_TargetGridX, m_TargetGridY)) {
+            bm.SpawnBomb(m_TargetGridX, m_TargetGridY, 2, -1, root); // 預設火力 2
+            LOG_INFO("Turret Bomb Landed!");
         }
+    }
+    else {
+        m_Pos.x += (dx / dist) * m_Speed;
+        m_Pos.y += (dy / dist) * m_Speed;
+        m_Transform.translation = m_Pos;
     }
 }

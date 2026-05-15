@@ -278,6 +278,7 @@ bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldCon
     auto check = [&](int gx, int gy) {
         bool isMapObstacle = !worldContext.IsWalkable(gx, gy);
         bool isBomb = worldContext.IsBombAt(gx, gy);
+        bool isTurret = worldContext.IsTurretAt(gx, gy);
         // bool isChest = interactableManager.IsChestAt(gx, gy);
 
         // 如果是炸彈，但該座標等於 m_IgnoreBombX/Y，則視為可穿透
@@ -292,10 +293,10 @@ bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldCon
             }
         }
         if (isIgnored) {
-            return isMapObstacle;
+            return isMapObstacle || isTurret;
         }
 
-        return isMapObstacle || isBomb;
+        return isMapObstacle || isBomb || isTurret;
     };
 
     // 其中一個角不能走就判定有碰撞

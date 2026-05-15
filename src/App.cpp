@@ -94,7 +94,7 @@ void App::LoadLevel(int levelIndex) {
 
     auto ctrl2P = std::make_unique<BotController>();
 
-    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::ATTACKER, std::move(ctrl1P), 0);
+    auto p1 = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
     m_Players.push_back(p1);
     m_Root.AddChild(p1);
 
@@ -168,9 +168,9 @@ void App::Update() {
         auto statusList = m_InteractableManager.GetChestStatusList();
         m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
         m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager);
-        m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_Root);
+        m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Root);
 
-        GameWorldContext worldContext(m_LevelManager, m_BombManager, m_InteractableManager);
+        GameWorldContext worldContext(m_LevelManager, m_BombManager, m_InteractableManager, m_TurretManager);
 
         for (auto& player : m_Players) {
             player->Update(worldContext);

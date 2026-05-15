@@ -9,6 +9,7 @@ public:
 
     virtual bool IsWalkable(int gridX, int gridY) const = 0;
     virtual bool IsBombAt(int gridX, int gridY) const = 0;
+    virtual bool IsTurretAt(int gridX, int gridY) const = 0;
     virtual glm::vec2 GetForceAt(int gridX, int gridY) const = 0;
 };
 

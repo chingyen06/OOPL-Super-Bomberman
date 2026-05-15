@@ -176,3 +176,9 @@ int BombManager::GetFirepowerAt(int gridX, int gridY) const {
     }
     return 0; // ¨S¬µ¼u¤õ¤O¬° 0
 }
+
+void BombManager::SpawnBomb(int gridX, int gridY, int firepower, int ownerID, Util::Renderer& root) {
+    auto newBomb = std::make_shared<Bomb>(gridX, gridY, firepower, ownerID);
+    m_Bombs.push_back(newBomb);
+    root.AddChild(newBomb);
+}

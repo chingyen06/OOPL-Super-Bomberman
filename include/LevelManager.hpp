@@ -23,6 +23,8 @@ public:
 
     std::pair<int, int> GetDefenderSpawn() const { return m_DefenderSpawn; }
     std::vector<std::pair<int, int>> GetAttackerSpawns() const { return m_AttackerSpawns; }
+    int GetMapWidth() const { return m_TileGrid.empty() ? 25 : m_TileGrid[0].size(); }
+    int GetMapHeight() const { return m_TileGrid.size(); }
     std::vector<std::pair<int, int>> GetSpiritSpawns() const { return m_SpiritSpawns; }
     std::vector<std::pair<int, int>> GetTurretSpawns() const { return m_TurretSpawns; }
     

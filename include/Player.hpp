@@ -107,17 +107,20 @@ private:
 
 	int m_Firepower = 2;  // 炸彈火力，初始為 2，最大為 5
 
-    // 彈跳板：飛行狀態
-    bool m_IsBouncing = false;
-    int m_BounceTick = 0;
-    int m_BounceDuration = 30;
-    glm::vec2 m_BounceStart = { 0.0f, 0.0f };  // 起跳座標
-    glm::vec2 m_BounceTarget = { 0.0f, 0.0f }; // 落地座標
+    struct BounceState {
+        bool active = false;
+        bool pending = false;
+        int tick = 0;
+        int duration = 30;
+        glm::vec2 start{};
+        glm::vec2 target{};
+        Direction pendingDir;
+        int pendingDist = 0;
+    };
+    BounceState m_Bounce;
 
-    // 彈跳板
-    bool m_PendingBounce = false;
-    Direction m_PendingBounceDir;
-    int m_PendingBounceDist = 0;
+    void UpdateBouncing();
+    void ApplyPendingBounce(const GameWorldContext& context);
 };
 
 #endif

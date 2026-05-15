@@ -15,8 +15,18 @@ public:
     void Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& levelManager, const BombManager& bombManager, const InteractableManager& interactableManager);
 
 private:
-    // ªx¥Î«¬ A* ºtºâªk¡A±N´M¸ô³W«h¥æµ¹ Cost Function ¨M©w
-    std::vector<std::pair<int, int>> FindPath(int startX, int startY, int targetX, int targetY, std::function<int(int, int)> costFunc);
+    // æ³›ç”¨å‹ A* æ¼”ç®—æ³•ï¼Œå°‡å°‹è·¯è¦å‰‡äº¤çµ¦ Cost Function æ±ºå®š
+    std::vector<std::pair<int, int>> FindPath(int startX, int startY, int targetX, int targetY, int mapW, int mapH, std::function<int(int, int)> costFunc);
+
+private:
+    bool IsLethal(int tx, int ty, const LevelManager& levelManager, const BombManager& bombManager, int fp, int pretendX = -1, int pretendY = -1) const;
+    
+    struct SafeSpot { int x, y, dist; bool found; };
+    SafeSpot FindSafeSpot(int startX, int startY, const LevelManager& levelManager, const BombManager& bombManager, int botFp, int pretendX = -1, int pretendY = -1) const;
+
+    std::shared_ptr<Interactable> FindNearestTarget(int botX, int botY, bool hasKey, const std::vector<std::shared_ptr<Interactable>>& items) const;
+
+    void ExecuteMove(BotController* botController, std::shared_ptr<Player>& bot, int fromX, int fromY, int toX, int toY, bool placeBomb) const;
 };
 
 #endif

@@ -16,6 +16,16 @@
 #include "Spirit.hpp"
 #include "Turret/TurretManager.hpp"
 
+class App;
+
+class IGameState {
+public:
+    virtual ~IGameState() = default;
+    virtual void OnEnter(App& app) {}
+    virtual void OnUpdate(App& app) = 0;
+    virtual void OnExit(App& app) {}
+};
+
 class App {
 public:
     enum class State {
@@ -27,26 +37,24 @@ public:
     State GetCurrentState() const { return m_CurrentState; }
 
     void Start();
-
     void Update();
-
-	void LoadLevel(int levelIndex);
-
+    void LoadLevel(int levelIndex);
     void End(); // NOLINT(readability-convert-member-functions-to-static)
+
+    void TransitionTo(std::unique_ptr<IGameState> nextState);
 
 private:
     void ValidTask();
 
 private:
-    enum class GameState {
-        TITLE_SCREEN,
-        LEVEL_SELECT,
-        GAMEPLAY,
-        GAMEEND
-    };
-
     State m_CurrentState = State::START;
-    GameState m_GameState = GameState::TITLE_SCREEN;
+    std::unique_ptr<IGameState> m_CurrentGameState;
+
+    // 定義狀態為 friend，讓它們可以存取 Manager
+    friend class TitleScreenState;
+    friend class LevelSelectState;
+    friend class GameplayState;
+    friend class GameEndState;
 
     Util::Renderer m_Root;  // 場景的根節點
 

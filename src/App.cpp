@@ -10,6 +10,156 @@
 #include "Util/Logger.hpp"
 #include "GameWorldContext.hpp"
 
+class TitleScreenState : public IGameState {
+public:
+    void OnEnter(App& app) override;
+    void OnUpdate(App& app) override;
+};
+
+class LevelSelectState : public IGameState {
+public:
+    void OnEnter(App& app) override;
+    void OnUpdate(App& app) override;
+    void OnExit(App& app) override;
+};
+
+class GameplayState : public IGameState {
+public:
+    void OnUpdate(App& app) override;
+};
+
+class GameEndState : public IGameState {
+public:
+    void OnEnter(App& app) override;
+    void OnUpdate(App& app) override;
+};
+
+void TitleScreenState::OnEnter(App& app) {
+    app.m_Root.AddChild(app.m_CoverImage);
+}
+void TitleScreenState::OnUpdate(App& app) {
+    if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {
+        LOG_INFO("Enter Level Select");
+        app.m_Root.RemoveChild(app.m_CoverImage);
+        app.TransitionTo(std::make_unique<LevelSelectState>());
+    }
+}
+
+void LevelSelectState::OnEnter(App& app) {
+    app.m_Root.AddChild(app.m_MenuBg);
+    app.m_MainMenu.Show(app.m_Root, 0, 50);
+}
+void LevelSelectState::OnUpdate(App& app) {
+    if (app.m_MainMenu.IsVisible()) 
+        app.m_MainMenu.Update();
+    else if (app.m_LevelMenu.IsVisible()) 
+        app.m_LevelMenu.Update();
+}
+void LevelSelectState::OnExit(App& app) {
+    app.m_Root.RemoveChild(app.m_MenuBg);
+    if (app.m_MainMenu.IsVisible()) app.m_MainMenu.Hide(app.m_Root);
+    if (app.m_LevelMenu.IsVisible()) app.m_LevelMenu.Hide(app.m_Root);
+}
+
+void GameplayState::OnUpdate(App& app) {
+    if (app.m_GameTime > 0) 
+        app.m_GameTime--;
+
+    if (app.m_GameTime % 60 == 0) {
+        int seconds = app.m_GameTime / 60;
+        LOG_INFO("Time Remaining: " + std::to_string(seconds) + "s");
+    }
+
+    if (app.m_InteractableManager.IsAllChestOpened()) {
+        LOG_INFO("Attacker Wins!");
+        app.m_Root.AddChild(app.m_AttackImage);
+        app.TransitionTo(std::make_unique<GameEndState>());
+        return;
+    }
+
+    if (app.m_GameTime == 0) {
+        LOG_INFO("Defender Wins!");
+        app.m_Root.AddChild(app.m_DefenseImage);
+        app.TransitionTo(std::make_unique<GameEndState>());
+        return;
+    }
+
+    app.m_BombManager.Update(app.m_LevelManager, app.m_InteractableManager, app.m_Root, app.m_Players);
+    app.m_InteractableManager.Update(app.m_Players, app.m_Root);
+    auto statusList = app.m_InteractableManager.GetChestStatusList();
+    app.m_UIManager.Update(app.m_GameTime, app.m_Players, statusList, app.m_Root);
+    app.m_AIManager.Update(app.m_Players, app.m_LevelManager, app.m_BombManager, app.m_InteractableManager);
+    app.m_TurretManager.Update(app.m_Players, app.m_LevelManager, app.m_BombManager, app.m_InteractableManager, app.m_Root);
+
+    GameWorldContext worldContext(app.m_LevelManager, app.m_BombManager, app.m_InteractableManager, app.m_TurretManager);
+
+    for (auto& player : app.m_Players) {
+        player->Update(worldContext);
+
+        if (!player->IsDead()) {
+            if (player->GetController() && player->GetController()->IsPlaceBombPressed()) {
+                app.m_BombManager.PlaceBomb(player, app.m_LevelManager, app.m_InteractableManager, app.m_Root, app.m_Players);
+            }
+        }
+        else {
+            if (player->HasKey()) {
+                LOG_INFO("Player dropped the Key!");
+                player->SetKey(false);
+                app.m_InteractableManager.DropKey(player->GetGridX(), player->GetGridY(), app.m_Root);
+            }
+        }
+    }
+
+    for (auto it = app.m_Spirits.begin(); it != app.m_Spirits.end();) {
+        auto& spirit = *it;
+
+        spirit->Update(app.m_Players, app.m_LevelManager, app.m_BombManager);
+
+        if (spirit->ShouldDelete()) {
+            app.m_Root.RemoveChild(spirit);
+            it = app.m_Spirits.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+}
+
+void GameEndState::OnEnter(App& app) {
+    app.m_InteractableManager.Clear(app.m_Root);
+    app.m_BombManager.Clear(app.m_Root);
+    app.m_LevelManager.DetachFromRoot(app.m_Root);
+    app.m_UIManager.Clear(app.m_Root);
+    app.m_TurretManager.Clear(app.m_Root);
+
+    for (auto& s : app.m_Spirits) 
+        app.m_Root.RemoveChild(s);
+    app.m_Spirits.clear();
+
+    for (auto& player : app.m_Players)
+        app.m_Root.RemoveChild(player);
+    app.m_Players.clear();
+}
+
+void GameEndState::OnUpdate(App& app) {
+    if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {
+        LOG_INFO("Return to Title Screen");
+        app.m_Root.RemoveChild(app.m_AttackImage);
+        app.m_Root.RemoveChild(app.m_DefenseImage);
+        app.TransitionTo(std::make_unique<TitleScreenState>());
+    }
+}
+
+void App::TransitionTo(std::unique_ptr<IGameState> next) {
+    if (m_CurrentGameState) {
+        m_CurrentGameState->OnExit(*this);
+    }
+    m_CurrentGameState = std::move(next);
+    if (m_CurrentGameState) {
+        m_CurrentGameState->OnEnter(*this);
+    }
+}
+
 void App::Start() {
     LOG_TRACE("Start");
 
@@ -21,12 +171,9 @@ void App::Start() {
     m_AttackImage->SetFullScreen();
 	m_MenuBg = std::make_shared<UIImage>(RESOURCE_DIR"/Image/white.png");  // 選單背景圖
     m_MenuBg->SetFullScreen();
-    m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
-    // m_LevelManager.LoadLevel(RESOURCE_DIR"/Map/level_1.txt");  // 預先載入第一關
-
-    // 選單
+    
     m_MainMenu.AddOption("Start Game", [this]() {
-        m_MainMenu.Hide(m_Root);
+        TransitionTo(std::make_unique<LevelSelectState>());
         m_LevelMenu.Show(m_Root, 0, 50); // 切換到關卡選單
     });
     m_MainMenu.AddOption("Exit Game", [this]() {
@@ -34,30 +181,23 @@ void App::Start() {
     });
 
     m_LevelMenu.AddOption("Level 1", [this]() {
-        m_LevelMenu.Hide(m_Root);
-        m_Root.RemoveChild(m_MenuBg);
-        m_GameState = GameState::GAMEPLAY;
+        TransitionTo(std::make_unique<GameplayState>());
         LoadLevel(1);
     });
     m_LevelMenu.AddOption("Level 2", [this]() {
-        m_LevelMenu.Hide(m_Root);
-        m_Root.RemoveChild(m_MenuBg);
-        m_GameState = GameState::GAMEPLAY;
+        TransitionTo(std::make_unique<GameplayState>());
         LoadLevel(2);
     });
     m_LevelMenu.AddOption("Level 3", [this]() {
-        m_LevelMenu.Hide(m_Root);
-        m_Root.RemoveChild(m_MenuBg);
-        m_GameState = GameState::GAMEPLAY;
+        TransitionTo(std::make_unique<GameplayState>());
         LoadLevel(3);
     });
     m_LevelMenu.AddOption("return", [this]() {
-        m_LevelMenu.Hide(m_Root);
-        m_MainMenu.Show(m_Root, 0, 50);
+        TransitionTo(std::make_unique<LevelSelectState>());
     });
-    //
 
     m_CurrentState = State::UPDATE;
+    TransitionTo(std::make_unique<TitleScreenState>());
 }
 
 void App::LoadLevel(int levelIndex) {
@@ -121,130 +261,25 @@ void App::LoadLevel(int levelIndex) {
 
 void App::Update() {
     m_Root.Update();  // 更新場景
-    if (m_GameState == GameState::TITLE_SCREEN) {  // 如果在 TITLE_SCREEN (封面)
-        if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
-            LOG_INFO("Enter Level Select");
-            m_GameState = GameState::LEVEL_SELECT;
-
-            // 進入選單，換掉封面圖，顯示第一層主選單
-            m_Root.RemoveChild(m_CoverImage);
-            m_Root.AddChild(m_MenuBg);
-            m_MainMenu.Show(m_Root, 0, 50);
-        }
-    }
-	else if (m_GameState == GameState::LEVEL_SELECT) {  // 如果在 LEVEL_SELECT (選單)
-        if (m_MainMenu.IsVisible()) 
-            m_MainMenu.Update();
-        else if (m_LevelMenu.IsVisible()) 
-            m_LevelMenu.Update();
-    }
-    else if (m_GameState == GameState::GAMEPLAY) {  // 如果在 GAMEPLAY (遊戲)
-        if (m_GameTime > 0) 
-            m_GameTime--;
-
-        if (m_GameTime % 60 == 0) {
-            int seconds = m_GameTime / 60;
-            LOG_INFO("Time Remaining: " + std::to_string(seconds) + "s");
-		}
-
-        if (m_InteractableManager.IsAllChestOpened()) {
-            LOG_INFO("Attacker Wins!");
-            m_GameState = GameState::GAMEEND;
-
-            m_Root.AddChild(m_AttackImage); // 進攻方勝利
-            return;
-        }
-
-        if (m_GameTime == 0) {
-            LOG_INFO("Defender Wins!");
-            m_GameState = GameState::GAMEEND;
-
-            m_Root.AddChild(m_DefenseImage); // 防守方勝利
-            return;
-        }
-
-        m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
-        m_InteractableManager.Update(m_Players, m_Root);
-        auto statusList = m_InteractableManager.GetChestStatusList();
-        m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
-        m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager);
-        m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Root);
-
-        GameWorldContext worldContext(m_LevelManager, m_BombManager, m_InteractableManager, m_TurretManager);
-
-        for (auto& player : m_Players) {
-            player->Update(worldContext);
-
-            if (!player->IsDead()) {
-                if (player->GetController() && player->GetController()->IsPlaceBombPressed()) {
-                    m_BombManager.PlaceBomb(player, m_LevelManager, m_InteractableManager, m_Root, m_Players);
-                }
-            }
-            else {
-                if (player->HasKey()) {
-                    LOG_INFO("Player dropped the Key!");
-                    player->SetKey(false);
-                    m_InteractableManager.DropKey(player->GetGridX(), player->GetGridY(), m_Root);
-                }
-            }
-        }
-
-        for (auto it = m_Spirits.begin(); it != m_Spirits.end();) {
-            auto& spirit = *it;
-
-            spirit->Update(m_Players, m_LevelManager, m_BombManager);
-
-            if (spirit->ShouldDelete()) {
-                m_Root.RemoveChild(spirit);
-                it = m_Spirits.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }
-    }
-    else if (m_GameState == GameState::GAMEEND) {
-        // 清除戰場
-        m_InteractableManager.Clear(m_Root);
-        m_BombManager.Clear(m_Root);
-        m_LevelManager.DetachFromRoot(m_Root);
-        m_UIManager.Clear(m_Root);
-        m_TurretManager.Clear(m_Root);
-
-        for (auto& s : m_Spirits) 
-            m_Root.RemoveChild(s);
-        m_Spirits.clear();
-
-        for (auto& player : m_Players)
-            m_Root.RemoveChild(player);
-        m_Players.clear();
-
-        if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {  // 偵測空白鍵
-            LOG_INFO("Return to Title Screen");
-
-            m_Root.RemoveChild(m_AttackImage);
-            m_Root.RemoveChild(m_DefenseImage);
-
-            m_Root.AddChild(m_CoverImage);  // 將封面圖片加入根節點
-
-            m_GameState = GameState::TITLE_SCREEN;
-        }
-    }
     
-    /*
-     * Do not touch the code below as they serve the purpose for
-     * closing the window.
-     */
-    if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||
-        Util::Input::IfExit()) {
+    if (m_CurrentGameState) {
+        m_CurrentGameState->OnUpdate(*this);
+    }
+
+    // 當前按鈕按下會呼叫該按鈕的 callback
+    if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) || Util::Input::IfExit()) {
         m_CurrentState = State::END;
+    }
+
+    if (m_CurrentState == State::UPDATE) {
+        ValidTask();
     }
 }
 
-void App::End() { // NOLINT(this method will mutate members in the future)
+void App::End() {
     LOG_TRACE("End");
 }
 
-
 void App::ValidTask() {
+    LOG_TRACE("ValidTask");
 }

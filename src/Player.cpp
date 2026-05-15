@@ -62,26 +62,8 @@ void Player::Update(const IWorldContext& worldContext) {
         return;
     }
 
-    if (m_IsBouncing) {
-        m_BounceTick++;
-        float t = static_cast<float>(m_BounceTick) / m_BounceDuration;
-
-        m_Pos.x = m_BounceStart.x + (m_BounceTarget.x - m_BounceStart.x) * t;
-        m_Pos.y = m_BounceStart.y + (m_BounceTarget.y - m_BounceStart.y) * t;
-
-        float jumpHeight = std::sin(t * 3.14159f) * 64.0f;
-        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f + jumpHeight };
-
-        // 落地判定
-        if (m_BounceTick >= m_BounceDuration) {
-            m_IsBouncing = false;
-            m_Pos = m_BounceTarget;
-
-            m_GridX = std::round(m_Pos.x / 32.0f) + 12;
-            m_GridY = 8 - std::round(m_Pos.y / 32.0f);
-            m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
-        }
-
+    if (m_Bounce.active) {
+        UpdateBouncing();
         return;
     }
 
@@ -182,51 +164,8 @@ void Player::Update(const IWorldContext& worldContext) {
         }
     }
 
-    if (m_PendingBounce) {
-        m_PendingBounce = false;
-
-        // 起跳點設為網格中心
-        float centerX = (m_GridX - 12) * 32.0f;
-        float centerY = (8 - m_GridY) * 32.0f;
-
-        float bdx = 0.0f, bdy = 0.0f;
-        switch (m_PendingBounceDir) {
-        case Direction::UP:    bdy = 1.0f;  break;
-        case Direction::DOWN:  bdy = -1.0f; break;
-        case Direction::LEFT:  bdx = -1.0f; break;
-        case Direction::RIGHT: bdx = 1.0f;  break;
-        }
-
-        int actualDist = 0;
-        // 逐格往前
-        for (int i = 1; i <= m_PendingBounceDist; i++) {
-            float testX = centerX + bdx * i * 32.0f;
-            float testY = centerY + bdy * i * 32.0f;
-
-            if (!IsColliding(testX, testY, worldContext)) {
-                actualDist = i;
-            }
-            else {
-                break; // 撞到障礙物停止
-            }
-        }
-
-        // 彈跳動畫
-        m_IsBouncing = true;
-        m_BounceTick = 0;
-        m_BounceStart = m_Pos; // 從當前位置起飛
-        ChangeDirection(m_PendingBounceDir); // 轉向彈跳方向
-
-        if (actualDist > 0) {
-            m_BounceTarget = { centerX + bdx * actualDist * 32.0f, centerY + bdy * actualDist * 32.0f };
-            m_BounceDuration = 30;
-        }
-        else {
-            // 被擋住原地跳
-            m_BounceTarget = { centerX, centerY };
-            m_BounceDuration = 15;
-            LOG_INFO("Bounce path blocked, bouncing in place.");
-        }
+    if (m_Bounce.pending) {
+        ApplyPendingBounce(worldContext);
     }
 
 	// 位置更新後，確保畫面座標與像素座標同步
@@ -354,10 +293,73 @@ void Player::IncreaseFirepower() {
 }
 
 bool Player::TriggerBounce(Direction dir, int distance) {
-    if (m_IsBouncing || m_PendingBounce) return false;
+    if (m_Bounce.active || m_Bounce.pending) return false;
 
-    m_PendingBounce = true;
-    m_PendingBounceDir = dir;
-    m_PendingBounceDist = distance;
+    m_Bounce.pending = true;
+    m_Bounce.pendingDir = dir;
+    m_Bounce.pendingDist = distance;
     return true;
+}
+
+void Player::UpdateBouncing() {
+    m_Bounce.tick++;
+    float t = static_cast<float>(m_Bounce.tick) / m_Bounce.duration;
+
+    m_Pos.x = m_Bounce.start.x + (m_Bounce.target.x - m_Bounce.start.x) * t;
+    m_Pos.y = m_Bounce.start.y + (m_Bounce.target.y - m_Bounce.start.y) * t;
+
+    float jumpHeight = std::sin(t * 3.14159f) * 64.0f;
+    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f + jumpHeight };
+
+    if (m_Bounce.tick >= m_Bounce.duration) {
+        m_Bounce.active = false;
+        m_Pos = m_Bounce.target;
+
+        m_GridX = std::round(m_Pos.x / 32.0f) + 12;
+        m_GridY = 8 - std::round(m_Pos.y / 32.0f);
+        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
+    }
+}
+
+void Player::ApplyPendingBounce(const GameWorldContext& worldContext) {
+    m_Bounce.pending = false;
+
+    float centerX = (m_GridX - 12) * 32.0f;
+    float centerY = (8 - m_GridY) * 32.0f;
+
+    float bdx = 0.0f, bdy = 0.0f;
+    switch (m_Bounce.pendingDir) {
+    case Direction::UP:    bdy = 1.0f;  break;
+    case Direction::DOWN:  bdy = -1.0f; break;
+    case Direction::LEFT:  bdx = -1.0f; break;
+    case Direction::RIGHT: bdx = 1.0f;  break;
+    }
+
+    int actualDist = 0;
+    for (int i = 1; i <= m_Bounce.pendingDist; i++) {
+        float testX = centerX + bdx * i * 32.0f;
+        float testY = centerY + bdy * i * 32.0f;
+
+        if (!IsColliding(testX, testY, worldContext)) {
+            actualDist = i;
+        }
+        else {
+            break;
+        }
+    }
+
+    m_Bounce.active = true;
+    m_Bounce.tick = 0;
+    m_Bounce.start = m_Pos;
+    ChangeDirection(m_Bounce.pendingDir);
+
+    if (actualDist > 0) {
+        m_Bounce.target = { centerX + bdx * actualDist * 32.0f, centerY + bdy * actualDist * 32.0f };
+        m_Bounce.duration = 30;
+    }
+    else {
+        m_Bounce.target = { centerX, centerY };
+        m_Bounce.duration = 15;
+        LOG_INFO("Bounce path blocked, bouncing in place.");
+    }
 }

@@ -120,7 +120,7 @@ private:
     BounceState m_Bounce;
 
     void UpdateBouncing();
-    void ApplyPendingBounce(const GameWorldContext& context);
+    void ApplyPendingBounce(const IWorldContext& context);
 };
 
 #endif

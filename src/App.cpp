@@ -173,7 +173,7 @@ void App::Start() {
     m_MenuBg->SetFullScreen();
     
     m_MainMenu.AddOption("Start Game", [this]() {
-        TransitionTo(std::make_unique<LevelSelectState>());
+        m_MainMenu.Hide(m_Root);
         m_LevelMenu.Show(m_Root, 0, 50); // 切換到關卡選單
     });
     m_MainMenu.AddOption("Exit Game", [this]() {

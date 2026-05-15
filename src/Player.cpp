@@ -5,6 +5,7 @@
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
+#include <algorithm>
 
 Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
     m_CurrentDir(Direction::DOWN), m_Team(team), m_Controller(std::move(controller)), m_PlayerID(id) {
@@ -321,7 +322,7 @@ void Player::UpdateBouncing() {
     }
 }
 
-void Player::ApplyPendingBounce(const GameWorldContext& worldContext) {
+void Player::ApplyPendingBounce(const IWorldContext& worldContext) {
     m_Bounce.pending = false;
 
     float centerX = (m_GridX - 12) * 32.0f;

@@ -2,6 +2,8 @@
 #include "LevelManager.hpp"
 #include "BombManager.hpp"
 #include "InteractableManager.hpp"
+#include <cmath>
+#include <algorithm>
 
 Bomb::Bomb(int gridX, int gridY, int firepower, int ownerID) : m_GridX(gridX), m_GridY(gridY), m_Firepower(firepower),
            m_Tick(180), m_State(State::COUNTDOWN), m_OwnerID(ownerID) {

@@ -10,6 +10,8 @@
 #include "BombManager.hpp"
 #include "InteractableManager.hpp"
 
+class BotController;
+
 class AIManager {
 public:
     void Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& levelManager, const BombManager& bombManager, const InteractableManager& interactableManager);

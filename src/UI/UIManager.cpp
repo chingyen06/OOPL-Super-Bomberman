@@ -3,6 +3,7 @@
 #include "Util/Logger.hpp"
 #include <cstdio>
 #include <string>
+#include <algorithm>
 
 void UIManager::Init(Util::Renderer& root, int totalChests) {
     Clear(root);

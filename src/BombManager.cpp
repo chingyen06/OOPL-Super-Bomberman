@@ -2,6 +2,7 @@
 #include "InteractableManager.hpp"
 #include "Player.hpp"
 #include "Util/Logger.hpp"
+#include <cmath>
 
 // ©ñ¸m¬µ¼u
 void BombManager::PlaceBomb(std::shared_ptr<Player>& player, LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, const std::vector<std::shared_ptr<Player>>& players) {

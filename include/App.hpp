@@ -1,4 +1,4 @@
-#ifndef APP_HPP
+﻿#ifndef APP_HPP
 #define APP_HPP
 
 #include "pch.hpp" // IWYU pragma: export
@@ -21,9 +21,9 @@ class App;
 class IGameState {
 public:
     virtual ~IGameState() = default;
-    virtual void OnEnter(App& app) {}
+    virtual void OnEnter(App& /*app*/) {}
     virtual void OnUpdate(App& app) = 0;
-    virtual void OnExit(App& app) {}
+    virtual void OnExit(App& /*app*/) {}
 };
 
 class App {

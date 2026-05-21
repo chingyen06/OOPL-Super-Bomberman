@@ -1,4 +1,4 @@
-#ifndef PLAYER_HPP
+﻿#ifndef PLAYER_HPP
 #define PLAYER_HPP
 
 #include "Util/GameObject.hpp"
@@ -8,19 +8,13 @@
 #include <vector>
 #include <utility>
 #include "glm/vec2.hpp"
+#include "GameConstants.hpp"
+#include "GameTypes.hpp"
 #include "WorldContext.hpp"
 #include "Controller/InputController.hpp"
 
-enum class Team {
-    ATTACKER,
-    DEFENDER
-};
-
 class Player : public Util::GameObject {
 public:
-    enum class Direction { UP, DOWN, LEFT, RIGHT };
-
-    // Player(int startGridX, int startGridY);
     Player(int startGridX, int startGridY, Team m_Team, std::unique_ptr<InputController> controller, int id);
 
     // void Update(const LevelManager& levelManager);
@@ -54,7 +48,7 @@ public:
 
     int GetPlayerID() const { return m_PlayerID; };
 
-    void ActivateSpeedBoost() { m_SpeedBoostTimer = 300;}
+    void ActivateSpeedBoost() { m_SpeedBoostTimer = Constants::Player::kSpeedBoostFrames; }
     void IncreaseMaxBombs();
     int GetFirepower() const { return m_Firepower; }
     void IncreaseFirepower();
@@ -83,8 +77,8 @@ private:
 
 	bool m_IsDead = false;  // 角色是否死亡
 
-    int m_MaxBombs = 3;        // 最大炸彈放置數量
-    int m_CurrentBombs = 0;    // 當前場上炸彈數量
+    int m_MaxBombs = Constants::Player::kInitialMaxBombs;        // 最大炸彈放置數量
+    int m_CurrentBombs = 0;                                       // 當前場上炸彈數量
 
 	// 暫時忽略的炸彈座標
     std::vector<std::pair<int, int>> m_IgnoreBombs;
@@ -105,7 +99,7 @@ private:
 
 	int m_SpeedBoostTimer = -1;  // 速度提升計時器
 
-	int m_Firepower = 2;  // 炸彈火力，初始為 2，最大為 5
+	int m_Firepower = Constants::Player::kInitialFirepower;  // 炸彈火力
 
     struct BounceState {
         bool active = false;

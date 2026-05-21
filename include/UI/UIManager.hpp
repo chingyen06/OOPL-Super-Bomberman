@@ -1,4 +1,4 @@
-#ifndef UIMANAGER_HPP
+﻿#ifndef UIMANAGER_HPP
 #define UIMANAGER_HPP
 
 #include <vector>
@@ -25,7 +25,8 @@ private:
     std::shared_ptr<UIText> m_TimerText;
     std::vector<std::shared_ptr<UIImage>> m_KeyIndicators;
     std::vector<std::shared_ptr<UIImage>> m_ChestPool;
-    std::vector<bool> m_LastChestStatus; // �аO�֨�
+    std::shared_ptr<Util::Image> m_ChestOpenedImage;  // 預載：寶箱開啟圖，避免每次開啟時讀檔
+    std::vector<bool> m_LastChestStatus; // Cached marker for diffing chest state
     int m_LastSeconds = -1;
 };
 

@@ -4,6 +4,7 @@
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
 #include "Util/Renderer.hpp"
+#include "GameConstants.hpp"
 #include "Player.hpp"
 #include <memory>
 #include <vector>
@@ -14,7 +15,7 @@ class BombManager;
 
 class Projectile : public Util::GameObject {
 public:
-    Projectile(int startGridX, int startGridY, int targetGridX, int targetGridY, Player::Direction dir);
+    Projectile(int startGridX, int startGridY, int targetGridX, int targetGridY, Direction dir);
 
     void Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& lm, BombManager& bm, Util::Renderer& root);
 
@@ -23,8 +24,8 @@ public:
 private:
     bool m_IsDead = false;
     glm::vec2 m_Pos;
-    Player::Direction m_Dir;
-    float m_Speed = 6.0f;
+    Direction m_Dir;
+    float m_Speed = Constants::Projectile::kSpeed;
 
     int m_TargetGridX;
     int m_TargetGridY;

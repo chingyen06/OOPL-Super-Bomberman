@@ -14,7 +14,7 @@ class InteractableManager;
 
 class Turret : public Util::GameObject {
 public:
-    Turret(int gridX, int gridY, Player::Direction dir);
+    Turret(int gridX, int gridY, Direction dir);
     virtual ~Turret() = default;
 
     virtual void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets) = 0;
@@ -25,7 +25,7 @@ public:
 protected:
     int m_GridX;
     int m_GridY;
-    Player::Direction m_Dir;
+    Direction m_Dir;
     int m_Timer;
 
     std::shared_ptr<Util::Image> m_ImgActive;
@@ -40,7 +40,7 @@ class RotatingTurret : public Turret {
 public:
     enum class State { IDLE, READY };
 
-    RotatingTurret(int gridX, int gridY, Player::Direction startDir);
+    RotatingTurret(int gridX, int gridY, Direction startDir);
     void Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets) override;
 
 private:

@@ -5,6 +5,7 @@
 #include "Util/Image.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
+#include "GameConstants.hpp"
 #include "Player.hpp"
 #include <memory>
 
@@ -20,7 +21,7 @@ public:
     virtual bool IsBlocksFire() const { return false; }
     virtual bool IsDestroyedByFire() const { return false; }
 
-    virtual bool OnInteract(std::shared_ptr<Player>& player) = 0;
+    virtual bool OnInteract(Player& player) = 0;
 
     virtual glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
 };
@@ -34,7 +35,7 @@ public:
 
     bool IsBlocksBomb() const override { return true; }
 
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 
 private:
     int m_GridX;
@@ -52,7 +53,7 @@ public:
     bool IsBlocksBomb() const override { return true; }
     bool IsBlocksFire() const override { return true; }
 
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 
     void Open();
 
@@ -65,7 +66,7 @@ private:
     std::shared_ptr<Util::Image> m_OpenedImage;
 };
 
-// �D��
+// Power-up base type
 class PowerUp : public Interactable {
 public:
     PowerUp(int gridX, int gridY);
@@ -80,25 +81,25 @@ protected:
     int m_GridY;
 };
 
-// �[�t�c�D��
+// Speed boost power-up
 class SpeedItem : public PowerUp {
 public:
     SpeedItem(int gridX, int gridY);
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 };
 
-// ���u�D�� 
+// Bomb-count power-up
 class BombItem : public PowerUp {
 public:
     BombItem(int gridX, int gridY);
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 };
 
-// ���K�D��
+// Firepower power-up
 class FireItem : public PowerUp {
 public:
     FireItem(int gridX, int gridY);
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 };
 
 // Factory Pattern for Interactables
@@ -108,7 +109,7 @@ public:
     virtual std::shared_ptr<Interactable> Create(int gridX, int gridY) = 0;
 };
 
-// �[�t�c
+// Speed boost factory
 class SpeedItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -116,7 +117,7 @@ public:
     }
 };
 
-// ���u�D��
+// Bomb-count factory
 class BombItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -124,7 +125,7 @@ public:
     }
 };
 
-//���K�D��
+// Firepower factory
 class FireItemFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
@@ -132,47 +133,47 @@ public:
     }
 };
 
-// �Ů�
+// Empty drop
 class EmptyDropFactory : public InteractableFactory {
 public:
-    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
-        return nullptr; // ���򳣤���
+    std::shared_ptr<Interactable> Create(int /*gridX*/, int /*gridY*/) override {
+        return nullptr; // Drop nothing
     }
 };
 
-// ��e�a
+// Conveyor
 class Conveyor : public Interactable {
 public:
-    Conveyor(int gridX, int gridY, Player::Direction dir);
+    Conveyor(int gridX, int gridY, Direction dir);
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
-    bool OnInteract(std::shared_ptr<Player>& player) override { return false; }
+    bool OnInteract(Player& /*player*/) override { return false; }
 
     glm::vec2 GetForce() const override;
 
 private:
     int m_GridX;
     int m_GridY;
-    Player::Direction m_Dir;
+    Direction m_Dir;
 };
 
-// �u���O
+// BouncePad
 class BouncePad : public Interactable {
 public:
-    BouncePad(int gridX, int gridY, Player::Direction dir);
+    BouncePad(int gridX, int gridY, Direction dir);
     void Update() override;
 
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
-    bool OnInteract(std::shared_ptr<Player>& player) override;
+    bool OnInteract(Player& player) override;
 
 private:
     int m_GridX;
     int m_GridY;
-    Player::Direction m_Dir;
-    int m_Distance = 3;
+    Direction m_Dir;
+    int m_Distance = Constants::BouncePad::kDefaultDistance;
     int m_Cooldown = 0;
 
     std::shared_ptr<Util::Image> m_ActiveImage;

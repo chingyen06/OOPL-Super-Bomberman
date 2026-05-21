@@ -1,4 +1,5 @@
-#include "LevelManager.hpp"
+﻿#include "LevelManager.hpp"
+#include "GridCoord.hpp"
 #include "InteractableManager.hpp"
 #include "MapTiles.hpp"
 #include <fstream>
@@ -6,40 +7,45 @@
 #include <functional>
 #include "Util/Logger.hpp"
 
-void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& interactableManager) {
+void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& interactableManager, Util::Renderer& root) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         LOG_ERROR("Error opening file: " + filepath);
         return;
     }
 
-    // 定義字元與對應的處理邏輯
+    // 定義字元與對應的處理邏輯。互動物件相關的 add 會直接掛到 root。
     std::unordered_map<char, std::function<void(int, int)>> featureHandlers = {
         {'F', [&](int x, int y) { m_DefenderSpawn = { x, y }; }},
         {'A', [&](int x, int y) { m_AttackerSpawns.push_back({ x, y }); }},
-        {'K', [&](int x, int y) { interactableManager.AddKey(x, y); }},
-        {'9', [&](int x, int y) { interactableManager.AddChest(x, y); }},
-        {'U', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::UP); }},
-        {'D', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::DOWN); }},
-        {'L', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::LEFT); }},
-        {'R', [&](int x, int y) { interactableManager.AddConveyor(x, y, Player::Direction::RIGHT); }},
-        {'4', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::UP); }},
-        {'5', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::DOWN); }},
-        {'6', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::LEFT); }},
-        {'7', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Player::Direction::RIGHT); }},
+        {'K', [&](int x, int y) { interactableManager.AddKey(x, y, root); }},
+        {'9', [&](int x, int y) { interactableManager.AddChest(x, y, root); }},
+        {'U', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::UP, root); }},
+        {'D', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::DOWN, root); }},
+        {'L', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::LEFT, root); }},
+        {'R', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::RIGHT, root); }},
+        {'4', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::UP, root); }},
+        {'5', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::DOWN, root); }},
+        {'6', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::LEFT, root); }},
+        {'7', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::RIGHT, root); }},
         {'S', [&](int x, int y) { m_SpiritSpawns.push_back({ x, y }); }},
         {'B', [&](int x, int y) { m_TurretSpawns.push_back({ x, y }); }},
     };
 
-    m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
+    m_TileGrid.assign(GridCoord::kMapHeight, std::vector<std::shared_ptr<Tile>>(GridCoord::kMapWidth));
 
     m_Tiles.clear();
     m_AttackerSpawns.clear();
 
-    for (int y=0;y<17;y++) {
-        for (int x=0;x<25;x++) {
-            char type; 
-            file >> type;
+    bool truncated = false;
+    for (int y = 0; y < GridCoord::kMapHeight && !truncated; y++) {
+        for (int x = 0; x < GridCoord::kMapWidth; x++) {
+            char type;
+            if (!(file >> type)) {
+                LOG_ERROR("Map file truncated at (" + std::to_string(x) + ", " + std::to_string(y) + "): " + filepath);
+                truncated = true;
+                break;
+            }
 
             std::shared_ptr<Tile> tile;  // 這個地圖方塊
 
@@ -52,7 +58,7 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
             else {
                 // 預設為草地
                 tile = std::make_shared<Ground>(x, y);
-                
+
                 // 檢查是否有對應的特殊物件或設定
                 auto it = featureHandlers.find(type);
                 if (it != featureHandlers.end()) {
@@ -62,6 +68,19 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
 
             m_TileGrid[y][x] = tile;  // 存地圖方塊
             m_Tiles.push_back(tile);  // 鋪設方塊
+        }
+    }
+
+    // 截斷後剩下的格子一律補草地，避免空 shared_ptr 留在 grid 中
+    if (truncated) {
+        for (int y = 0; y < GridCoord::kMapHeight; y++) {
+            for (int x = 0; x < GridCoord::kMapWidth; x++) {
+                if (!m_TileGrid[y][x]) {
+                    auto fallback = std::make_shared<Ground>(x, y);
+                    m_TileGrid[y][x] = fallback;
+                    m_Tiles.push_back(fallback);
+                }
+            }
         }
     }
     LOG_INFO("Map loading complete, total: " + std::to_string(m_Tiles.size()) + " objects");
@@ -81,10 +100,8 @@ void LevelManager::DetachFromRoot(Util::Renderer& root) {
 
 // 碰撞查詢
 bool LevelManager::IsWalkable(int gridX, int gridY) const {
-    if (gridX < 0 || gridX >= 25 || gridY < 0 || gridY >= 17)
+    if (!GridCoord::InBounds(gridX, gridY))
         return false;
-
-    //char type = m_MapData[gridY][gridX];
 
     // 可走的回傳
     return m_TileGrid[gridY][gridX]->IsPassable();
@@ -92,7 +109,7 @@ bool LevelManager::IsWalkable(int gridX, int gridY) const {
 
 // 檢查該格是否為磚塊
 bool LevelManager::IsBrick(int gridX, int gridY) const {
-    if (gridX < 0 || gridX >= 25 || gridY < 0 || gridY >= 17) 
+    if (!GridCoord::InBounds(gridX, gridY))
         return false;
 
     return m_TileGrid[gridY][gridX]->IsDestructible();
@@ -128,5 +145,5 @@ void LevelManager::Clear(Util::Renderer& root) {
     m_AttackerSpawns.clear();
     m_SpiritSpawns.clear();
     m_TurretSpawns.clear();
-    m_TileGrid.assign(17, std::vector<std::shared_ptr<Tile>>(25));
+    m_TileGrid.assign(GridCoord::kMapHeight, std::vector<std::shared_ptr<Tile>>(GridCoord::kMapWidth));
 }

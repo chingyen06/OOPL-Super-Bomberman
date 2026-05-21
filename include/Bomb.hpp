@@ -25,7 +25,7 @@ public:
 
     int GetOwnerID() const { return m_OwnerID; }
 
-	void ForceDetonate() { m_State = State::DONE; }  // 強制引爆（被其他炸彈的火焰引爆）
+	void ForceDetonate() { m_State = State::DONE; }  // Force detonation (used for chain reactions when another bomb's fire reaches this one)
 
 private:
     int m_GridX;

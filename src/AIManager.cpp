@@ -1,4 +1,5 @@
-#include "AIManager.hpp"
+﻿#include "AIManager.hpp"
+#include "GameTypes.hpp"
 #include "Interactable.hpp"
 #include "Controller/BotController.hpp"
 #include <queue>
@@ -29,9 +30,6 @@ std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int
     int startH = std::abs(startX - targetX) + std::abs(startY - targetY);
     openList.push(std::make_shared<AStarNode>(AStarNode{ startX, startY, 0, startH, nullptr }));
 
-    int dx[] = { 0, 0, -1, 1 };
-    int dy[] = { -1, 1, 0, 0 };
-
     while (!openList.empty()) {
         auto current = openList.top();
         openList.pop();
@@ -49,9 +47,9 @@ std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int
             return path;
         }
 
-        for (int i = 0; i < 4; ++i) {
-            int nx = current->x + dx[i];
-            int ny = current->y + dy[i];
+        for (const auto& off : kCardinalOffsets) {
+            int nx = current->x + off.dx;
+            int ny = current->y + off.dy;
 
             if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
                 int cost = costFunc(nx, ny);
@@ -66,10 +64,47 @@ std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int
     return path;
 }
 
+void AIManager::RebuildDangerMap(const LevelManager& levelManager, const BombManager& bombManager) {
+    int mapW = levelManager.GetMapWidth();
+    int mapH = levelManager.GetMapHeight();
+    m_Danger.assign(mapH, std::vector<bool>(mapW, false));
+
+    // 1) 已存在的爆炸火焰
+    for (int y = 0; y < mapH; ++y) {
+        for (int x = 0; x < mapW; ++x) {
+            if (bombManager.HasExplosionAt(x, y)) {
+                m_Danger[y][x] = true;
+            }
+        }
+    }
+
+    // 2) 倒數中的炸彈會掃到的格子 (沿四方向延伸到第一個牆/磚為止)
+    for (int by = 0; by < mapH; ++by) {
+        for (int bx = 0; bx < mapW; ++bx) {
+            if (!bombManager.IsBombAt(bx, by)) continue;
+
+            int bfp = bombManager.GetFirepowerAt(bx, by);
+            m_Danger[by][bx] = true;
+
+            for (const auto& off : kCardinalOffsets) {
+                for (int step = 1; step <= bfp; ++step) {
+                    int cx = bx + off.dx * step;
+                    int cy = by + off.dy * step;
+                    if (cx < 0 || cx >= mapW || cy < 0 || cy >= mapH) break;
+                    m_Danger[cy][cx] = true;
+                    if (!levelManager.IsWalkable(cx, cy)) break;
+                }
+            }
+        }
+    }
+}
+
 void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     const LevelManager& levelManager,
     const BombManager& bombManager,
     const InteractableManager& interactableManager) {
+
+    RebuildDangerMap(levelManager, bombManager);
 
     const auto& interactables = interactableManager.GetInteractables();
     int mapW = levelManager.GetMapWidth();
@@ -84,7 +119,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         int botY = bot->GetGridY();
         int botFirepower = bot->GetFirepower();
 
-        bool inDanger = IsLethal(botX, botY, levelManager, bombManager, botFirepower);
+        bool inDanger = IsLethal(botX, botY, levelManager, botFirepower);
         if (inDanger) {
             auto safeSpot = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower);
             if (safeSpot.found) {
@@ -92,7 +127,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                     if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
                     return 1;
                     });
-                if (!path.empty()) ExecuteMove(botController, bot, botX, botY, path[0].first, path[0].second, false);
+                if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false);
             }
             continue;
         }
@@ -111,7 +146,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
         int targetX = -1, targetY = -1;
         auto nearestTarget = FindNearestTarget(botX, botY, bot->HasKey(), interactables);
-        
+
         if (nearestTarget) {
             targetX = nearestTarget->GetGridX();
             targetY = nearestTarget->GetGridY();
@@ -128,7 +163,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 3：尋找安全的目標
         auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-            if (IsLethal(x, y, levelManager, bombManager, botFirepower)) return -1;
+            if (IsLethal(x, y, levelManager, botFirepower)) return -1;
             return 1;
             });
 
@@ -138,16 +173,16 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             if (targetDefender && targetX == targetDefender->GetGridX() && targetY == targetDefender->GetGridY()) {
                 auto willHitTarget = [&](int bx, int by, int tx, int ty, int fp) {
                     if (bx == tx && by == ty) return true;
-                    int dx[] = { 0, 0, -1, 1 }; int dy[] = { -1, 1, 0, 0 };
-                    for (int dir = 0; dir < 4; dir++) {
+                    for (const auto& off : kCardinalOffsets) {
                         for (int step = 1; step <= fp; step++) {
-                            int cx = bx + dx[dir] * step; int cy = by + dy[dir] * step;
+                            int cx = bx + off.dx * step;
+                            int cy = by + off.dy * step;
                             if (cx == tx && cy == ty) return true;
                             if (!levelManager.IsWalkable(cx, cy)) break;
                         }
                     }
                     return false;
-                    };
+                };
 
                 if (willHitTarget(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY(), botFirepower)) {
                     auto testSafe = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
@@ -155,14 +190,14 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 }
             }
 
-            ExecuteMove(botController, bot, botX, botY, pathSafe[0].first, pathSafe[0].second, placeBomb);
+            ExecuteMove(botController, botX, botY, pathSafe[0].first, pathSafe[0].second, placeBomb);
             continue;
         }
 
         // 策略 4：無安全路徑 - 嘗試炸牆 (不管爆炸)
         auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) && !levelManager.IsBrick(x, y)) return -1;
-            if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, bombManager, botFirepower)) return -1;
+            if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, botFirepower)) return -1;
             if (levelManager.IsBrick(x, y)) return 50;
             return 1;
             });
@@ -181,10 +216,10 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
             else {
                 auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, [&](int x, int y) {
-                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, bombManager, botFirepower)) return -1;
+                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, botFirepower)) return -1;
                     return 1;
                     });
-                if (!pathToBrick.empty()) ExecuteMove(botController, bot, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
+                if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
                 else botController->SetInput(false, false, false, false, false);
             }
             continue;
@@ -210,7 +245,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                         cx += stepX; cy += stepY;
                     }
                     return true;
-                    };
+                };
 
                 if (defenderDist <= 5 && hasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
                     auto testSafe = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
@@ -226,34 +261,25 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     }
 }
 
-bool AIManager::IsLethal(int tx, int ty, const LevelManager& levelManager, const BombManager& bombManager, int fp, int pretendX, int pretendY) const {
-    if (bombManager.HasExplosionAt(tx, ty)) return true;
-
-    auto checkCross = [&](int bx, int by, int bfp) {
-        if (tx == bx && ty == by) return true;
-        int dx[] = { 0, 0, -1, 1 };
-        int dy[] = { -1, 1, 0, 0 };
-        for (int dir = 0; dir < 4; dir++) {
-            for (int step = 1; step <= bfp; step++) {
-                int cx = bx + dx[dir] * step;
-                int cy = by + dy[dir] * step;
-                if (tx == cx && ty == cy) return true;
-                if (!levelManager.IsWalkable(cx, cy)) break;
-            }
-        }
+bool AIManager::IsLethal(int tx, int ty, const LevelManager& levelManager, int fp, int pretendX, int pretendY) const {
+    // 對地圖外或越界格子保守視為不致命 (與舊版行為一致)
+    if (tx < 0 || ty < 0 || ty >= static_cast<int>(m_Danger.size()) ||
+        (m_Danger.size() > 0 && tx >= static_cast<int>(m_Danger[0].size()))) {
         return false;
-    };
-
-    if (pretendX != -1 && pretendY != -1) {
-        if (checkCross(pretendX, pretendY, fp)) return true;
     }
 
-    int mapW = levelManager.GetMapWidth();
-    int mapH = levelManager.GetMapHeight();
-    for (int by = 0; by < mapH; ++by) {
-        for (int bx = 0; bx < mapW; ++bx) {
-            if (bombManager.IsBombAt(bx, by)) {
-                if (checkCross(bx, by, bombManager.GetFirepowerAt(bx, by))) return true;
+    // 1) 真實炸彈/爆炸 — 直接查預先計算的快取
+    if (m_Danger[ty][tx]) return true;
+
+    // 2) 假想炸彈 (AI 想像在 pretendX/Y 放一顆 fp 火力的炸彈)
+    if (pretendX >= 0 && pretendY >= 0) {
+        if (tx == pretendX && ty == pretendY) return true;
+        for (const auto& off : kCardinalOffsets) {
+            for (int step = 1; step <= fp; step++) {
+                int cx = pretendX + off.dx * step;
+                int cy = pretendY + off.dy * step;
+                if (tx == cx && ty == cy) return true;
+                if (!levelManager.IsWalkable(cx, cy)) break;
             }
         }
     }
@@ -274,18 +300,16 @@ AIManager::SafeSpot AIManager::FindSafeSpot(int startX, int startY, const LevelM
         auto current = q.front();
         q.pop();
 
-        if (!IsLethal(current.x, current.y, levelManager, bombManager, botFp, pretendX, pretendY)) {
+        if (!IsLethal(current.x, current.y, levelManager, botFp, pretendX, pretendY)) {
             bestSafe = { current.x, current.y, current.dist, true };
             break;
         }
 
         if (current.dist >= 5) continue;
 
-        int dx[] = { 0, 0, -1, 1 };
-        int dy[] = { -1, 1, 0, 0 };
-        for (int i = 0; i < 4; ++i) {
-            int nx = current.x + dx[i];
-            int ny = current.y + dy[i];
+        for (const auto& off : kCardinalOffsets) {
+            int nx = current.x + off.dx;
+            int ny = current.y + off.dy;
 
             if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
                 if (!visited[ny][nx] && levelManager.IsWalkable(nx, ny) &&
@@ -328,7 +352,7 @@ std::shared_ptr<Interactable> AIManager::FindNearestTarget(int botX, int botY, b
     return nullptr;
 }
 
-void AIManager::ExecuteMove(BotController* botController, std::shared_ptr<Player>& bot, int fromX, int fromY, int toX, int toY, bool placeBomb) const {
+void AIManager::ExecuteMove(BotController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb) const {
     bool up = false, down = false, left = false, right = false;
     if (toX > fromX) right = true;
     else if (toX < fromX) left = true;

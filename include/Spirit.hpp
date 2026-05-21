@@ -6,6 +6,7 @@
 #include "glm/vec2.hpp"
 #include <memory>
 #include <vector>
+#include "GameConstants.hpp"
 #include "Player.hpp"
 
 class LevelManager;
@@ -33,7 +34,7 @@ private:
     bool m_IsMoving = false;
     glm::vec2 m_PixelTarget;
 
-    float m_MoveSpeed = 1.0f;
+    float m_MoveSpeed = Constants::Spirit::kMoveSpeed;
     int m_Tick = 0;
     int m_StateTimer = 0;
 

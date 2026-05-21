@@ -21,7 +21,7 @@ public:
     bool IsDownPressed() const override { return Util::Input::IsKeyPressed(m_Control.DOWN); }
     bool IsLeftPressed() const override { return Util::Input::IsKeyPressed(m_Control.LEFT); }
     bool IsRightPressed() const override { return Util::Input::IsKeyPressed(m_Control.RIGHT); }
-    bool IsPlaceBombPressed() const override { return Util::Input::IsKeyDown(m_Control.PLACEBOMB); }
+    bool IsPlaceBombJustPressed() const override { return Util::Input::IsKeyDown(m_Control.PLACEBOMB); }
 
     Util::Keycode GetBombKey() const { return m_Control.PLACEBOMB; }
 

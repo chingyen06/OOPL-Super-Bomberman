@@ -1,5 +1,6 @@
-#include "Player.hpp"
+﻿#include "Player.hpp"
 #include "BombManager.hpp"
+#include "GridCoord.hpp"
 #include "InteractableManager.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
@@ -18,30 +19,31 @@ Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputC
     SetDrawable(m_ImgDown); // 初始面向下方
     SetZIndex(20);
 
-    // 放大角色：寬度 36、高度 48
-    m_Transform.scale = { 36.0f / m_ImgDown->GetSize().x, 48.0f / m_ImgDown->GetSize().y };
+    // 放大角色至設定的 sprite 尺寸
+    m_Transform.scale = {
+        Constants::Player::kSpriteWidth  / m_ImgDown->GetSize().x,
+        Constants::Player::kSpriteHeight / m_ImgDown->GetSize().y
+    };
 
     // 計算初始像素座標
-    m_Pos.x = (m_GridX - 12) * 32.0f;
-    m_Pos.y = (8 - m_GridY) * 32.0f;
+    m_Pos = GridCoord::ToPixel(m_GridX, m_GridY);
 
-    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
+    m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
 }
 
 void Player::Update(const IWorldContext& worldContext) {
-    float speed = 3.0f;
+    float speed = Constants::Player::kNormalSpeed;
     float dx = 0.0f;
     float dy = 0.0f;
     float nextX = m_Pos.x;
     float nextY = m_Pos.y;
-    //bool moved = false;
 
     if (m_SpeedBoostTimer > 0) {
         m_SpeedBoostTimer--;
-		speed = 5.0f;  // 速度提升
+        speed = Constants::Player::kBoostSpeed;
     }
     else {
-		speed = 3.0f;
+        speed = Constants::Player::kNormalSpeed;
     }
 
     if (m_IsDead) {
@@ -49,7 +51,7 @@ void Player::Update(const IWorldContext& worldContext) {
             m_DeathCountdown--;
             if (m_DeathCountdown == 0) {
                 SetVisible(false);
-                m_RespawnTimer = 90;
+                m_RespawnTimer = Constants::Player::kRespawnDelayFrames;
                 m_DeathCountdown = -1;
             }
         }
@@ -69,8 +71,8 @@ void Player::Update(const IWorldContext& worldContext) {
     }
 
     // 取得當前位置的網格中心點座標
-    float centerX = (m_GridX - 12) * 32.0f;
-    float centerY = (8 - m_GridY) * 32.0f;
+    float centerX = GridCoord::ToPixelX(m_GridX);
+    float centerY = GridCoord::ToPixelY(m_GridY);
 
     bool isUpPressed = false;
     bool isDownPressed = false;
@@ -137,25 +139,24 @@ void Player::Update(const IWorldContext& worldContext) {
     bool isForced = (envForce.x != 0.0f || envForce.y != 0.0f);  // 被推動
 
     if (moveX || moveY || isForced) {  // 正在移動
-        if (!IsColliding(nextX, m_Pos.y, worldContext)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(nextX, m_Pos.y, worldContext)) {
             m_Pos.x = nextX;
         }
-        if (!IsColliding(m_Pos.x, nextY, worldContext)) {  // 如果不會碰撞，可以移動
+        if (!IsColliding(m_Pos.x, nextY, worldContext)) {
             m_Pos.y = nextY;
         }
 
-        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };  // 更新畫面像素座標
-
         // 計算角色真正的座標
-        m_GridX = std::round(m_Pos.x / 32.0f) + 12;
-        m_GridY = 8 - std::round(m_Pos.y / 32.0f);
+        m_GridX = GridCoord::ToGridX(m_Pos.x);
+        m_GridY = GridCoord::ToGridY(m_Pos.y);
 
         if (!m_IgnoreBombs.empty()) {
             for (auto it = m_IgnoreBombs.begin(); it != m_IgnoreBombs.end(); ) {
-                float bombPixelX = (it->first - 12) * 32.0f;
-                float bombPixelY = (8 - it->second) * 32.0f;
+                float bombPixelX = GridCoord::ToPixelX(it->first);
+                float bombPixelY = GridCoord::ToPixelY(it->second);
 
-                if (std::abs(m_Pos.x - bombPixelX) >= 40.0f || std::abs(m_Pos.y - bombPixelY) >= 40.0f) {
+                if (std::abs(m_Pos.x - bombPixelX) >= Constants::Player::kIgnoreBombClearance ||
+                    std::abs(m_Pos.y - bombPixelY) >= Constants::Player::kIgnoreBombClearance) {
                     it = m_IgnoreBombs.erase(it);
                 }
                 else {
@@ -169,10 +170,10 @@ void Player::Update(const IWorldContext& worldContext) {
         ApplyPendingBounce(worldContext);
     }
 
-	// 位置更新後，確保畫面座標與像素座標同步
+    // 單次寫入畫面像素座標 (避免每幀重複寫兩次)
     m_Transform.translation = {
         std::round(m_Pos.x),
-        std::round(m_Pos.y + 15.0f)
+        std::round(m_Pos.y + Constants::Player::kSpriteYOffset)
     };
 
     // 無敵時間
@@ -204,27 +205,19 @@ void Player::ChangeDirection(Direction dir) {
 }
 
 bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldContext) {
-    float radius = 9.0f;  // 碰撞箱半徑
+    float radius = Constants::Player::kCollisionRadius;
     float left = nextX - radius;
     float right = nextX + radius;
     float top = nextY + radius;
     float bottom = nextY - radius;
 
-    // 用像素座標計算真正的網格座標
-    auto getGridX = [](float x) { return static_cast<int>(std::floor((x + 16.0f) / 32.0f)) + 12; };
-    auto getGridY = [](float y) { return 8 - static_cast<int>(std::floor((y + 16.0f) / 32.0f)); };
-
-	// 檢查四個角落的網格座標是否可行走或有炸彈
+    // 檢查四個角落的網格是否可走或有炸彈
     auto check = [&](int gx, int gy) {
         bool isMapObstacle = !worldContext.IsWalkable(gx, gy);
-        bool isBomb = worldContext.IsBombAt(gx, gy);
-        bool isTurret = worldContext.IsTurretAt(gx, gy);
-        // bool isChest = interactableManager.IsChestAt(gx, gy);
+        bool isBomb        =  worldContext.IsBombAt(gx, gy);
+        bool isTurret      =  worldContext.IsTurretAt(gx, gy);
 
-        // 如果是炸彈，但該座標等於 m_IgnoreBombX/Y，則視為可穿透
-        /*if (gx == m_IgnoreBombX && gy == m_IgnoreBombY) {
-            return isMapObstacle;
-        }*/
+        // 玩家自己剛放的炸彈在 IgnoreBombs 中視為可穿透 (不擋玩家)
         bool isIgnored = false;
         for (const auto& ig : m_IgnoreBombs) {
             if (gx == ig.first && gy == ig.second) {
@@ -239,33 +232,27 @@ bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldCon
         return isMapObstacle || isBomb || isTurret;
     };
 
-    // 其中一個角不能走就判定有碰撞
-    if (check(getGridX(left), getGridY(top)))
-        return true;
-    if (check(getGridX(right), getGridY(top)))
-        return true;
-    if (check(getGridX(left), getGridY(bottom)))
-        return true;
-    if (check(getGridX(right), getGridY(bottom)))
-        return true;
+    if (check(GridCoord::ToGridX(left),  GridCoord::ToGridY(top)))    return true;
+    if (check(GridCoord::ToGridX(right), GridCoord::ToGridY(top)))    return true;
+    if (check(GridCoord::ToGridX(left),  GridCoord::ToGridY(bottom))) return true;
+    if (check(GridCoord::ToGridX(right), GridCoord::ToGridY(bottom))) return true;
 
-    return false;  // 無碰撞
+    return false;
 }
 
 // 重生角色
 void Player::Respawn() {
-	m_GridX = m_SpawnX;
-	m_GridY = m_SpawnY;
-    m_Pos.x = (m_GridX - 12) * 32.0f;
-    m_Pos.y = (8 - m_GridY) * 32.0f;
-    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
+    m_GridX = m_SpawnX;
+    m_GridY = m_SpawnY;
+    m_Pos = GridCoord::ToPixel(m_GridX, m_GridY);
+    m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
     m_IsDead = false;
     m_CurrentBombs = 0;
-    m_MaxBombs = 3;
-    m_Firepower = 2;
+    m_MaxBombs = Constants::Player::kInitialMaxBombs;
+    m_Firepower = Constants::Player::kInitialFirepower;
     SetVisible(true);
 
-    m_Invincible = 180;  // 無敵時間
+    m_Invincible = Constants::Player::kInvincibleFramesOnRespawn;
 }
 
 void Player::Kill() {
@@ -274,23 +261,26 @@ void Player::Kill() {
 
     m_IsDead = true;
     m_IgnoreBombs.clear();
-    m_DeathCountdown = 30;
+    m_DeathCountdown = Constants::Player::kDeathCountdownFrames;
+
+    // 確保死亡時清空彈跳狀態，避免重生後莫名其妙被彈走
+    m_Bounce = BounceState{};
 
     LOG_INFO("Player died");
 }
 
 void Player::IncreaseMaxBombs() {
-    if (m_MaxBombs < 10) {
+    if (m_MaxBombs < Constants::Player::kMaxBombsCap) {
         m_MaxBombs++;
         LOG_INFO("Player's max bombs increased to " + std::to_string(m_MaxBombs));
-	}
+    }
 }
 
 void Player::IncreaseFirepower() {
-    if (m_Firepower < 5) {
+    if (m_Firepower < Constants::Player::kFirepowerCap) {
         m_Firepower++;
         LOG_INFO("Player's firepower increased to " + std::to_string(m_Firepower));
-	}
+    }
 }
 
 bool Player::TriggerBounce(Direction dir, int distance) {
@@ -309,24 +299,24 @@ void Player::UpdateBouncing() {
     m_Pos.x = m_Bounce.start.x + (m_Bounce.target.x - m_Bounce.start.x) * t;
     m_Pos.y = m_Bounce.start.y + (m_Bounce.target.y - m_Bounce.start.y) * t;
 
-    float jumpHeight = std::sin(t * 3.14159f) * 64.0f;
-    m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f + jumpHeight };
+    float jumpHeight = std::sin(t * 3.14159f) * Constants::Player::kBounceJumpHeight;
+    m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset + jumpHeight };
 
     if (m_Bounce.tick >= m_Bounce.duration) {
         m_Bounce.active = false;
         m_Pos = m_Bounce.target;
 
-        m_GridX = std::round(m_Pos.x / 32.0f) + 12;
-        m_GridY = 8 - std::round(m_Pos.y / 32.0f);
-        m_Transform.translation = { m_Pos.x, m_Pos.y + 15.0f };
+        m_GridX = GridCoord::ToGridX(m_Pos.x);
+        m_GridY = GridCoord::ToGridY(m_Pos.y);
+        m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
     }
 }
 
 void Player::ApplyPendingBounce(const IWorldContext& worldContext) {
     m_Bounce.pending = false;
 
-    float centerX = (m_GridX - 12) * 32.0f;
-    float centerY = (8 - m_GridY) * 32.0f;
+    float centerX = GridCoord::ToPixelX(m_GridX);
+    float centerY = GridCoord::ToPixelY(m_GridY);
 
     float bdx = 0.0f, bdy = 0.0f;
     switch (m_Bounce.pendingDir) {
@@ -338,8 +328,8 @@ void Player::ApplyPendingBounce(const IWorldContext& worldContext) {
 
     int actualDist = 0;
     for (int i = 1; i <= m_Bounce.pendingDist; i++) {
-        float testX = centerX + bdx * i * 32.0f;
-        float testY = centerY + bdy * i * 32.0f;
+        float testX = centerX + bdx * i * GridCoord::kTileSize;
+        float testY = centerY + bdy * i * GridCoord::kTileSize;
 
         if (!IsColliding(testX, testY, worldContext)) {
             actualDist = i;
@@ -355,12 +345,12 @@ void Player::ApplyPendingBounce(const IWorldContext& worldContext) {
     ChangeDirection(m_Bounce.pendingDir);
 
     if (actualDist > 0) {
-        m_Bounce.target = { centerX + bdx * actualDist * 32.0f, centerY + bdy * actualDist * 32.0f };
-        m_Bounce.duration = 30;
+        m_Bounce.target = { centerX + bdx * actualDist * GridCoord::kTileSize, centerY + bdy * actualDist * GridCoord::kTileSize };
+        m_Bounce.duration = Constants::Player::kBounceFrames;
     }
     else {
         m_Bounce.target = { centerX, centerY };
-        m_Bounce.duration = 15;
+        m_Bounce.duration = Constants::Player::kBounceBlockedFrames;
         LOG_INFO("Bounce path blocked, bouncing in place.");
     }
 }

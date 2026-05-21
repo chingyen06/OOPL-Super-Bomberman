@@ -1,9 +1,10 @@
-#include "App.hpp"
+﻿#include "App.hpp"
 #include "Controller/HumanController.hpp"
 #include "Controller/BotController.hpp"
 #include <algorithm>
 #include <random>
 #include <chrono>
+#include "GameConstants.hpp"
 #include "Util/Image.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
@@ -97,15 +98,15 @@ void GameplayState::OnUpdate(App& app) {
         player->Update(worldContext);
 
         if (!player->IsDead()) {
-            if (player->GetController() && player->GetController()->IsPlaceBombPressed()) {
-                app.m_BombManager.PlaceBomb(player, app.m_LevelManager, app.m_InteractableManager, app.m_Root, app.m_Players);
+            if (player->GetController() && player->GetController()->IsPlaceBombJustPressed()) {
+                app.m_BombManager.PlaceBomb(*player, app.m_LevelManager, app.m_InteractableManager, app.m_Root, app.m_Players);
             }
         }
         else {
             if (player->HasKey()) {
                 LOG_INFO("Player dropped the Key!");
                 player->SetKey(false);
-                app.m_InteractableManager.DropKey(player->GetGridX(), player->GetGridY(), app.m_Root);
+                app.m_InteractableManager.AddKey(player->GetGridX(), player->GetGridY(), app.m_Root);
             }
         }
     }
@@ -180,18 +181,13 @@ void App::Start() {
         m_CurrentState = State::END;
     });
 
-    m_LevelMenu.AddOption("Level 1", [this]() {
-        TransitionTo(std::make_unique<GameplayState>());
-        LoadLevel(1);
-    });
-    m_LevelMenu.AddOption("Level 2", [this]() {
-        TransitionTo(std::make_unique<GameplayState>());
-        LoadLevel(2);
-    });
-    m_LevelMenu.AddOption("Level 3", [this]() {
-        TransitionTo(std::make_unique<GameplayState>());
-        LoadLevel(3);
-    });
+    constexpr int kNumLevels = 3;
+    for (int i = 1; i <= kNumLevels; ++i) {
+        m_LevelMenu.AddOption("Level " + std::to_string(i), [this, i]() {
+            TransitionTo(std::make_unique<GameplayState>());
+            LoadLevel(i);
+        });
+    }
     m_LevelMenu.AddOption("return", [this]() {
         TransitionTo(std::make_unique<LevelSelectState>());
     });
@@ -205,15 +201,24 @@ void App::LoadLevel(int levelIndex) {
 
     std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
 
+    // 清理上一局可能殘留的實體 (即使沒走過 GameEndState 也要乾淨)
+    for (auto& player : m_Players)
+        m_Root.RemoveChild(player);
+    m_Players.clear();
+
+    for (auto& spirit : m_Spirits)
+        m_Root.RemoveChild(spirit);
+    m_Spirits.clear();
+
     m_LevelManager.Clear(m_Root);
     m_InteractableManager.Clear(m_Root);
     m_BombManager.Clear(m_Root);
     m_UIManager.Clear(m_Root);
+    m_TurretManager.Clear(m_Root);
 
-    m_LevelManager.LoadLevel(levelPath, m_InteractableManager);  // 載入關卡
-    m_LevelManager.AttachToRoot(m_Root);    // 載入地圖方塊
-    m_InteractableManager.AttachToRoot(m_Root);  // 載入互動物件
-    int totalChests = m_InteractableManager.GetTotalChestCount();  // 取得寶箱總數
+    m_LevelManager.LoadLevel(levelPath, m_InteractableManager, m_Root);  // 載入關卡 (互動物件已自行掛上 root)
+    m_LevelManager.AttachToRoot(m_Root);                                  // 載入地圖方塊
+    int totalChests = m_InteractableManager.GetTotalChestCount();
     m_UIManager.Init(m_Root, totalChests);
 
     // 出生點
@@ -243,7 +248,6 @@ void App::LoadLevel(int levelIndex) {
     m_Root.AddChild(p2);
 
     // 源石精靈
-    m_Spirits.clear();
     for (const auto& sp : m_LevelManager.GetSpiritSpawns()) {
         auto spirit = std::make_shared<Spirit>(sp.first, sp.second);
         m_Spirits.push_back(spirit);
@@ -251,12 +255,11 @@ void App::LoadLevel(int levelIndex) {
     }
 
     // 砲台
-    m_TurretManager.Clear(m_Root);
     for (const auto& sp : m_LevelManager.GetTurretSpawns()) {
-        m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Player::Direction::DOWN), m_Root);
+        m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Direction::DOWN), m_Root);
     }
 
-    m_GameTime = 60 * 60 * 3;  // 遊戲時間 (3 分鐘)
+    m_GameTime = Constants::Game::kRoundDurationFrames;
 }
 
 void App::Update() {

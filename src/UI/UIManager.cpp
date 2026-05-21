@@ -8,6 +8,11 @@
 void UIManager::Init(Util::Renderer& root, int totalChests) {
     Clear(root);
 
+    // 預載一次「寶箱開啟」紋理，之後寶箱開啟時直接共用，不再每次讀檔
+    if (!m_ChestOpenedImage) {
+        m_ChestOpenedImage = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
+    }
+
     m_TimerBackground = std::make_shared<UIImage>(RESOURCE_DIR"/Image/timer.png", 0, 320);
     root.AddChild(m_TimerBackground);
 
@@ -45,10 +50,10 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         snprintf(buffer, sizeof(buffer), "%02d:%02d", minutes, seconds);
         m_TimerText->SetText(std::string(buffer));
 
-        m_LastSeconds = totalSeconds; // ��s�֨�
+        m_LastSeconds = totalSeconds; // Update cache
     }
 
-	// �ӫa
+    // Crown indicator on the surviving defender
     bool defenderFound = false;
     for (const auto& player : players) {
         if (player->GetTeam() == Team::DEFENDER && !player->IsDead()) {
@@ -62,7 +67,7 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         m_CrownImage->SetPosition(-1000.0f, -1000.0f);
     }
     
-    // �_��
+    // Key indicators floating above players holding a key
     int activeKeysNeeded = 0;
     for (const auto& player : players) {
         if (player->HasKey() && !player->IsDead()) {
@@ -77,7 +82,7 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
         m_KeyIndicators[i]->SetPosition(-1000.0f, -1000.0f);
     }
 
-	// �_�c
+    // Chest icons in HUD
     if (chestStatus != m_LastChestStatus) {
         size_t loopSize = std::min(chestStatus.size(), m_ChestPool.size());
 
@@ -86,11 +91,10 @@ void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Play
             bool isOpened = chestStatus[i];
 
             if (isOpened && !wasOpened) {
-                auto openedImg = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
-                m_ChestPool[i]->SetDrawable(openedImg);
+                m_ChestPool[i]->SetDrawable(m_ChestOpenedImage);
             }
         }
-        m_LastChestStatus = chestStatus; // ��s�֨�
+        m_LastChestStatus = chestStatus; // Update cache
     }
 }
 

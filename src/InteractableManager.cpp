@@ -1,4 +1,4 @@
-#include <random>
+﻿#include <random>
 #include "InteractableManager.hpp"
 #include "Player.hpp"
 #include "Util/Logger.hpp"
@@ -12,20 +12,16 @@ InteractableManager::InteractableManager() {
     m_LootTable.push_back({ 15, std::make_shared<FireItemFactory>() });
 }
 
-void InteractableManager::AddKey(int gridX, int gridY) {
+void InteractableManager::AddKey(int gridX, int gridY, Util::Renderer& root) {
     auto key = std::make_shared<Key>(gridX, gridY);
     m_Interactables.push_back(key);
+    root.AddChild(key);
 }
 
-void InteractableManager::AddChest(int gridX, int gridY) {
+void InteractableManager::AddChest(int gridX, int gridY, Util::Renderer& root) {
     auto chest = std::make_shared<Chest>(gridX, gridY);
     m_Interactables.push_back(chest);
-}
-
-void InteractableManager::AttachToRoot(Util::Renderer& root) {
-    for (auto& interactable : m_Interactables) {
-        root.AddChild(interactable);
-    }
+    root.AddChild(chest);
 }
 
 void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root) {
@@ -40,7 +36,7 @@ void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, 
 
             if (player->GetGridX() == item->GetGridX() && player->GetGridY() == item->GetGridY()) {
 
-                if (item->OnInteract(player)) {
+                if (item->OnInteract(*player)) {
                     root.RemoveChild(item);
                     it = m_Interactables.erase(it);
                     itemErased = true;
@@ -94,13 +90,6 @@ bool InteractableManager::IsAllChestOpened() const {
     return true;
 }
 
-void InteractableManager::DropKey(int gridX, int gridY, Util::Renderer& root) {
-    auto key = std::make_shared<Key>(gridX, gridY);
-    m_Interactables.push_back(key);
-
-    root.AddChild(key);
-}
-
 int InteractableManager::GetTotalChestCount() const {
     int count = 0;
     for (const auto& item : m_Interactables) {
@@ -130,9 +119,16 @@ void InteractableManager::UpdateChestStatusCache() {
     }
 }
 
-void InteractableManager::RemoveItem(std::vector<std::shared_ptr<Interactable>>::iterator& it, Util::Renderer& root) {
-    root.RemoveChild(*it);
-    it = m_Interactables.erase(it);
+void InteractableManager::DestroyFlammableAt(int gridX, int gridY, Util::Renderer& root) {
+    for (auto it = m_Interactables.begin(); it != m_Interactables.end(); ) {
+        if ((*it)->GetGridX() == gridX && (*it)->GetGridY() == gridY && (*it)->IsDestroyedByFire()) {
+            root.RemoveChild(*it);
+            it = m_Interactables.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 void InteractableManager::OnBrickDestroyed(int gridX, int gridY, Util::Renderer& root) {
@@ -172,21 +168,14 @@ glm::vec2 InteractableManager::GetForceAt(int gridX, int gridY) const {
     return totalForce;
 }
 
-void InteractableManager::AddConveyor(int gridX, int gridY, Player::Direction dir) {
+void InteractableManager::AddConveyor(int gridX, int gridY, Direction dir, Util::Renderer& root) {
     auto conveyor = std::make_shared<Conveyor>(gridX, gridY, dir);
     m_Interactables.push_back(conveyor);
+    root.AddChild(conveyor);
 }
 
-//glm::vec3 InteractableManager::GetBounceAt(int gridX, int gridY) const {
-//    for (const auto& item : m_Interactables) {
-//        if (item->GetGridX() == gridX && item->GetGridY() == gridY) {
-//            return item->GetBounce(); // {dx, dy, dist}
-//        }
-//    }
-//    return { 0.0f, 0.0f, 0.0f };
-//}
-
-void InteractableManager::AddBouncePad(int gridX, int gridY, Player::Direction dir) {
+void InteractableManager::AddBouncePad(int gridX, int gridY, Direction dir, Util::Renderer& root) {
     auto bouncePad = std::make_shared<BouncePad>(gridX, gridY, dir);
     m_Interactables.push_back(bouncePad);
+    root.AddChild(bouncePad);
 }

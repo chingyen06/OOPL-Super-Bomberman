@@ -14,7 +14,7 @@ void Menu::Show(Util::Renderer& root, float startX, float startY) {
     m_IsVisible = true;
     m_SelectedIndex = 0;
 
-    // 由上往下排版
+    // Lay out menu options vertically from top to bottom
     for (size_t i = 0; i < m_OptionTexts.size(); i++) {
         m_OptionTexts[i]->SetPosition(startX, startY - (i * 60.0f));
         root.AddChild(m_OptionTexts[i]);
@@ -35,7 +35,7 @@ void Menu::Update() {
 
     bool changed = false;
 
-    // 處理上下移動
+    // Handle up/down navigation
     if (Util::Input::IsKeyUp(Util::Keycode::UP) || Util::Input::IsKeyUp(Util::Keycode::W)) {
         m_SelectedIndex--;
         if (m_SelectedIndex < 0) m_SelectedIndex = m_OptionTexts.size() - 1;

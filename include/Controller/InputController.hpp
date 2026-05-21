@@ -1,4 +1,4 @@
-#ifndef INPUT_CONTROLLER_HPP
+﻿#ifndef INPUT_CONTROLLER_HPP
 #define INPUT_CONTROLLER_HPP
 
 class InputController {
@@ -9,7 +9,8 @@ public:
     virtual bool IsDownPressed() const = 0;
     virtual bool IsLeftPressed() const = 0;
     virtual bool IsRightPressed() const = 0;
-    virtual bool IsPlaceBombPressed() const = 0;
+    // 注意：這是邊緣觸發 (key-down 那一幀才回 true)，不是長按
+    virtual bool IsPlaceBombJustPressed() const = 0;
 };
 
 #endif

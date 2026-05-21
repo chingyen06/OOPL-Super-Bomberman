@@ -22,6 +22,9 @@ set(SRC_FILES
 
 set(INCLUDE_FILES
     App.hpp
+    GameConstants.hpp
+    GameTypes.hpp
+    GridCoord.hpp
     LevelManager.hpp
     MapTiles.hpp
     Player.hpp

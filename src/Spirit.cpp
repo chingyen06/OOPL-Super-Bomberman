@@ -1,4 +1,7 @@
-#include "Spirit.hpp"
+ï»¿#include "Spirit.hpp"
+#include "GameConstants.hpp"
+#include "GameTypes.hpp"
+#include "GridCoord.hpp"
 #include "LevelManager.hpp"
 #include "BombManager.hpp"
 #include "Util/Logger.hpp"
@@ -13,8 +16,7 @@ Spirit::Spirit(int spawnGridX, int spawnGridY)
 
     SetZIndex(18);
 
-    m_Pos.x = (m_GridX - 12) * 32.0f;
-    m_Pos.y = (8 - m_GridY) * 32.0f;
+    m_Pos = GridCoord::ToPixel(m_GridX, m_GridY);
     m_Transform.translation = m_Pos;
 }
 
@@ -51,10 +53,10 @@ void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const LevelMa
         }
     }
 
-    float hover = std::sin(static_cast<float>(m_Tick) * 0.1f) * 5.0f;
+    float hover = std::sin(static_cast<float>(m_Tick) * Constants::Spirit::kHoverSpeed) * Constants::Spirit::kHoverAmplitude;
     m_Transform.translation = {
         std::round(m_Pos.x),
-        std::round(m_Pos.y + 10.0f + hover)
+        std::round(m_Pos.y + Constants::Spirit::kVisualYOffset + hover)
     };
 }
 
@@ -73,7 +75,7 @@ void Spirit::UpdatePixelMovement() {
     glm::vec2 dir = m_PixelTarget - m_Pos;
     float dist = glm::length(dir);
 
-    // §PÂ_¬O§_©è¹F¥Ø¼ÐÂI
+    // Check if we have reached the target tile
     if (dist <= m_MoveSpeed) {
         m_Pos = m_PixelTarget;
         m_IsMoving = false;
@@ -84,7 +86,7 @@ void Spirit::UpdatePixelMovement() {
 }
 
 void Spirit::ScanForEnemies(const std::vector<std::shared_ptr<Player>>& players) {
-    const int alertRadius = 5; // Äµ§Ù¥b®| 5 ®æ
+    const int alertRadius = Constants::Spirit::kAlertRadius;
     int closestDist = 999;
     m_Target = nullptr;
 
@@ -98,7 +100,7 @@ void Spirit::ScanForEnemies(const std::vector<std::shared_ptr<Player>>& players)
         }
     }
 
-    // ®Ú¾Ú¯Á¼Äµ²ªG¤Á´«ª¬ºA
+    // Switch state based on whether an enemy is in range
     if (m_Target && m_State == State::PATROL) {
         m_State = State::CHASE;
     }
@@ -110,15 +112,16 @@ void Spirit::ScanForEnemies(const std::vector<std::shared_ptr<Player>>& players)
 void Spirit::HandlePatrol(const LevelManager& lm, const BombManager& bm) {
     m_StateTimer--;
     if (m_StateTimer <= 0) {
-        m_StateTimer = 60; // ¨µÅÞ°±¹y 1 ¬í
-        int dx = (std::rand() % 3) - 1; // -1, 0, 1
-        int dy = (std::rand() % 3) - 1;
+        m_StateTimer = Constants::Spirit::kPatrolInterval;
+        // åªèµ° 4 å€‹æ­£æ–¹å‘ (é¿å…æ–œå‘ç©¿ç‰†è§’)
+        const int dir = std::rand() % 4;
+        const auto off = kCardinalOffsets[dir];
+        int nextX = m_GridX + off.dx;
+        int nextY = m_GridY + off.dy;
 
-        int nextX = m_GridX + dx;
-        int nextY = m_GridY + dy;
-
-        // ­­¨î¦b¥X¥ÍÂI¥b®| 3 ®æ¤º¨µÅÞ
-        if (std::abs(nextX - m_SpawnX) <= 3 && std::abs(nextY - m_SpawnY) <= 3) {
+        // Stay within kPatrolRange tiles of the spawn point
+        if (std::abs(nextX - m_SpawnX) <= Constants::Spirit::kPatrolRange &&
+            std::abs(nextY - m_SpawnY) <= Constants::Spirit::kPatrolRange) {
             MoveTowards(nextX, nextY, lm, bm);
         }
     }
@@ -129,10 +132,18 @@ void Spirit::HandleChase(const LevelManager& lm, const BombManager& bm) {
 
     m_StateTimer--;
     if (m_StateTimer <= 0) {
-        m_StateTimer = 30; // °lÀ»¤ÏÀ³ÀW²v (0.5 ¬í¤@¦¸)
+        m_StateTimer = Constants::Spirit::kChaseInterval;
 
-        int nextX = m_GridX + (m_Target->GetGridX() > m_GridX ? 1 : (m_Target->GetGridX() < m_GridX ? -1 : 0));
-        int nextY = m_GridY + (m_Target->GetGridY() > m_GridY ? 1 : (m_Target->GetGridY() < m_GridY ? -1 : 0));
+        // 4 æ–¹å‘è¿½æ“Šï¼šé¸èˆ‡ç›®æ¨™å·®è·è¼ƒå¤§çš„é‚£ä¸€è»¸å…ˆèµ°ï¼Œé¿å…æ–œå‘ç©¿ç‰†è§’
+        const int dxToTarget = m_Target->GetGridX() - m_GridX;
+        const int dyToTarget = m_Target->GetGridY() - m_GridY;
+        int nextX = m_GridX;
+        int nextY = m_GridY;
+        if (std::abs(dxToTarget) >= std::abs(dyToTarget) && dxToTarget != 0) {
+            nextX += (dxToTarget > 0 ? 1 : -1);
+        } else if (dyToTarget != 0) {
+            nextY += (dyToTarget > 0 ? 1 : -1);
+        }
         MoveTowards(nextX, nextY, lm, bm);
     }
 }
@@ -140,11 +151,10 @@ void Spirit::HandleChase(const LevelManager& lm, const BombManager& bm) {
 void Spirit::MoveTowards(int targetX, int targetY, const LevelManager& lm, const BombManager& bm) {
     if (m_IsMoving) return;
 
-    // ÀË¬d¥Ø¼Ð®æ¬O§_¥i³q¦æ¥BµL¬µ¼u
+    // Verify the target tile is walkable and bomb-free
     if (lm.IsWalkable(targetX, targetY) && !bm.IsBombAt(targetX, targetY)) {
         m_IsMoving = true;
-        m_PixelTarget.x = (targetX - 12) * 32.0f;
-        m_PixelTarget.y = (8 - targetY) * 32.0f;
+        m_PixelTarget = GridCoord::ToPixel(targetX, targetY);
         m_GridX = targetX;
         m_GridY = targetY;
     }

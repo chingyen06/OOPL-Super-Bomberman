@@ -1,5 +1,6 @@
 set(SRC_FILES
     App.cpp
+    GameSession.cpp
     LevelManager.cpp
     MapTiles.cpp
     Player.cpp
@@ -22,6 +23,7 @@ set(SRC_FILES
 
 set(INCLUDE_FILES
     App.hpp
+    GameSession.hpp
     GameConstants.hpp
     GameTypes.hpp
     GridCoord.hpp

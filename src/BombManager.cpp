@@ -19,14 +19,6 @@ void BombManager::PlaceBomb(Player& player, LevelManager& levelManager, Interact
     float bombPixelX = GridCoord::ToPixelX(targetX);
     float bombPixelY = GridCoord::ToPixelY(targetY);
 
-    for (const auto& p : players) {
-        if (p->GetPlayerID() == player.GetPlayerID() || p->IsDead()) continue;
-        if (std::abs(p->GetPixelPos().x - bombPixelX) < GridCoord::kTileSize && std::abs(p->GetPixelPos().y - bombPixelY) < GridCoord::kTileSize) {
-            LOG_INFO("Cannot place bomb: Another player is occupying the grid.");
-            return;
-        }
-    }
-
     // The target tile must be walkable, free of bombs, and not blocked by an interactable
     if (levelManager.IsWalkable(targetX, targetY) && !IsBombAt(targetX, targetY) && !interactableManager.IsBlocksBombAt(targetX, targetY)) {
         auto newBomb = std::make_shared<Bomb>(targetX, targetY, player.GetFirepower(), player.GetPlayerID());

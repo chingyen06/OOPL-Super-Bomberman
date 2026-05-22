@@ -4,17 +4,10 @@
 #include "pch.hpp" // IWYU pragma: export
 #include <memory>
 
-#include "Util/Renderer.hpp"
-#include "UI/UIImage.hpp"
-#include "LevelManager.hpp"
-#include "Player.hpp"
-#include "BombManager.hpp"
-#include "InteractableManager.hpp"
-#include "UI/UIManager.hpp"
-#include "AIManager.hpp"
+#include "GameSession.hpp"
 #include "Menu.hpp"
-#include "Spirit.hpp"
-#include "Turret/TurretManager.hpp"
+#include "UI/UIImage.hpp"
+#include "Util/Renderer.hpp"
 
 class App;
 
@@ -38,57 +31,48 @@ public:
 
     void Start();
     void Update();
-    void LoadLevel(int levelIndex);
     void End(); // NOLINT(readability-convert-member-functions-to-static)
 
     void TransitionTo(std::unique_ptr<IGameState> nextState);
 
+    // ------- State 用的 public API (不再用 friend 開後門) -------
+
+    GameSession& Session() { return m_Session; }
+    Menu&        MainMenu()  { return m_MainMenu; }
+    Menu&        LevelMenu() { return m_LevelMenu; }
+
+    // overlay 操作 (UI 圖片 add/remove 全部封裝在 App 內，State 不直接碰 Renderer)
+    void ShowCover();
+    void HideCover();
+    void ShowMenuBg();
+    void HideMenuBg();
+    void ShowAttackerWin();
+    void ShowDefenderWin();
+    void HideWinScreens();
+
+    // Menu show/hide 也封裝起來，State 不需要拿 Renderer
+    void ShowMenu(Menu& menu, float x, float y);
+    void HideMenu(Menu& menu);
+
+    void RequestQuit() { m_CurrentState = State::END; }
+
 private:
     void ValidTask();
 
-private:
     State m_CurrentState = State::START;
     std::unique_ptr<IGameState> m_CurrentGameState;
 
-    // 定義狀態為 friend，讓它們可以存取 Manager
-    friend class TitleScreenState;
-    friend class LevelSelectState;
-    friend class GameplayState;
-    friend class GameEndState;
+    // m_Root 必須在 m_Session 之前宣告，因 m_Session 以 m_Root 初始化
+    Util::Renderer m_Root;
+    GameSession    m_Session{ m_Root };
 
-    Util::Renderer m_Root;  // 場景的根節點
-
-	// 背景圖片
     std::shared_ptr<UIImage> m_CoverImage;
-	std::shared_ptr<UIImage> m_DefenseImage;
+    std::shared_ptr<UIImage> m_DefenseImage;
     std::shared_ptr<UIImage> m_AttackImage;
+    std::shared_ptr<UIImage> m_MenuBg;
 
-    LevelManager m_LevelManager;  // 管理關卡
-
-    // std::shared_ptr<Player> m_Player;  // 角色
-    std::vector<std::shared_ptr<Player>> m_Players;
-
-	BombManager m_BombManager;  // 管理炸彈與火焰
-
-	int m_DeathCountdown = -1;  // 死亡倒數計時
-	int m_RespawnTimer = -1;  // 重生倒數計時
-
-	InteractableManager m_InteractableManager;  // 管理互動物件
-
-	int m_GameTime = -1;  // 遊戲時間
-
-	UIManager m_UIManager;  // 管理 UI 顯示
-
-    AIManager m_AIManager;
-
-    std::vector<std::shared_ptr<Spirit>> m_Spirits;
-
-	TurretManager m_TurretManager;  // 管理砲台
-
-    // 選單
     Menu m_MainMenu;
     Menu m_LevelMenu;
-    std::shared_ptr<UIImage> m_MenuBg;
 };
 
 #endif

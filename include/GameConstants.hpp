@@ -1,4 +1,4 @@
-#ifndef GAMECONSTANTS_HPP
+﻿#ifndef GAMECONSTANTS_HPP
 #define GAMECONSTANTS_HPP
 
 // All gameplay-tunable values live here so we don't bury magic numbers
@@ -71,6 +71,13 @@ namespace Constants {
     namespace Projectile {
         inline constexpr float kSpriteScale        = 0.6f;
         inline constexpr float kSpeed              = 6.0f;           // px/frame
+    }
+
+    // ---------------- Bot (AI 控制的玩家) ----------------
+    namespace Bot {
+        // 兩次決策之間的最少 frame 數。值愈大反應愈慢、感覺愈不機械。
+        // 不同 bot 用 playerID 做相位偏移避免每 K 幀同時 stutter。
+        inline constexpr int kReactionFrames = 6;
     }
 
     // ---------------- Spirit (patrol enemy) ----------------

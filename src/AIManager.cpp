@@ -5,11 +5,12 @@
 #include "Interactable.hpp"
 #include "Spirit.hpp"
 #include "Turret/TurretManager.hpp"
-#include "Controller/BotController.hpp"
+#include "Controller/IProgrammableController.hpp"
 #include <queue>
 #include <cmath>
 #include <algorithm>
 #include <functional>
+#include <map>
 
 struct AStarNode {
     int x, y;
@@ -68,41 +69,6 @@ std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int
     return path;
 }
 
-void AIManager::RebuildDangerMap(const LevelManager& levelManager, const BombManager& bombManager) {
-    int mapW = levelManager.GetMapWidth();
-    int mapH = levelManager.GetMapHeight();
-    m_Danger.assign(mapH, std::vector<bool>(mapW, false));
-
-    // 1) 已存在的爆炸火焰
-    for (int y = 0; y < mapH; ++y) {
-        for (int x = 0; x < mapW; ++x) {
-            if (bombManager.HasExplosionAt(x, y)) {
-                m_Danger[y][x] = true;
-            }
-        }
-    }
-
-    // 2) 倒數中的炸彈會掃到的格子 (沿四方向延伸到第一個牆/磚為止)
-    for (int by = 0; by < mapH; ++by) {
-        for (int bx = 0; bx < mapW; ++bx) {
-            if (!bombManager.IsBombAt(bx, by)) continue;
-
-            int bfp = bombManager.GetFirepowerAt(bx, by);
-            m_Danger[by][bx] = true;
-
-            for (const auto& off : kCardinalOffsets) {
-                for (int step = 1; step <= bfp; ++step) {
-                    int cx = bx + off.dx * step;
-                    int cy = by + off.dy * step;
-                    if (cx < 0 || cx >= mapW || cy < 0 || cy >= mapH) break;
-                    m_Danger[cy][cx] = true;
-                    if (!levelManager.IsWalkable(cx, cy)) break;
-                }
-            }
-        }
-    }
-}
-
 void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     const LevelManager& levelManager,
     const BombManager& bombManager,
@@ -110,7 +76,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     const std::vector<std::shared_ptr<Spirit>>& spirits,
     const TurretManager& turretManager) {
 
-    RebuildDangerMap(levelManager, bombManager);
+    m_DangerMap.Rebuild(levelManager, bombManager);
 
     const auto& interactables = interactableManager.GetInteractables();
     int mapW = levelManager.GetMapWidth();
@@ -119,27 +85,16 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     // 跨 bot 共享的目標鎖定表：本幀內某物件被某 bot 鎖定後，其他 bot 不再追同一物
     std::unordered_set<Interactable*> claimedTargets;
 
-    // 把已決定要放的「pending 炸彈」直接寫入 m_Danger，讓後續 bot 的 IsLethal/FindSafeSpot
-    // 自動納入考量 — 防止多隻 bot 各自以為安全、放完發現連鎖把全員炸死
+    // pending 炸彈的危險範圍委由 DangerMap 處理 — 防止多隻 bot 各自以為安全、放完發現連鎖把全員炸死
     auto registerPendingBomb = [&](int bx, int by, int fp) {
-        if (bx < 0 || by < 0 || by >= static_cast<int>(m_Danger.size()) ||
-            bx >= static_cast<int>(m_Danger[0].size())) return;
-        m_Danger[by][bx] = true;
-        for (const auto& off : kCardinalOffsets) {
-            for (int step = 1; step <= fp; ++step) {
-                int cx = bx + off.dx * step;
-                int cy = by + off.dy * step;
-                if (cx < 0 || cy < 0 || cy >= static_cast<int>(m_Danger.size()) ||
-                    cx >= static_cast<int>(m_Danger[0].size())) break;
-                m_Danger[cy][cx] = true;
-                if (!levelManager.IsWalkable(cx, cy)) break;
-            }
-        }
+        m_DangerMap.RegisterPendingBomb(bx, by, fp, levelManager);
     };
 
     for (auto& bot : players) {
         if (bot->IsDead()) continue;
-        auto botController = dynamic_cast<BotController*>(bot->GetController());
+        // Cross-cast 到 IProgrammableController：HumanController 沒有實作此介面所以會回 nullptr，
+        // 自動被略過 — 不再依賴具體 BotController 類別。
+        auto botController = dynamic_cast<IProgrammableController*>(bot->GetController());
         if (!botController) continue;
 
         botController->TickCooldown();
@@ -153,7 +108,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         //  (a) 身處危險 — 100ms 反應太慢可能直接被炸死
         //  (b) 站在輸送帶上 — 力場每幀都在推，需要即時調整方向鍵
         //  (c) bot 像素位置已偏離當前格中心 (>2 px) — 必須每幀微修否則就 S 型走
-        const bool inDanger = IsLethal(botX, botY, levelManager, botFirepower);
+        const bool inDanger = m_DangerMap.IsLethal(botX, botY, levelManager, botFirepower);
         const auto forceHere = interactableManager.GetForceAt(botX, botY);
         const bool onForceField = (forceHere.x != 0.0f || forceHere.y != 0.0f);
 
@@ -212,7 +167,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 決策完成後設定下次冷卻 (用 playerID 做相位偏移，分散不同 bot 的決策幀)
         // immediate 情境 (危險 / 輸送帶 / 像素偏離) cooldown = 0，每幀都會繼續微調 — 避免 S 型走
         struct ResetGuard {
-            BotController* ctrl;
+            IProgrammableController* ctrl;
             int frames;
             ~ResetGuard() { ctrl->ResetCooldown(frames); }
         };
@@ -222,7 +177,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         ResetGuard guard{ botController, nextCooldown };
 
         if (inDanger) {
-            auto safeSpot = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower);
+            auto safeSpot = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower);
             if (safeSpot.found) {
                 auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH, [&](int x, int y) {
                     if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
@@ -267,7 +222,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 3：尋找安全的目標
         auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-            if (IsLethal(x, y, levelManager, botFirepower)) return -1;
+            if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
             if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
             return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
             });
@@ -301,13 +256,13 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             int moveToX = pathSafe[0].first;
             int moveToY = pathSafe[0].second;
             if (wantBomb) {
-                auto testSafe = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
+                auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
                 if (testSafe.found) {
                     // 注意：escape path 只避開「已存在」的炸彈/爆炸，不避開 pretend bomb 的火力範圍。
                     // 因為剛放的炸彈有 3 秒引信，bot 有充足時間從尚未爆炸的格子穿出去 (testSafe.dist ≤ 5)。
                     auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
                         if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                        if (IsLethal(x, y, levelManager, botFirepower)) return -1;  // 真實炸彈/爆炸才擋
+                        if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // 真實炸彈/爆炸才擋
                         if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
                         return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
                         });
@@ -329,7 +284,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 4：無安全路徑 - 嘗試炸牆 (不管爆炸)
         auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
             if (!levelManager.IsWalkable(x, y) && !levelManager.IsBrick(x, y)) return -1;
-            if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, botFirepower)) return -1;
+            if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
             if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
             if (levelManager.IsBrick(x, y)) return 50;
             return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
@@ -344,13 +299,13 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
             if (botX == walkToX && botY == walkToY) {
                 // 站在 brick 前準備炸 — 同樣要驗證「逃生路徑」可走得到、且放彈後朝逃生點走
-                auto testSafe = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
+                auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
                 bool canBomb = false;
                 int moveToX = botX, moveToY = botY;
                 if (testSafe.found) {
                     auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
                         if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                        if (IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
+                        if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
                         if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
                         return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
                         });
@@ -366,7 +321,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
             else {
                 auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, [&](int x, int y) {
-                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || IsLethal(x, y, levelManager, botFirepower)) return -1;
+                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
                     if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
                     return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
                     });
@@ -402,11 +357,11 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
                 if (defenderDist <= 5 && hasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
                     // 確認逃生路徑走得到，否則寧可不放 (避免無腦自殺)
-                    auto testSafe = FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
+                    auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
                     if (testSafe.found) {
                         auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
                             if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                            if (IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
+                            if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
                             if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
                             return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
                             });
@@ -429,101 +384,33 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     }
 }
 
-bool AIManager::IsLethal(int tx, int ty, const LevelManager& levelManager, int fp, int pretendX, int pretendY) const {
-    // 對地圖外或越界格子保守視為不致命 (與舊版行為一致)
-    if (tx < 0 || ty < 0 || ty >= static_cast<int>(m_Danger.size()) ||
-        (m_Danger.size() > 0 && tx >= static_cast<int>(m_Danger[0].size()))) {
-        return false;
-    }
-
-    // 1) 真實炸彈/爆炸 — 直接查預先計算的快取
-    if (m_Danger[ty][tx]) return true;
-
-    // 2) 假想炸彈 (AI 想像在 pretendX/Y 放一顆 fp 火力的炸彈)
-    if (pretendX >= 0 && pretendY >= 0) {
-        if (tx == pretendX && ty == pretendY) return true;
-        for (const auto& off : kCardinalOffsets) {
-            for (int step = 1; step <= fp; step++) {
-                int cx = pretendX + off.dx * step;
-                int cy = pretendY + off.dy * step;
-                if (tx == cx && ty == cy) return true;
-                if (!levelManager.IsWalkable(cx, cy)) break;
-            }
-        }
-    }
-    return false;
-}
-
-AIManager::SafeSpot AIManager::FindSafeSpot(int startX, int startY, const LevelManager& levelManager, const BombManager& bombManager, int botFp, int pretendX, int pretendY) const {
-    SafeSpot bestSafe = { -1, -1, 999, false };
-    int mapW = levelManager.GetMapWidth();
-    int mapH = levelManager.GetMapHeight();
-
-    std::vector<std::vector<bool>> visited(mapH, std::vector<bool>(mapW, false));
-    std::queue<SafeSpot> q;
-    q.push({ startX, startY, 0, false });
-    visited[startY][startX] = true;
-
-    while (!q.empty()) {
-        auto current = q.front();
-        q.pop();
-
-        if (!IsLethal(current.x, current.y, levelManager, botFp, pretendX, pretendY)) {
-            bestSafe = { current.x, current.y, current.dist, true };
-            break;
-        }
-
-        if (current.dist >= 5) continue;
-
-        for (const auto& off : kCardinalOffsets) {
-            int nx = current.x + off.dx;
-            int ny = current.y + off.dy;
-
-            if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
-                if (!visited[ny][nx] && levelManager.IsWalkable(nx, ny) &&
-                    !bombManager.IsBombAt(nx, ny) && !bombManager.HasExplosionAt(nx, ny)) {
-                    visited[ny][nx] = true;
-                    q.push({ nx, ny, current.dist + 1, false });
-                }
-            }
-        }
-    }
-    return bestSafe;
-}
-
 std::shared_ptr<Interactable> AIManager::FindNearestTarget(int botX, int botY, bool hasKey,
                                                             const std::vector<std::shared_ptr<Interactable>>& items,
                                                             const std::unordered_set<Interactable*>& claimed) const {
-    std::shared_ptr<Interactable> nearestItem = nullptr;
-    std::shared_ptr<Interactable> nearestChest = nullptr;
-    std::shared_ptr<Interactable> nearestKey = nullptr;
-
-    int itemDist = 9999, chestDist = 9999, keyDist = 9999;
+    // 優先序資料化：不再 dynamic_pointer_cast<PowerUp/Chest/Key>，改詢問 Interactable
+    // 的 GetAttackerTargetPriority。每個 priority 層內取距離最近者，跨層則依 std::map
+    // 排序 (priority 小 = 優先) 由低到高挑第一個非空層。
+    //
+    // 新增一種 bot 目標型別 = 新類別 override GetAttackerTargetPriority — 不必動 AIManager。
+    std::map<int, std::pair<std::shared_ptr<Interactable>, int>> bestByPriority;
 
     for (const auto& item : items) {
-        if (claimed.count(item.get())) continue;  // 已被其他 bot 鎖定，跳過
-        int dist = std::abs(item->GetGridX() - botX) + std::abs(item->GetGridY() - botY);
-        if (std::dynamic_pointer_cast<PowerUp>(item)) {
-            if (dist < itemDist) { itemDist = dist; nearestItem = item; }
-        } else {
-            auto c = std::dynamic_pointer_cast<Chest>(item);
-            if (c && !c->IsOpened()) {
-                if (dist < chestDist) { chestDist = dist; nearestChest = item; }
-            } else if (std::dynamic_pointer_cast<Key>(item)) {
-                if (dist < keyDist) { keyDist = dist; nearestKey = item; }
-            }
+        if (claimed.count(item.get())) continue;  // 已被其他 bot 鎖定
+        const int prio = item->GetAttackerTargetPriority(hasKey);
+        if (prio <= 0) continue;  // 不可選為目標 (e.g. 沒鑰匙的 bot 看到 Chest)
+
+        const int dist = std::abs(item->GetGridX() - botX) + std::abs(item->GetGridY() - botY);
+        auto it = bestByPriority.find(prio);
+        if (it == bestByPriority.end() || dist < it->second.second) {
+            bestByPriority[prio] = { item, dist };
         }
     }
 
-    if (nearestItem) return nearestItem;
-    if (hasKey && nearestChest) return nearestChest;
-    if (!hasKey && nearestKey) return nearestKey;
-    // 沒鑰匙的 bot 不該鎖定寶箱：自己根本打不開，還會佔住 claimedTargets 讓持鑰匙的 bot 沒得拿
-    // 回 nullptr 讓 caller fallback 到追擊 defender
-    return nullptr;
+    if (bestByPriority.empty()) return nullptr;
+    return bestByPriority.begin()->second.first;  // 最低 priority 編號 = 最優先
 }
 
-void AIManager::ExecuteMove(BotController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb,
+void AIManager::ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb,
                              glm::vec2 botPixelPos) const {
     bool up = false, down = false, left = false, right = false;
     const float targetPixelX = GridCoord::ToPixelX(toX);

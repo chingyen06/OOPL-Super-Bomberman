@@ -10,6 +10,7 @@ set(SRC_FILES
     InteractableManager.cpp
     Interactable.cpp
     AIManager.cpp
+    DangerMap.cpp
     Menu.cpp
     GameWorldContext.cpp
     UI/UIManager.cpp
@@ -36,10 +37,14 @@ set(INCLUDE_FILES
     InteractableManager.hpp
     Interactable.hpp
     AIManager.hpp
+    DangerMap.hpp
     Menu.hpp
     Controller/InputController.hpp
     Controller/HumanController.hpp
     Controller/BotController.hpp
+    Controller/IProgrammableController.hpp
+    Effects/IPlayerEffect.hpp
+    Effects/PlayerEffects.hpp
     WorldContext.hpp
     GameWorldContext.hpp
     UI/UIManager.hpp

@@ -64,7 +64,9 @@ void Bomb::Update(const LevelManager& levelManager, const BombManager& bombManag
 
             auto checkGrid = [&](int gx, int gy) {
                 if (!levelManager.IsWalkable(gx, gy)) return true;
-                if (bombManager.IsBombAt(gx, gy, this)) return true;
+                // 自己當前所在格永遠視為可走 — PlaceBomb 已保證同格不會有第二顆炸彈
+                if (gx == m_GridX && gy == m_GridY) return false;
+                if (bombManager.IsBombAt(gx, gy)) return true;
                 return false;
             };
 

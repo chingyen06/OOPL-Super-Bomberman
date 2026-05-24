@@ -103,6 +103,12 @@ namespace Constants {
         inline constexpr int kCooldownFrames       = 60 * 5;         // 5 seconds
     }
 
+    // ---------------- UI / HUD ----------------
+    namespace UI {
+        // 最多同時顯示鑰匙提示的玩家數 (= 整局最大玩家數上限)
+        inline constexpr int kMaxKeyIndicators     = 15;
+    }
+
 } // namespace Constants
 
 #endif

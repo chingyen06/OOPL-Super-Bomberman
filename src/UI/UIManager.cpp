@@ -1,4 +1,5 @@
-#include "UI/UIManager.hpp"
+﻿#include "UI/UIManager.hpp"
+#include "GameConstants.hpp"
 #include "Util/Image.hpp"
 #include "Util/Logger.hpp"
 #include <cstdio>
@@ -22,7 +23,7 @@ void UIManager::Init(Util::Renderer& root, int totalChests) {
     m_TimerText = std::make_shared<UIText>("03:00", 10, 320);
     root.AddChild(m_TimerText);
 
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < Constants::UI::kMaxKeyIndicators; i++) {
         auto indicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
         root.AddChild(indicator);
         m_KeyIndicators.push_back(indicator);

@@ -58,48 +58,19 @@ bool Chest::OnInteract(Player& player) {
 }
 
 
-PowerUp::PowerUp(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {}
-
-
-SpeedItem::SpeedItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_speedup.png");
+PowerUp::PowerUp(int gridX, int gridY, std::unique_ptr<IPlayerEffect> effect, const std::string& imagePath)
+    : m_GridX(gridX), m_GridY(gridY), m_Effect(std::move(effect)) {
+    auto image = std::make_shared<Util::Image>(imagePath);
     SetDrawable(image);
     SetZIndex(6);
     m_Transform.scale = { GridCoord::kTileSize / image->GetSize().x, GridCoord::kTileSize / image->GetSize().y };
     m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
 }
 
-bool SpeedItem::OnInteract(Player& player) {
-    player.ActivateSpeedBoost(); // Trigger a 5-second speed boost timer on the player
-    LOG_INFO("Player picked up SPEED_UP! (Temporary 5s boost)");
-    return true;
-}
-
-BombItem::BombItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_bombup.png");
-    SetDrawable(image);
-    SetZIndex(6);
-    m_Transform.scale = { GridCoord::kTileSize / image->GetSize().x, GridCoord::kTileSize / image->GetSize().y };
-    m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
-}
-
-bool BombItem::OnInteract(Player& player) {
-    player.IncreaseMaxBombs();
-    LOG_INFO("Player picked up BOMB_UP! Max bombs increased to " + std::to_string(player.CanPlaceBomb()));
-    return true;
-}
-
-FireItem::FireItem(int gridX, int gridY) : PowerUp(gridX, gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/item_fireup.png");
-    SetDrawable(image);
-    SetZIndex(6);
-    m_Transform.scale = { GridCoord::kTileSize / image->GetSize().x, GridCoord::kTileSize / image->GetSize().y };
-    m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
-}
-
-bool FireItem::OnInteract(Player& player) {
-    player.IncreaseFirepower();
-    LOG_INFO("Player picked up FIRE_UP! Firepower increased to " + std::to_string(player.GetFirepower()));
+bool PowerUp::OnInteract(Player& player) {
+    if (!m_Effect) return false;
+    m_Effect->Apply(player);
+    LOG_INFO(std::string("Player picked up ") + m_Effect->GetLogName() + "!");
     return true;
 }
 

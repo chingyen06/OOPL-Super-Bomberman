@@ -14,20 +14,12 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
         return;
     }
 
-    // 定義字元與對應的處理邏輯。互動物件相關的 add 會直接掛到 root。
-    std::unordered_map<char, std::function<void(int, int)>> featureHandlers = {
+    // LevelManager 只負責「spawn metadata」這類關卡座標 (Defender / Attacker / Spirit / Turret)。
+    // 其他「在地圖上會被建立的 interactable 物件」全部交由 InteractableManager::HandleSymbol —
+    // LevelManager 不再知道有哪些 interactable 種類存在，新增類型不必動本檔。
+    std::unordered_map<char, std::function<void(int, int)>> spawnHandlers = {
         {'F', [&](int x, int y) { m_DefenderSpawn = { x, y }; }},
         {'A', [&](int x, int y) { m_AttackerSpawns.push_back({ x, y }); }},
-        {'K', [&](int x, int y) { interactableManager.AddKey(x, y, root); }},
-        {'9', [&](int x, int y) { interactableManager.AddChest(x, y, root); }},
-        {'U', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::UP, root); }},
-        {'D', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::DOWN, root); }},
-        {'L', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::LEFT, root); }},
-        {'R', [&](int x, int y) { interactableManager.AddConveyor(x, y, Direction::RIGHT, root); }},
-        {'4', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::UP, root); }},
-        {'5', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::DOWN, root); }},
-        {'6', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::LEFT, root); }},
-        {'7', [&](int x, int y) { interactableManager.AddBouncePad(x, y, Direction::RIGHT, root); }},
         {'S', [&](int x, int y) { m_SpiritSpawns.push_back({ x, y }); }},
         {'B', [&](int x, int y) { m_TurretSpawns.push_back({ x, y }); }},
     };
@@ -59,10 +51,12 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
                 // 預設為草地
                 tile = std::make_shared<Ground>(x, y);
 
-                // 檢查是否有對應的特殊物件或設定
-                auto it = featureHandlers.find(type);
-                if (it != featureHandlers.end()) {
+                // 先試 spawn handlers (LevelManager 自己管 spawn 座標)，否則委派給 InteractableManager
+                auto it = spawnHandlers.find(type);
+                if (it != spawnHandlers.end()) {
                     it->second(x, y);
+                } else {
+                    interactableManager.HandleSymbol(type, x, y, root);
                 }
             }
 

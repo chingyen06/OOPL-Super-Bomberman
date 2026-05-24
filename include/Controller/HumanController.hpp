@@ -1,4 +1,4 @@
-#ifndef HUMAN_CONTROLLER_HPP
+﻿#ifndef HUMAN_CONTROLLER_HPP
 #define HUMAN_CONTROLLER_HPP
 
 #include "Controller/InputController.hpp"

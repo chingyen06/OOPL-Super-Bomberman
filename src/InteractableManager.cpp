@@ -1,15 +1,47 @@
 ﻿#include <random>
 #include "InteractableManager.hpp"
+#include "Effects/PlayerEffects.hpp"
 #include "Player.hpp"
 #include "Util/Logger.hpp"
 
 InteractableManager::InteractableManager() {
-	// 55% 掉落空氣，15% 掉落加速鞋，15% 掉落炸彈道具，15% 掉落火焰道具
+    // 55% 掉落空氣，15% 加速鞋、15% 炸彈道具、15% 火焰道具
+    // 新增一種 powerup 只需在這裡加一行 — 不必動 PowerUp / Player / Factory 任何類別。
     m_LootTable.clear();
     m_LootTable.push_back({ 55, std::make_shared<EmptyDropFactory>() });
-    m_LootTable.push_back({ 15, std::make_shared<SpeedItemFactory>() });
-    m_LootTable.push_back({ 15, std::make_shared<BombItemFactory>() });
-    m_LootTable.push_back({ 15, std::make_shared<FireItemFactory>() });
+    m_LootTable.push_back({ 15, std::make_shared<GenericPowerUpFactory>(
+        [] { return std::make_unique<SpeedBoostEffect>(); },
+        RESOURCE_DIR"/Image/item_speedup.png") });
+    m_LootTable.push_back({ 15, std::make_shared<GenericPowerUpFactory>(
+        [] { return std::make_unique<BombUpEffect>(); },
+        RESOURCE_DIR"/Image/item_bombup.png") });
+    m_LootTable.push_back({ 15, std::make_shared<GenericPowerUpFactory>(
+        [] { return std::make_unique<FirepowerUpEffect>(); },
+        RESOURCE_DIR"/Image/item_fireup.png") });
+
+    // 地圖字元 → interactable 的對應表
+    // 新增一種 interactable 只需新增一個 RegisterSymbol — 不必再動 LevelManager。
+    RegisterSymbol('K', [this](int x, int y, Util::Renderer& r) { AddKey(x, y, r); });
+    RegisterSymbol('9', [this](int x, int y, Util::Renderer& r) { AddChest(x, y, r); });
+    RegisterSymbol('U', [this](int x, int y, Util::Renderer& r) { AddConveyor(x, y, Direction::UP,    r); });
+    RegisterSymbol('D', [this](int x, int y, Util::Renderer& r) { AddConveyor(x, y, Direction::DOWN,  r); });
+    RegisterSymbol('L', [this](int x, int y, Util::Renderer& r) { AddConveyor(x, y, Direction::LEFT,  r); });
+    RegisterSymbol('R', [this](int x, int y, Util::Renderer& r) { AddConveyor(x, y, Direction::RIGHT, r); });
+    RegisterSymbol('4', [this](int x, int y, Util::Renderer& r) { AddBouncePad(x, y, Direction::UP,    r); });
+    RegisterSymbol('5', [this](int x, int y, Util::Renderer& r) { AddBouncePad(x, y, Direction::DOWN,  r); });
+    RegisterSymbol('6', [this](int x, int y, Util::Renderer& r) { AddBouncePad(x, y, Direction::LEFT,  r); });
+    RegisterSymbol('7', [this](int x, int y, Util::Renderer& r) { AddBouncePad(x, y, Direction::RIGHT, r); });
+}
+
+void InteractableManager::RegisterSymbol(char symbol, SymbolHandler handler) {
+    m_SymbolTable[symbol] = std::move(handler);
+}
+
+bool InteractableManager::HandleSymbol(char symbol, int gridX, int gridY, Util::Renderer& root) {
+    auto it = m_SymbolTable.find(symbol);
+    if (it == m_SymbolTable.end()) return false;
+    it->second(gridX, gridY, root);
+    return true;
 }
 
 void InteractableManager::AddKey(int gridX, int gridY, Util::Renderer& root) {
@@ -49,8 +81,6 @@ void InteractableManager::Update(std::vector<std::shared_ptr<Player>>& players, 
             ++it;
         }
     }
-
-    UpdateChestStatusCache();
 }
 
 void InteractableManager::Clear(Util::Renderer& root) {
@@ -108,15 +138,6 @@ std::vector<bool> InteractableManager::GetChestStatusList() const {
         }
     }
     return statusList;
-}
-
-void InteractableManager::UpdateChestStatusCache() {
-    m_ChestStatusCache.clear();
-    for (const auto& item : m_Interactables) {
-        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
-            m_ChestStatusCache.push_back(chest->IsOpened());
-        }
-    }
 }
 
 void InteractableManager::DestroyFlammableAt(int gridX, int gridY, Util::Renderer& root) {

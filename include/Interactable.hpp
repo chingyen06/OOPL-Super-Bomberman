@@ -1,4 +1,4 @@
-#ifndef INTERACTABLE_HPP
+﻿#ifndef INTERACTABLE_HPP
 #define INTERACTABLE_HPP
 
 #include "Util/GameObject.hpp"
@@ -6,8 +6,12 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "GameConstants.hpp"
+#include "Effects/IPlayerEffect.hpp"
 #include "Player.hpp"
+#include <functional>
 #include <memory>
+#include <string>
+#include <utility>
 
 class Interactable : public Util::GameObject {
 public:
@@ -24,6 +28,12 @@ public:
     virtual bool OnInteract(Player& player) = 0;
 
     virtual glm::vec2 GetForce() const { return { 0.0f, 0.0f }; }
+
+    // AI 使用：本 interactable 對攻擊方 bot 而言的目標優先順序。
+    // 0 = 不應被選為目標；正數越小代表越優先 (1 = 最優先)。
+    // 預設不可選；具體子類覆寫提供自己的邏輯 (e.g. Key 在 bot 已持鑰匙時回 0)。
+    // 透過此 hook 取代過往 AIManager 內 dynamic_pointer_cast<PowerUp/Chest/Key> 寫死的型別分支。
+    virtual int GetAttackerTargetPriority(bool /*botHasKey*/) const { return 0; }
 };
 
 class Key : public Interactable {
@@ -36,6 +46,11 @@ public:
     bool IsBlocksBomb() const override { return true; }
 
     bool OnInteract(Player& player) override;
+
+    // Key 優先序：bot 已持鑰匙 → 不再撿；否則為次要目標 (僅次於 PowerUp)
+    int GetAttackerTargetPriority(bool botHasKey) const override {
+        return botHasKey ? 0 : 2;
+    }
 
 private:
     int m_GridX;
@@ -55,6 +70,11 @@ public:
 
     bool OnInteract(Player& player) override;
 
+    // Chest 優先序：必須有鑰匙、且未開過，才是 bot 的目標 (priority 2 — 與 Key 同層)
+    int GetAttackerTargetPriority(bool botHasKey) const override {
+        return (botHasKey && !m_Opened) ? 2 : 0;
+    }
+
     void Open();
 
 private:
@@ -66,40 +86,27 @@ private:
     std::shared_ptr<Util::Image> m_OpenedImage;
 };
 
-// Power-up base type
+// Power-up：撿到時對 player 套用一個 IPlayerEffect。本身不再 abstract，
+// 新增一種道具只需在 LootTable 註冊新 effect + sprite，不必再為每種道具寫 subclass。
 class PowerUp : public Interactable {
 public:
-    PowerUp(int gridX, int gridY);
+    PowerUp(int gridX, int gridY, std::unique_ptr<IPlayerEffect> effect, const std::string& imagePath);
+
     int GetGridX() const override { return m_GridX; }
     int GetGridY() const override { return m_GridY; }
 
     bool IsBlocksBomb() const override { return true; }
     bool IsDestroyedByFire() const override { return true; }
 
+    bool OnInteract(Player& player) override;  // 模板方法：呼叫 m_Effect->Apply
+
+    // PowerUp 一律為 bot 最優先目標 (priority 1)
+    int GetAttackerTargetPriority(bool /*botHasKey*/) const override { return 1; }
+
 protected:
     int m_GridX;
     int m_GridY;
-};
-
-// Speed boost power-up
-class SpeedItem : public PowerUp {
-public:
-    SpeedItem(int gridX, int gridY);
-    bool OnInteract(Player& player) override;
-};
-
-// Bomb-count power-up
-class BombItem : public PowerUp {
-public:
-    BombItem(int gridX, int gridY);
-    bool OnInteract(Player& player) override;
-};
-
-// Firepower power-up
-class FireItem : public PowerUp {
-public:
-    FireItem(int gridX, int gridY);
-    bool OnInteract(Player& player) override;
+    std::unique_ptr<IPlayerEffect> m_Effect;
 };
 
 // Factory Pattern for Interactables
@@ -109,31 +116,23 @@ public:
     virtual std::shared_ptr<Interactable> Create(int gridX, int gridY) = 0;
 };
 
-// Speed boost factory
-class SpeedItemFactory : public InteractableFactory {
+// 用於 PowerUp 的泛型 Factory：把「如何造 effect」與「sprite 路徑」用建構子注入，
+// 不必每加一種 powerup 就新增一個 Factory 子類 (OCP 友善)。
+class GenericPowerUpFactory : public InteractableFactory {
 public:
+    GenericPowerUpFactory(std::function<std::unique_ptr<IPlayerEffect>()> effectMaker, std::string spritePath)
+        : m_EffectMaker(std::move(effectMaker)), m_Sprite(std::move(spritePath)) {}
+
     std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
-        return std::make_shared<SpeedItem>(gridX, gridY);
+        return std::make_shared<PowerUp>(gridX, gridY, m_EffectMaker(), m_Sprite);
     }
+
+private:
+    std::function<std::unique_ptr<IPlayerEffect>()> m_EffectMaker;
+    std::string m_Sprite;
 };
 
-// Bomb-count factory
-class BombItemFactory : public InteractableFactory {
-public:
-    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
-        return std::make_shared<BombItem>(gridX, gridY);
-    }
-};
-
-// Firepower factory
-class FireItemFactory : public InteractableFactory {
-public:
-    std::shared_ptr<Interactable> Create(int gridX, int gridY) override {
-        return std::make_shared<FireItem>(gridX, gridY);
-    }
-};
-
-// Empty drop
+// Empty drop (磚塊摧毀後不掉東西)
 class EmptyDropFactory : public InteractableFactory {
 public:
     std::shared_ptr<Interactable> Create(int /*gridX*/, int /*gridY*/) override {

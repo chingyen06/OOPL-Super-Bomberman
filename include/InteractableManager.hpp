@@ -1,8 +1,10 @@
 ﻿#ifndef INTERACTABLEMANAGER_HPP
 #define INTERACTABLEMANAGER_HPP
 
-#include <vector>
+#include <functional>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 #include "Interactable.hpp"
 #include "Player.hpp"
 #include "Util/Renderer.hpp"
@@ -18,6 +20,9 @@ struct LootEntry {
 
 class InteractableManager {
 public:
+    // 註冊表用 — char (地圖符號) → 「建立 interactable」的閉包
+    using SymbolHandler = std::function<void(int gridX, int gridY, Util::Renderer&)>;
+
     InteractableManager();
 
     // 所有 Add* 方法皆會 push 進清單並立刻 AddChild 到 root，
@@ -26,6 +31,12 @@ public:
     void AddChest(int gridX, int gridY, Util::Renderer& root);
     void AddConveyor(int gridX, int gridY, Direction dir, Util::Renderer& root);
     void AddBouncePad(int gridX, int gridY, Direction dir, Util::Renderer& root);
+
+    // 註冊表 API — LevelManager 從地圖檔讀到字元時呼叫 HandleSymbol，
+    // 由本 manager 查表決定如何建立對應 interactable。
+    // 新增一種 interactable 只需在 InteractableManager 建構子裡 RegisterSymbol — 不必動 LevelManager。
+    void RegisterSymbol(char symbol, SymbolHandler handler);
+    bool HandleSymbol(char symbol, int gridX, int gridY, Util::Renderer& root);
 
     void Update(std::vector<std::shared_ptr<Player>>& players, Util::Renderer& root);
 
@@ -51,14 +62,10 @@ public:
     glm::vec2 GetForceAt(int gridX, int gridY) const;
 
 private:
-    /*std::vector<std::shared_ptr<Key>> m_Keys;
-    std::vector<std::shared_ptr<Chest>> m_Chests;*/
-
     std::vector<std::shared_ptr<Interactable>> m_Interactables;
-    std::vector<bool> m_ChestStatusCache;  // 內部快取
-    void UpdateChestStatusCache();
 
-	std::vector<LootEntry> m_LootTable;  // 掉落表
+    std::vector<LootEntry> m_LootTable;  // 掉落表
+    std::unordered_map<char, SymbolHandler> m_SymbolTable;  // 地圖字元 → 建構策略
 };
 
 #endif

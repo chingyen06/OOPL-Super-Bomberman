@@ -31,7 +31,7 @@ void BombManager::PlaceBomb(Player& player, LevelManager& levelManager, Interact
             if (p->IsDead()) continue;
             if (std::abs(p->GetPixelPos().x - bombPixelX) < Constants::Bomb::kIgnoreClearance &&
                 std::abs(p->GetPixelPos().y - bombPixelY) < Constants::Bomb::kIgnoreClearance) {
-                p->SetIgnoreBomb(targetX, targetY);
+                p->OnPlacedBombAt(targetX, targetY);
             }
         }
 
@@ -145,9 +145,8 @@ void BombManager::Clear(Util::Renderer& root) {
     m_Explosions.clear();
 }
 
-bool BombManager::IsBombAt(int gridX, int gridY, const Bomb* ignore) const {
+bool BombManager::IsBombAt(int gridX, int gridY) const {
     for (const auto& b : m_Bombs) {
-        if (b.get() == ignore) continue; // Skip self when used by Bomb::Update
         if (b->GetGridX() == gridX && b->GetGridY() == gridY) return true;
     }
     return false;

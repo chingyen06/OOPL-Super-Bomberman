@@ -15,7 +15,7 @@
 
 class Player : public Util::GameObject {
 public:
-    Player(int startGridX, int startGridY, Team m_Team, std::unique_ptr<InputController> controller, int id);
+    Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id);
 
     // void Update(const LevelManager& levelManager);
     void Update(const IWorldContext& worldContext);
@@ -34,12 +34,17 @@ public:
     void Respawn();
 
     void AddBombCount() { m_CurrentBombs++; }
-    void DecBombCount() { m_CurrentBombs--; }
+    // 死亡→Respawn 會把 m_CurrentBombs 歸 0；若場上仍有玩家放的炸彈，事後爆炸時
+    // BombManager 會再呼叫 DecBombCount，沒下限保護會讓計數變負數，導致玩家事實上
+    // 可以放比 m_MaxBombs 多 1 顆。Clamp 至 0 修掉這個對戰時可重現的 bug。
+    void DecBombCount() { if (m_CurrentBombs > 0) m_CurrentBombs--; }
     bool CanPlaceBomb() const { return m_CurrentBombs < m_MaxBombs; }
 
 	Direction GetDirection() const { return m_CurrentDir; }  // 取得當前方向
 
-	void SetIgnoreBomb(int gx, int gy) { m_IgnoreBombs.push_back({ gx, gy }); }  // 設定放置炸彈後暫時忽略的座標
+    // 通知玩家「他放在 (gx, gy) 的炸彈正在那一格」— 玩家會把該格暫時加入忽略碰撞清單，
+    // 走離後 (IgnoreBombClearance) 才把該格從清單移除。BombManager 在 PlaceBomb 後呼叫。
+    void OnPlacedBombAt(int gx, int gy) { m_IgnoreBombs.push_back({ gx, gy }); }
 
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }

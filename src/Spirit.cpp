@@ -6,7 +6,7 @@
 #include "BombManager.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
-#include <cstdlib>
+#include <random>
 
 Spirit::Spirit(int spawnGridX, int spawnGridY)
     : m_SpawnX(spawnGridX), m_SpawnY(spawnGridY), m_GridX(spawnGridX), m_GridY(spawnGridY) {
@@ -114,7 +114,10 @@ void Spirit::HandlePatrol(const LevelManager& lm, const BombManager& bm) {
     if (m_StateTimer <= 0) {
         m_StateTimer = Constants::Spirit::kPatrolInterval;
         // 只走 4 個正方向 (避免斜向穿牆角)
-        const int dir = std::rand() % 4;
+        // 與專案其他處 (GameSession / InteractableManager) 一致使用 mt19937
+        static thread_local std::mt19937 rng{ std::random_device{}() };
+        std::uniform_int_distribution<int> pickDir(0, 3);
+        const int dir = pickDir(rng);
         const auto off = kCardinalOffsets[dir];
         int nextX = m_GridX + off.dx;
         int nextY = m_GridY + off.dy;

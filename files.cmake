@@ -4,12 +4,14 @@ set(SRC_FILES
     LevelManager.cpp
     MapTiles.cpp
     Player.cpp
+    PlayerBounce.cpp
     Bomb.cpp
     Explosion.cpp
     BombManager.cpp
     InteractableManager.cpp
     Interactable.cpp
     AIManager.cpp
+    Bot/BotNavigator.cpp
     DangerMap.cpp
     Menu.cpp
     GameWorldContext.cpp
@@ -31,12 +33,14 @@ set(INCLUDE_FILES
     LevelManager.hpp
     MapTiles.hpp
     Player.hpp
+    PlayerBounce.hpp
     Bomb.hpp
     Explosion.hpp
     BombManager.hpp
     InteractableManager.hpp
     Interactable.hpp
     AIManager.hpp
+    Bot/BotNavigator.hpp
     DangerMap.hpp
     Menu.hpp
     Controller/InputController.hpp

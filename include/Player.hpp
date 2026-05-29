@@ -12,6 +12,7 @@
 #include "GameTypes.hpp"
 #include "WorldContext.hpp"
 #include "Controller/InputController.hpp"
+#include "PlayerBounce.hpp"
 
 class Player : public Util::GameObject {
 public:
@@ -48,6 +49,15 @@ public:
 
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }
+
+    // 死亡時若持有鑰匙，會在 Kill() 內標記為「待掉落」並清掉持有狀態。
+    // GameSession 每幀詢問一次：回 true 表示該把鑰匙實體放回世界 (只觸發一次)。
+    // 「死亡掉鑰匙」這條遊戲規則因此留在 Player，不再洩漏進 GameSession::Update。
+    bool ConsumeDroppedKey() {
+        if (!m_DroppedKeyPending) return false;
+        m_DroppedKeyPending = false;
+        return true;
+    }
 
 	Team GetTeam() const { return m_Team; }
 
@@ -91,6 +101,7 @@ private:
     int m_Invincible = -1;  // 無敵時間
 
     bool m_HasKey = false;  // 角色是否有鑰匙
+    bool m_DroppedKeyPending = false;  // 死亡時持有鑰匙 → 等 GameSession 取走並放回世界
 
     Team m_Team;
     std::unique_ptr<InputController> m_Controller;
@@ -106,20 +117,7 @@ private:
 
 	int m_Firepower = Constants::Player::kInitialFirepower;  // 炸彈火力
 
-    struct BounceState {
-        bool active = false;
-        bool pending = false;
-        int tick = 0;
-        int duration = 30;
-        glm::vec2 start{};
-        glm::vec2 target{};
-        Direction pendingDir;
-        int pendingDist = 0;
-    };
-    BounceState m_Bounce;
-
-    void UpdateBouncing();
-    void ApplyPendingBounce(const IWorldContext& context);
+    PlayerBounce m_Bounce;  // 彈跳板狀態機 (抽離自 Player，SRP)
 };
 
 #endif

@@ -25,7 +25,7 @@ void GameSession::LoadLevel(int levelIndex) {
     m_LevelManager.LoadLevel(levelPath, m_InteractableManager, m_Root);
     m_LevelManager.AttachToRoot(m_Root);
 
-    const int totalChests = m_InteractableManager.GetTotalChestCount();
+    const int totalChests = m_InteractableManager.GetObjectiveCount();
     m_UIManager.Init(m_Root, totalChests);
 
     // 出生點
@@ -76,15 +76,15 @@ void GameSession::Update() {
     if (m_GameTime > 0)
         m_GameTime--;
 
-    if (m_GameTime % 60 == 0) {
-        const int seconds = m_GameTime / 60;
+    if (m_GameTime % Constants::Game::kFPS == 0) {
+        const int seconds = m_GameTime / Constants::Game::kFPS;
         LOG_INFO("Time Remaining: " + std::to_string(seconds) + "s");
     }
 
     m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
     m_InteractableManager.Update(m_Players, m_Root);
 
-    auto statusList = m_InteractableManager.GetChestStatusList();
+    auto statusList = m_InteractableManager.GetObjectiveStatusList();
     m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
 
     m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Spirits, m_TurretManager);
@@ -100,18 +100,17 @@ void GameSession::Update() {
                 m_BombManager.PlaceBomb(*player, m_LevelManager, m_InteractableManager, m_Root, m_Players);
             }
         }
-        else {
-            if (player->HasKey()) {
-                LOG_INFO("Player dropped the Key!");
-                player->SetKey(false);
-                m_InteractableManager.AddKey(player->GetGridX(), player->GetGridY(), m_Root);
-            }
+
+        // 「死亡掉鑰匙」的判斷在 Player::Kill() 內；這裡只負責把鑰匙實體放回世界
+        if (player->ConsumeDroppedKey()) {
+            LOG_INFO("Player dropped the Key!");
+            m_InteractableManager.AddKey(player->GetGridX(), player->GetGridY(), m_Root);
         }
     }
 
     for (auto it = m_Spirits.begin(); it != m_Spirits.end();) {
         auto& spirit = *it;
-        spirit->Update(m_Players, m_LevelManager, m_BombManager);
+        spirit->Update(m_Players, worldContext);
 
         if (spirit->ShouldDelete()) {
             m_Root.RemoveChild(spirit);
@@ -138,5 +137,5 @@ void GameSession::Clear() {
 }
 
 bool GameSession::IsAttackerWin() const {
-    return m_InteractableManager.IsAllChestOpened();
+    return m_InteractableManager.AreAllObjectivesComplete();
 }

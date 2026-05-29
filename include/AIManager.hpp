@@ -30,6 +30,13 @@ private:
     // 泛用型 A*；尋路規則透過 cost function 注入
     std::vector<std::pair<int, int>> FindPath(int startX, int startY, int targetX, int targetY, int mapW, int mapH, std::function<int(int, int)> costFunc);
 
+    // 放彈前驗證逃生路徑可行 (FindSafeSpot + 走得到)。可行則回 true、outFirstStep 設為逃生第一步，
+    // 並把這顆 pending 炸彈登記進 DangerMap。三個放彈策略 (追擊/炸牆/自殺) 共用，消除重複。
+    bool TryPlanBombEscape(int botX, int botY, int mapW, int mapH,
+                           const LevelManager& lm, const BombManager& bm, int fp,
+                           const std::function<int(int, int)>& walkCost,
+                           std::pair<int, int>& outFirstStep);
+
     // claimed: 已被其他 bot 鎖定的目標，會被排除以避免多隻 bot 衝向同一物
     std::shared_ptr<Interactable> FindNearestTarget(int botX, int botY, bool hasKey,
                                                      const std::vector<std::shared_ptr<Interactable>>& items,

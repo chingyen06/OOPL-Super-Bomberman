@@ -1,9 +1,8 @@
 ﻿#include "Spirit.hpp"
+#include "Player.hpp"
 #include "GameConstants.hpp"
 #include "GameTypes.hpp"
 #include "GridCoord.hpp"
-#include "LevelManager.hpp"
-#include "BombManager.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
 #include <random>
@@ -20,10 +19,10 @@ Spirit::Spirit(int spawnGridX, int spawnGridY)
     m_Transform.translation = m_Pos;
 }
 
-void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& lm, const BombManager& bm) {
+void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const IEnemyWorldContext& world) {
     if (m_ShouldDelete) return;
 
-    CheckDamage(bm);
+    CheckDamage(world);
     if (m_ShouldDelete) return;
 
     UpdatePixelMovement();
@@ -42,11 +41,11 @@ void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const LevelMa
         switch (m_State) {
         case State::PATROL:
             ScanForEnemies(players);
-            HandlePatrol(lm, bm);
+            HandlePatrol(world);
             break;
         case State::CHASE:
             ScanForEnemies(players);
-            HandleChase(lm, bm);
+            HandleChase(world);
             break;
         case State::DEAD:
             break;
@@ -60,8 +59,8 @@ void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const LevelMa
     };
 }
 
-void Spirit::CheckDamage(const BombManager& bm) {
-    if (bm.HasExplosionAt(m_GridX, m_GridY)) {
+void Spirit::CheckDamage(const IEnemyWorldContext& world) {
+    if (world.HasExplosionAt(m_GridX, m_GridY)) {
         m_ShouldDelete = true;
         m_State = State::DEAD;
         SetVisible(false);
@@ -109,7 +108,7 @@ void Spirit::ScanForEnemies(const std::vector<std::shared_ptr<Player>>& players)
     }
 }
 
-void Spirit::HandlePatrol(const LevelManager& lm, const BombManager& bm) {
+void Spirit::HandlePatrol(const IEnemyWorldContext& world) {
     m_StateTimer--;
     if (m_StateTimer <= 0) {
         m_StateTimer = Constants::Spirit::kPatrolInterval;
@@ -125,12 +124,12 @@ void Spirit::HandlePatrol(const LevelManager& lm, const BombManager& bm) {
         // Stay within kPatrolRange tiles of the spawn point
         if (std::abs(nextX - m_SpawnX) <= Constants::Spirit::kPatrolRange &&
             std::abs(nextY - m_SpawnY) <= Constants::Spirit::kPatrolRange) {
-            MoveTowards(nextX, nextY, lm, bm);
+            MoveTowards(nextX, nextY, world);
         }
     }
 }
 
-void Spirit::HandleChase(const LevelManager& lm, const BombManager& bm) {
+void Spirit::HandleChase(const IEnemyWorldContext& world) {
     if (!m_Target) return;
 
     m_StateTimer--;
@@ -147,15 +146,15 @@ void Spirit::HandleChase(const LevelManager& lm, const BombManager& bm) {
         } else if (dyToTarget != 0) {
             nextY += (dyToTarget > 0 ? 1 : -1);
         }
-        MoveTowards(nextX, nextY, lm, bm);
+        MoveTowards(nextX, nextY, world);
     }
 }
 
-void Spirit::MoveTowards(int targetX, int targetY, const LevelManager& lm, const BombManager& bm) {
+void Spirit::MoveTowards(int targetX, int targetY, const IEnemyWorldContext& world) {
     if (m_IsMoving) return;
 
     // Verify the target tile is walkable and bomb-free
-    if (lm.IsWalkable(targetX, targetY) && !bm.IsBombAt(targetX, targetY)) {
+    if (world.IsWalkable(targetX, targetY) && !world.IsBombAt(targetX, targetY)) {
         m_IsMoving = true;
         m_PixelTarget = GridCoord::ToPixel(targetX, targetY);
         m_GridX = targetX;

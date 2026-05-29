@@ -6,12 +6,14 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "GameConstants.hpp"
+#include "GameTypes.hpp"  // Direction
 #include "Effects/IPlayerEffect.hpp"
-#include "Player.hpp"
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+class Player;
 
 class Interactable : public Util::GameObject {
 public:
@@ -34,14 +36,21 @@ public:
     // 預設不可選；具體子類覆寫提供自己的邏輯 (e.g. Key 在 bot 已持鑰匙時回 0)。
     // 透過此 hook 取代過往 AIManager 內 dynamic_pointer_cast<PowerUp/Chest/Key> 寫死的型別分支。
     virtual int GetAttackerTargetPriority(bool /*botHasKey*/) const { return 0; }
+
+    // 勝負/HUD 用：本 interactable 是否為「攻擊方需要完成的計分目標」，以及是否已完成。
+    // 取代 InteractableManager 內 dynamic_pointer_cast<Chest> 的型別判斷 —
+    // 新增一種目標型別 (e.g. 要炸毀的基地) 只需 override 這兩個 hook，
+    // 不必再動 InteractableManager 的目標計數 / 狀態查詢 / 勝負邏輯 (OCP)。
+    virtual bool IsScoringObjective() const { return false; }
+    virtual bool IsObjectiveComplete() const { return false; }
 };
 
 class Key : public Interactable {
 public:
     Key(int gridX, int gridY);
 
-    int GetGridX() const { return m_GridX; }
-    int GetGridY() const { return m_GridY; }
+    int GetGridX() const override { return m_GridX; }
+    int GetGridY() const override { return m_GridY; }
 
     bool IsBlocksBomb() const override { return true; }
 
@@ -61,12 +70,16 @@ class Chest : public Interactable {
 public:
     Chest(int gridX, int gridY);
 
-    int GetGridX() const { return m_GridX; }
-    int GetGridY() const { return m_GridY; }
+    int GetGridX() const override { return m_GridX; }
+    int GetGridY() const override { return m_GridY; }
     bool IsOpened() const { return m_Opened; }
 
     bool IsBlocksBomb() const override { return true; }
     bool IsBlocksFire() const override { return true; }
+
+    // Chest 是攻擊方的計分目標；開啟即視為完成
+    bool IsScoringObjective() const override { return true; }
+    bool IsObjectiveComplete() const override { return m_Opened; }
 
     bool OnInteract(Player& player) override;
 

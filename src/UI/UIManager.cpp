@@ -41,7 +41,7 @@ void UIManager::Init(Util::Renderer& root, int totalChests) {
 }
 
 void UIManager::Update(int gameTimeTicks, const std::vector<std::shared_ptr<Player>>& players, const std::vector<bool>& chestStatus, Util::Renderer& root) {
-    int totalSeconds = gameTimeTicks / 60;
+    int totalSeconds = gameTimeTicks / Constants::Game::kFPS;
 
     if (totalSeconds != m_LastSeconds) {
         int minutes = totalSeconds / 60;

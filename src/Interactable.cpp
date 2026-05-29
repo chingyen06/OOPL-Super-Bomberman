@@ -1,4 +1,5 @@
 ﻿#include "Interactable.hpp"
+#include "Player.hpp"
 #include "GameConstants.hpp"
 #include "GridCoord.hpp"
 #include "Util/Image.hpp"

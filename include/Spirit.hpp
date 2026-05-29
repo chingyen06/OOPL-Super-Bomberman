@@ -7,10 +7,9 @@
 #include <memory>
 #include <vector>
 #include "GameConstants.hpp"
-#include "Player.hpp"
+#include "WorldContext.hpp"
 
-class LevelManager;
-class BombManager;
+class Player;
 
 class Spirit : public Util::GameObject {
 public:
@@ -18,7 +17,8 @@ public:
 
     Spirit(int spawnGridX, int spawnGridY);
 
-    void Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& levelmanager, const BombManager& bombmanager);
+    // 透過 IEnemyWorldContext 抽象查詢世界 (可走 / 炸彈 / 爆炸)，不再依賴具體 LevelManager / BombManager (DIP)
+    void Update(std::vector<std::shared_ptr<Player>>& players, const IEnemyWorldContext& world);
 
     bool ShouldDelete() const { return m_ShouldDelete; }
     int GetGridX() const { return m_GridX; }
@@ -41,12 +41,12 @@ private:
     std::shared_ptr<Player> m_Target = nullptr;
     std::shared_ptr<Util::Image> m_ImgIdle;
 
-    void HandlePatrol(const LevelManager& lm, const BombManager& bm);
-    void HandleChase(const LevelManager& lm, const BombManager& bm);
+    void HandlePatrol(const IEnemyWorldContext& world);
+    void HandleChase(const IEnemyWorldContext& world);
     void UpdatePixelMovement();
-    void CheckDamage(const BombManager& bm);
+    void CheckDamage(const IEnemyWorldContext& world);
     void ScanForEnemies(const std::vector<std::shared_ptr<Player>>& players);
-    void MoveTowards(int targetX, int targetY, const LevelManager& lm, const BombManager& bm);
+    void MoveTowards(int targetX, int targetY, const IEnemyWorldContext& world);
 };
 
 #endif

@@ -3,8 +3,10 @@
 #include "GameTypes.hpp"
 #include "GridCoord.hpp"
 #include "Interactable.hpp"
+#include "Player.hpp"
 #include "Spirit.hpp"
 #include "Turret/TurretManager.hpp"
+#include "Bot/BotNavigator.hpp"
 #include "Controller/IProgrammableController.hpp"
 #include <queue>
 #include <cmath>
@@ -69,6 +71,24 @@ std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int
     return path;
 }
 
+bool AIManager::TryPlanBombEscape(int botX, int botY, int mapW, int mapH,
+                                  const LevelManager& lm, const BombManager& bm, int fp,
+                                  const std::function<int(int, int)>& walkCost,
+                                  std::pair<int, int>& outFirstStep) {
+    // 放彈前確認逃生路徑「不只存在，還走得到」。escape path 只避開「已存在」的炸彈/爆炸與
+    // 危險格，不避開這顆 pretend bomb 自己的火力 — 它有 3 秒引信，bot 來得及穿出去。
+    auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, lm, bm, fp, botX, botY);
+    if (!testSafe.found) return false;
+
+    auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, walkCost);
+    if (escapePath.empty()) return false;
+
+    outFirstStep = escapePath[0];
+    // 通知後續 bot：這顆 pending 炸彈的爆炸範圍他們也要避開，避免多 bot 同時放彈互炸
+    m_DangerMap.RegisterPendingBomb(botX, botY, fp, lm);
+    return true;
+}
+
 void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     const LevelManager& levelManager,
     const BombManager& bombManager,
@@ -85,11 +105,6 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     // 跨 bot 共享的目標鎖定表：本幀內某物件被某 bot 鎖定後，其他 bot 不再追同一物
     std::unordered_set<Interactable*> claimedTargets;
 
-    // pending 炸彈的危險範圍委由 DangerMap 處理 — 防止多隻 bot 各自以為安全、放完發現連鎖把全員炸死
-    auto registerPendingBomb = [&](int bx, int by, int fp) {
-        m_DangerMap.RegisterPendingBomb(bx, by, fp, levelManager);
-    };
-
     for (auto& bot : players) {
         if (bot->IsDead()) continue;
         // Cross-cast 到 IProgrammableController：HumanController 沒有實作此介面所以會回 nullptr，
@@ -102,6 +117,10 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         int botX = bot->GetGridX();
         int botY = bot->GetGridY();
         int botFirepower = bot->GetFirepower();
+
+        // 本幀尋路所需的環境查詢與成本函式都集中在 nav (取代散落的 lambda)
+        BotNavigator nav(levelManager, bombManager, m_DangerMap, spirits, turretManager, players, bot.get(), botFirepower);
+        auto safeCost = [&](int x, int y) { return nav.SafeWalkCost(x, y); };
 
         // 反應延遲：cooldown 中跳過決策，input 保持上一次設定。
         // 下列情況必須 bypass、每幀重決策：
@@ -121,49 +140,6 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         const bool needsImmediate = inDanger || onForceField || needsAlignment;
         if (!needsImmediate && !botController->IsReadyToDecide()) continue;
 
-        // 把其他活著的 player當作 soft obstacle，避免多隻 AI 走在同一條路擠在一格放不下炸彈
-        auto isBlockedByOther = [&](int x, int y) {
-            for (const auto& other : players) {
-                if (other.get() == bot.get()) continue;
-                if (other->IsDead()) continue;
-                if (other->GetGridX() == x && other->GetGridY() == y) return true;
-            }
-            return false;
-        };
-        constexpr int kOtherPlayerPenalty = 25;  // 走過對方所在格成本很高，強烈傾向繞路
-
-        // 源石精靈所在格 = 碰到立即被殺 (對攻擊方)，當成 hard obstacle 排除
-        auto isSpiritAt = [&](int x, int y) {
-            for (const auto& s : spirits) {
-                if (s->ShouldDelete()) continue;
-                if (s->GetGridX() == x && s->GetGridY() == y) return true;
-            }
-            return false;
-        };
-
-        // 砲台所在格不能走 (撞上去就卡住)
-        auto isTurretAt = [&](int x, int y) {
-            return turretManager.IsTurretAt(x, y);
-        };
-
-        // 判斷在 (bx,by) 放炸彈能否炸到任何源石精靈 (用於主動清怪)
-        auto willHitAnySpirit = [&](int bx, int by, int fp) {
-            for (const auto& s : spirits) {
-                if (s->ShouldDelete()) continue;
-                int sx = s->GetGridX(), sy = s->GetGridY();
-                if (bx == sx && by == sy) return true;
-                for (const auto& off : kCardinalOffsets) {
-                    for (int step = 1; step <= fp; step++) {
-                        int cx = bx + off.dx * step;
-                        int cy = by + off.dy * step;
-                        if (cx == sx && cy == sy) return true;
-                        if (!levelManager.IsWalkable(cx, cy)) break;
-                    }
-                }
-            }
-            return false;
-        };
-
         // 決策完成後設定下次冷卻 (用 playerID 做相位偏移，分散不同 bot 的決策幀)
         // immediate 情境 (危險 / 輸送帶 / 像素偏離) cooldown = 0，每幀都會繼續微調 — 避免 S 型走
         struct ResetGuard {
@@ -176,20 +152,19 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             : Constants::Bot::kReactionFrames + (bot->GetPlayerID() % 3);
         ResetGuard guard{ botController, nextCooldown };
 
+        // 策略 1：身處危險 — 逃往最近的安全格 (穿越危險也要逃，故用 RetreatCost)
         if (inDanger) {
             auto safeSpot = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower);
             if (safeSpot.found) {
-                auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH, [&](int x, int y) {
-                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                    if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;  // 死亡格 / 撞砲台
-                    return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-                    });
+                auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH,
+                                     [&](int x, int y) { return nav.RetreatCost(x, y); });
                 if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false,
                                                 bot->GetPixelPos());
             }
             continue;
         }
 
+        // 找最近的敵方 defender
         std::shared_ptr<Player> targetDefender = nullptr;
         int defenderDist = 999;
         for (const auto& p : players) {
@@ -202,6 +177,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
         }
 
+        // 目標選擇：優先撿物件 (priority hook)，否則追最近 defender
         int targetX = -1, targetY = -1;
         auto nearestTarget = FindNearestTarget(botX, botY, bot->HasKey(), interactables, claimedTargets);
 
@@ -219,61 +195,30 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // 策略 3：尋找安全的目標
-        auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
-            if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-            if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
-            if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-            return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-            });
-
+        // 策略 3：有安全路徑可達目標
+        auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, safeCost);
         if (!pathSafe.empty()) {
-            // 「想要放炸彈」的觸發條件：擊中 defender 或精靈
+            // 「想要放炸彈」的觸發條件：能炸到 defender 或精靈
             bool wantBomb = false;
             if (targetDefender && targetX == targetDefender->GetGridX() && targetY == targetDefender->GetGridY()) {
-                auto willHitTarget = [&](int bx, int by, int tx, int ty, int fp) {
-                    if (bx == tx && by == ty) return true;
-                    for (const auto& off : kCardinalOffsets) {
-                        for (int step = 1; step <= fp; step++) {
-                            int cx = bx + off.dx * step;
-                            int cy = by + off.dy * step;
-                            if (cx == tx && cy == ty) return true;
-                            if (!levelManager.IsWalkable(cx, cy)) break;
-                        }
-                    }
-                    return false;
-                };
-                if (willHitTarget(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY(), botFirepower)) {
+                if (nav.BombReaches(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
                     wantBomb = true;
                 }
             }
-            if (!wantBomb && willHitAnySpirit(botX, botY, botFirepower)) {
+            if (!wantBomb && nav.BombHitsAnySpirit(botX, botY)) {
                 wantBomb = true;
             }
 
-            // 真正放彈前：確認「逃生路徑」(不只 safe spot 存在，還要走得到)
+            // 預設朝目標走；想放彈則先驗證逃生路徑，可行才放並改朝逃生點走 (否則自己走進爆炸圈)
             bool placeBomb = false;
             int moveToX = pathSafe[0].first;
             int moveToY = pathSafe[0].second;
             if (wantBomb) {
-                auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
-                if (testSafe.found) {
-                    // 注意：escape path 只避開「已存在」的炸彈/爆炸，不避開 pretend bomb 的火力範圍。
-                    // 因為剛放的炸彈有 3 秒引信，bot 有充足時間從尚未爆炸的格子穿出去 (testSafe.dist ≤ 5)。
-                    auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
-                        if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                        if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // 真實炸彈/爆炸才擋
-                        if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-                        return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-                        });
-                    if (!escapePath.empty()) {
-                        placeBomb = true;
-                        // 放彈後優先走「逃生點」而非原本的 target — 否則自己走進爆炸圈
-                        moveToX = escapePath[0].first;
-                        moveToY = escapePath[0].second;
-                        // 通知後續 bot：這顆炸彈的爆炸範圍他們也要避開
-                        registerPendingBomb(botX, botY, botFirepower);
-                    }
+                std::pair<int, int> escapeStep;
+                if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
+                    placeBomb = true;
+                    moveToX = escapeStep.first;
+                    moveToY = escapeStep.second;
                 }
             }
 
@@ -281,15 +226,9 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // 策略 4：無安全路徑 - 嘗試炸牆 (不管爆炸)
-        auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
-            if (!levelManager.IsWalkable(x, y) && !levelManager.IsBrick(x, y)) return -1;
-            if (bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
-            if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-            if (levelManager.IsBrick(x, y)) return 50;
-            return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-            });
-
+        // 策略 4：無安全路徑 — 嘗試炸牆開路
+        auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+                                          [&](int x, int y) { return nav.BrickCost(x, y); });
         if (!pathThroughBricks.empty()) {
             int walkToX = botX, walkToY = botY;
             for (auto& p : pathThroughBricks) {
@@ -298,33 +237,17 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
 
             if (botX == walkToX && botY == walkToY) {
-                // 站在 brick 前準備炸 — 同樣要驗證「逃生路徑」可走得到、且放彈後朝逃生點走
-                auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
-                bool canBomb = false;
-                int moveToX = botX, moveToY = botY;
-                if (testSafe.found) {
-                    auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
-                        if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                        if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
-                        if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-                        return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-                        });
-                    if (!escapePath.empty()) {
-                        canBomb = true;
-                        moveToX = escapePath[0].first;
-                        moveToY = escapePath[0].second;
-                        registerPendingBomb(botX, botY, botFirepower);
-                    }
+                // 已站在 brick 前：驗證逃生路徑走得到，可行才炸並朝逃生點走
+                std::pair<int, int> escapeStep;
+                if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, bot->GetPixelPos());
                 }
-                if (canBomb) ExecuteMove(botController, botX, botY, moveToX, moveToY, true, bot->GetPixelPos());
-                else         botController->SetInput(false, false, false, false, false);
+                else {
+                    botController->SetInput(false, false, false, false, false);
+                }
             }
             else {
-                auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, [&](int x, int y) {
-                    if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y) || m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;
-                    if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-                    return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-                    });
+                auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, safeCost);
                 if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false,
                                                        bot->GetPixelPos());
                 else botController->SetInput(false, false, false, false, false);
@@ -332,51 +255,20 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             continue;
         }
 
-        // 策略 5：無安全路徑 - 無視火焰與障礙 (自殺攻擊)
-        // 砲台仍是物理碰撞，自殺也穿不過
-        auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH, [&](int x, int y) {
-            if (!levelManager.IsWalkable(x, y) || isTurretAt(x, y)) return -1;
-            return 1;
-            });
-
+        // 策略 5：無路可走 — 自殺攻擊 (無視火焰，砲台仍是物理碰撞穿不過)
+        auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+                                       [&](int x, int y) { return nav.SuicideCost(x, y); });
         if (!pathIgnoreFire.empty()) {
-            bool placeBomb = false;
-
-            if (targetDefender) {
-                auto hasLineOfSight = [&](int bx, int by, int tx, int ty) {
-                    if (bx != tx && by != ty) return false;
-                    int stepX = (tx > bx) ? 1 : (tx < bx) ? -1 : 0;
-                    int stepY = (ty > by) ? 1 : (ty < by) ? -1 : 0;
-                    int cx = bx + stepX, cy = by + stepY;
-                    while (cx != tx || cy != ty) {
-                        if (!levelManager.IsWalkable(cx, cy)) return false;
-                        cx += stepX; cy += stepY;
-                    }
-                    return true;
-                };
-
-                if (defenderDist <= 5 && hasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
-                    // 確認逃生路徑走得到，否則寧可不放 (避免無腦自殺)
-                    auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower, botX, botY);
-                    if (testSafe.found) {
-                        auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, [&](int x, int y) {
-                            if (!levelManager.IsWalkable(x, y) || bombManager.IsBombAt(x, y) || bombManager.HasExplosionAt(x, y)) return -1;
-                            if (m_DangerMap.IsLethal(x, y, levelManager, botFirepower)) return -1;  // pretend bomb 還沒爆，不擋 path
-                            if (isSpiritAt(x, y) || isTurretAt(x, y)) return -1;
-                            return isBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
-                            });
-                        if (!escapePath.empty()) {
-                            placeBomb = true;
-                            registerPendingBomb(botX, botY, botFirepower);
-                            // 放彈後朝逃生點走、不要傻站
-                            ExecuteMove(botController, botX, botY, escapePath[0].first, escapePath[0].second, true, bot->GetPixelPos());
-                            continue;
-                        }
-                    }
+            // 僅在「對 defender 有直線視野且夠近」時才值得自殺放彈，且仍要逃生路徑走得到
+            if (targetDefender && defenderDist <= 5 &&
+                nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+                std::pair<int, int> escapeStep;
+                if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, bot->GetPixelPos());
+                    continue;
                 }
             }
-
-            botController->SetInput(false, false, false, false, placeBomb);
+            botController->SetInput(false, false, false, false, false);
             continue;
         }
 

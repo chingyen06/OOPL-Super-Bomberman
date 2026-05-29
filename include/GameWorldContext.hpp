@@ -8,7 +8,7 @@ class BombManager;
 class InteractableManager;
 class TurretManager;
 
-class GameWorldContext : public IWorldContext {
+class GameWorldContext : public IEnemyWorldContext {
 public:
     GameWorldContext(const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const TurretManager& tm);
 
@@ -16,6 +16,7 @@ public:
     bool IsBombAt(int gridX, int gridY) const override;
     bool IsTurretAt(int gridX, int gridY) const override;
     glm::vec2 GetForceAt(int gridX, int gridY) const override;
+    bool HasExplosionAt(int gridX, int gridY) const override;
 
 private:
     const LevelManager& m_LevelManager;

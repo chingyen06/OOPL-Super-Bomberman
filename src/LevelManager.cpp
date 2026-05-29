@@ -24,6 +24,14 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
         {'B', [&](int x, int y) { m_TurretSpawns.push_back({ x, y }); }},
     };
 
+    // 地圖字元 → tile 工廠。取代寫死的 if/else 型別分支，與下方 spawnHandlers /
+    // InteractableManager::HandleSymbol 的資料化風格一致。未登記的字元一律視為草地，
+    // 新增地形磚種只需在此加一行 (OCP)。
+    const std::unordered_map<char, std::function<std::shared_ptr<Tile>(int, int)>> tileFactories = {
+        {'1', [](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Wall>(x, y); }},   // 無敵牆
+        {'2', [](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Brick>(x, y); }},  // 可破壞磚塊
+    };
+
     m_TileGrid.assign(GridCoord::kMapHeight, std::vector<std::shared_ptr<Tile>>(GridCoord::kMapWidth));
 
     m_Tiles.clear();
@@ -41,14 +49,12 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
 
             std::shared_ptr<Tile> tile;  // 這個地圖方塊
 
-            if (type == '1') {  // 鋪設無敵牆
-                tile = std::make_shared<Wall>(x, y);
-            }
-            else if (type == '2') {   // 鋪設磚塊
-                tile = std::make_shared<Brick>(x, y);
+            auto tf = tileFactories.find(type);
+            if (tf != tileFactories.end()) {
+                tile = tf->second(x, y);  // 地形磚 (牆 / 磚塊)
             }
             else {
-                // 預設為草地
+                // 非地形字元：底下一律鋪草地，再決定要不要在上面放東西
                 tile = std::make_shared<Ground>(x, y);
 
                 // 先試 spawn handlers (LevelManager 自己管 spawn 座標)，否則委派給 InteractableManager

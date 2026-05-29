@@ -65,8 +65,17 @@ void Player::Update(const IWorldContext& worldContext) {
         return;
     }
 
-    if (m_Bounce.active) {
-        UpdateBouncing();
+    if (m_Bounce.IsActive()) {
+        auto step = m_Bounce.Update();
+        m_Pos = step.pos;
+        if (step.finished) {
+            m_GridX = GridCoord::ToGridX(m_Pos.x);
+            m_GridY = GridCoord::ToGridY(m_Pos.y);
+            m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
+        }
+        else {
+            m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset + step.jumpHeight };
+        }
         return;
     }
 
@@ -166,8 +175,11 @@ void Player::Update(const IWorldContext& worldContext) {
         }
     }
 
-    if (m_Bounce.pending) {
-        ApplyPendingBounce(worldContext);
+    if (m_Bounce.IsPending()) {
+        glm::vec2 center = GridCoord::ToPixel(m_GridX, m_GridY);
+        m_Bounce.Begin(m_Pos, center,
+            [&](glm::vec2 p) { return IsColliding(p.x, p.y, worldContext); });
+        ChangeDirection(m_Bounce.PendingDir());
     }
 
     // 單次寫入畫面像素座標 (避免每幀重複寫兩次)
@@ -263,8 +275,14 @@ void Player::Kill() {
     m_IgnoreBombs.clear();
     m_DeathCountdown = Constants::Player::kDeathCountdownFrames;
 
+    // 死亡時若持有鑰匙就掉落：清掉持有狀態並標記待掉落，由 GameSession 放回世界
+    if (m_HasKey) {
+        m_HasKey = false;
+        m_DroppedKeyPending = true;
+    }
+
     // 確保死亡時清空彈跳狀態，避免重生後莫名其妙被彈走
-    m_Bounce = BounceState{};
+    m_Bounce.Cancel();
 
     LOG_INFO("Player died");
 }
@@ -284,73 +302,5 @@ void Player::IncreaseFirepower() {
 }
 
 bool Player::TriggerBounce(Direction dir, int distance) {
-    if (m_Bounce.active || m_Bounce.pending) return false;
-
-    m_Bounce.pending = true;
-    m_Bounce.pendingDir = dir;
-    m_Bounce.pendingDist = distance;
-    return true;
-}
-
-void Player::UpdateBouncing() {
-    m_Bounce.tick++;
-    float t = static_cast<float>(m_Bounce.tick) / m_Bounce.duration;
-
-    m_Pos.x = m_Bounce.start.x + (m_Bounce.target.x - m_Bounce.start.x) * t;
-    m_Pos.y = m_Bounce.start.y + (m_Bounce.target.y - m_Bounce.start.y) * t;
-
-    float jumpHeight = std::sin(t * 3.14159f) * Constants::Player::kBounceJumpHeight;
-    m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset + jumpHeight };
-
-    if (m_Bounce.tick >= m_Bounce.duration) {
-        m_Bounce.active = false;
-        m_Pos = m_Bounce.target;
-
-        m_GridX = GridCoord::ToGridX(m_Pos.x);
-        m_GridY = GridCoord::ToGridY(m_Pos.y);
-        m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
-    }
-}
-
-void Player::ApplyPendingBounce(const IWorldContext& worldContext) {
-    m_Bounce.pending = false;
-
-    float centerX = GridCoord::ToPixelX(m_GridX);
-    float centerY = GridCoord::ToPixelY(m_GridY);
-
-    float bdx = 0.0f, bdy = 0.0f;
-    switch (m_Bounce.pendingDir) {
-    case Direction::UP:    bdy = 1.0f;  break;
-    case Direction::DOWN:  bdy = -1.0f; break;
-    case Direction::LEFT:  bdx = -1.0f; break;
-    case Direction::RIGHT: bdx = 1.0f;  break;
-    }
-
-    int actualDist = 0;
-    for (int i = 1; i <= m_Bounce.pendingDist; i++) {
-        float testX = centerX + bdx * i * GridCoord::kTileSize;
-        float testY = centerY + bdy * i * GridCoord::kTileSize;
-
-        if (!IsColliding(testX, testY, worldContext)) {
-            actualDist = i;
-        }
-        else {
-            break;
-        }
-    }
-
-    m_Bounce.active = true;
-    m_Bounce.tick = 0;
-    m_Bounce.start = m_Pos;
-    ChangeDirection(m_Bounce.pendingDir);
-
-    if (actualDist > 0) {
-        m_Bounce.target = { centerX + bdx * actualDist * GridCoord::kTileSize, centerY + bdy * actualDist * GridCoord::kTileSize };
-        m_Bounce.duration = Constants::Player::kBounceFrames;
-    }
-    else {
-        m_Bounce.target = { centerX, centerY };
-        m_Bounce.duration = Constants::Player::kBounceBlockedFrames;
-        LOG_INFO("Bounce path blocked, bouncing in place.");
-    }
+    return m_Bounce.Trigger(dir, distance);
 }

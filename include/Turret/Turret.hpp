@@ -3,10 +3,12 @@
 
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
-#include "Player.hpp"
+#include "GameTypes.hpp"  // Direction
 #include "Turret/Projectile.hpp"
 #include <vector>
 #include <memory>
+
+class Player;
 
 class LevelManager;
 class BombManager;

@@ -109,32 +109,30 @@ bool InteractableManager::BlocksFireAt(int gridX, int gridY) const {
 	return false;
 }
 
-bool InteractableManager::IsAllChestOpened() const {
+bool InteractableManager::AreAllObjectivesComplete() const {
     for (const auto& item : m_Interactables) {
-        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
-            if (!chest->IsOpened()) {
-                return false;
-            }
+        if (item->IsScoringObjective() && !item->IsObjectiveComplete()) {
+            return false;
         }
     }
     return true;
 }
 
-int InteractableManager::GetTotalChestCount() const {
+int InteractableManager::GetObjectiveCount() const {
     int count = 0;
     for (const auto& item : m_Interactables) {
-        if (std::dynamic_pointer_cast<Chest>(item)) {
+        if (item->IsScoringObjective()) {
             count++;
         }
     }
     return count;
 }
 
-std::vector<bool> InteractableManager::GetChestStatusList() const {
+std::vector<bool> InteractableManager::GetObjectiveStatusList() const {
     std::vector<bool> statusList;
     for (const auto& item : m_Interactables) {
-        if (auto chest = std::dynamic_pointer_cast<Chest>(item)) {
-            statusList.push_back(chest->IsOpened());
+        if (item->IsScoringObjective()) {
+            statusList.push_back(item->IsObjectiveComplete());
         }
     }
     return statusList;

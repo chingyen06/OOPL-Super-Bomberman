@@ -5,13 +5,14 @@
 #include "Util/Image.hpp"
 #include "Util/Renderer.hpp"
 #include "GameConstants.hpp"
-#include "Player.hpp"
+#include "GameTypes.hpp"  // Direction
 #include <memory>
 #include <vector>
 #include "glm/vec2.hpp"
 
 class LevelManager;
 class BombManager;
+class Player;
 
 class Projectile : public Util::GameObject {
 public:

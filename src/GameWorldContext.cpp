@@ -23,3 +23,7 @@ glm::vec2 GameWorldContext::GetForceAt(int gridX, int gridY) const {
 bool GameWorldContext::IsTurretAt(int gridX, int gridY) const {
     return m_TurretManager.IsTurretAt(gridX, gridY);
 }
+
+bool GameWorldContext::HasExplosionAt(int gridX, int gridY) const {
+    return m_BombManager.HasExplosionAt(gridX, gridY);
+}

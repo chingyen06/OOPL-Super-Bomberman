@@ -20,7 +20,7 @@ struct LootEntry {
 
 class InteractableManager {
 public:
-    // 註冊表用 — char (地圖符號) → 「建立 interactable」的閉包
+    // 註冊表用 — char (地圖符號) → 建立 interactable
     using SymbolHandler = std::function<void(int gridX, int gridY, Util::Renderer&)>;
 
     InteractableManager();
@@ -32,8 +32,8 @@ public:
     void AddConveyor(int gridX, int gridY, Direction dir, Util::Renderer& root);
     void AddBouncePad(int gridX, int gridY, Direction dir, Util::Renderer& root);
 
-    // 註冊表 API — LevelManager 從地圖檔讀到字元時呼叫 HandleSymbol，
-    // 由本 manager 查表決定如何建立對應 interactable。
+    // LevelManager 從地圖檔讀到字元時呼叫 HandleSymbol，
+    // 由這個 manager 查表決定如何建立對應 interactable。
     // 新增一種 interactable 只需在 InteractableManager 建構子裡 RegisterSymbol — 不必動 LevelManager。
     void RegisterSymbol(char symbol, SymbolHandler handler);
     bool HandleSymbol(char symbol, int gridX, int gridY, Util::Renderer& root);
@@ -45,11 +45,13 @@ public:
     bool IsBlocksBombAt(int gridX, int gridY) const;
     bool BlocksFireAt(int gridX, int gridY) const;
 
-    bool IsAllChestOpened() const;
+    // 勝負/HUD 查詢：以 Interactable 的 IsScoringObjective/IsObjectiveComplete hook 為準，
+    // 不再對 Chest 做 dynamic_cast — 新增目標型別不必改這裡。
+    bool AreAllObjectivesComplete() const;
 
-    int GetTotalChestCount() const;
+    int GetObjectiveCount() const;
 
-    std::vector<bool> GetChestStatusList() const;
+    std::vector<bool> GetObjectiveStatusList() const;
 
     // 只允許外部讀取，不再外露 non-const 容器
     const std::vector<std::shared_ptr<Interactable>>& GetInteractables() const { return m_Interactables; }

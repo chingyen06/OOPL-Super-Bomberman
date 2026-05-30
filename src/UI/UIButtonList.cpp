@@ -39,6 +39,12 @@ void UIButtonList::SetSelected(int index) {
     if (m_Visible) UpdateCursor();
 }
 
+void UIButtonList::SetHighlight(bool on) {
+    if (m_Highlight == on) return;
+    m_Highlight = on;
+    if (m_Visible) UpdateCursor();
+}
+
 void UIButtonList::Show(Util::Renderer& root, float startX, float startY, float stepX, float stepY) {
     if (m_Visible) return;
     m_Visible = true;
@@ -93,7 +99,7 @@ int UIButtonList::StepToEnabled(int from, int dir) const {
 
 void UIButtonList::UpdateCursor() {
     for (size_t i = 0; i < m_Buttons.size(); i++) {
-        const bool sel = (static_cast<int>(i) == m_Selected);
+        const bool sel = (static_cast<int>(i) == m_Selected) && m_Highlight;
         m_Buttons[i]->SetDrawable(sel ? m_SelectedImg : m_NormalImg);
 
         Util::Color color = Util::Color::FromName(Util::Colors::BLACK);

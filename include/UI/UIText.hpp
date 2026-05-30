@@ -13,7 +13,9 @@ public:
            const Util::Color& color = Util::Color::FromName(Util::Colors::BLACK));
     void SetText(const std::string& text);
     void SetPosition(float x, float y);
+    void SetScale(float sx, float sy);
     void SetColor(const Util::Color& color);
+    float GetWidth() const;   // 目前文字的原始像素寬度 (未套用 transform 縮放)
 private:
     std::shared_ptr<Util::Text> m_Text;
 };

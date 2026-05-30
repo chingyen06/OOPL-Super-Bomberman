@@ -56,6 +56,15 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${DEPENDENCY_INCLUDE_D
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/PTSD/include)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+# 依職責把標頭分到 include/ 的各子資料夾後，仍允許直接 #include 檔名 —
+# 把 include/ 下每個子資料夾都加入 include 路徑 (新增資料夾自動納入)。
+file(GLOB INCLUDE_SUBDIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
+foreach(dir ${INCLUDE_SUBDIRS})
+    if(IS_DIRECTORY ${dir})
+        target_include_directories(${PROJECT_NAME} PRIVATE ${dir})
+    endif()
+endforeach()
+
 target_link_libraries(${PROJECT_NAME}
     SDL2::SDL2main
     PTSD

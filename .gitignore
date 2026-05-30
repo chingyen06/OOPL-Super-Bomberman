@@ -494,3 +494,6 @@ lib/
 
 # Doxygen generated files
 docs/html/
+
+# runtime player save
+Resources/save.json

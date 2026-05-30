@@ -7,7 +7,9 @@
 #include <cmath>
 
 Turret::Turret(int gridX, int gridY, Direction dir)
-    : m_GridX(gridX), m_GridY(gridY), m_Dir(dir), m_Timer(Constants::Turret::kInitialIdleFrames) {
+    : m_GridX(gridX), m_GridY(gridY), m_Dir(dir),
+      m_Timer(Constants::Turret::kInitialIdleFrames),
+      m_CooldownTotal(Constants::Turret::kInitialIdleFrames) {
     m_ImgActive = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/turret_down.png");
     m_ImgIdle = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/turret_down.png");
 
@@ -15,6 +17,25 @@ Turret::Turret(int gridX, int gridY, Direction dir)
     SetZIndex(18);
     m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
     UpdateRotationVisual();
+
+    // 冷卻條：浮在砲台上方；填充由左往右長滿表示即將發射
+    const glm::vec2 p = GridCoord::ToPixel(gridX, gridY);
+    m_CdBg   = std::make_shared<UIImage>(RESOURCE_DIR"/Image/turret_cd_bg.png", p.x, p.y + 22.0f, 19.0f);
+    m_CdFill = std::make_shared<UIImage>(RESOURCE_DIR"/Image/turret_cd.png",    p.x, p.y + 22.0f, 20.0f);
+    m_Overlays = { m_CdBg, m_CdFill };
+    UpdateCooldownVisual(false);
+}
+
+void Turret::UpdateCooldownVisual(bool ready) {
+    const float fullW = 32.0f;                       // 背景條寬 (= 圖原寬)
+    const glm::vec2 p = GridCoord::ToPixel(m_GridX, m_GridY);
+    float prog = ready ? 1.0f
+                       : (m_CooldownTotal > 0 ? 1.0f - static_cast<float>(m_Timer) / m_CooldownTotal : 1.0f);
+    if (prog < 0.0f) prog = 0.0f; else if (prog > 1.0f) prog = 1.0f;
+    // 由左往右長：填充寬 = fullW*prog，靠左對齊背景左緣
+    const float left = p.x - fullW * 0.5f;
+    m_CdFill->SetScale(prog, 1.0f);
+    m_CdFill->SetPosition(left + fullW * prog * 0.5f, p.y + 22.0f);
 }
 
 void Turret::UpdateRotationVisual() {
@@ -89,6 +110,7 @@ void RotatingTurret::Update(std::vector<std::shared_ptr<Projectile>>& outProject
 
             m_State = State::READY;
             m_Timer = Constants::Turret::kReadyFrames;
+            m_CooldownTotal = Constants::Turret::kReadyFrames;
             SetDrawable(m_ImgActive);
         }
     }
@@ -98,7 +120,11 @@ void RotatingTurret::Update(std::vector<std::shared_ptr<Projectile>>& outProject
 
             m_State = State::IDLE;
             m_Timer = Constants::Turret::kCooldownFrames;
+            m_CooldownTotal = Constants::Turret::kCooldownFrames;
             SetDrawable(m_ImgIdle);
         }
     }
+
+    // 充能條：IDLE(冷卻中) 隨時間長滿；READY(剛發射的待發姿勢) 顯示滿條
+    UpdateCooldownVisual(m_State == State::READY);
 }

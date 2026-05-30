@@ -27,6 +27,7 @@ public:
     void SetItemLabel(int index, const std::string& text);
     void SetItemEnabled(int index, bool enabled);  // 停用項：變灰、無法選取
     void SetSelected(int index);                   // 指定目前選取項 (需為可選)
+    void SetHighlight(bool on);                    // 是否顯示選取高亮 (焦點移出此列表時關掉)
 
     // 從 (startX, startY) 開始，每個項目位移 (stepX, stepY)。
     void Show(Util::Renderer& root, float startX, float startY, float stepX, float stepY);
@@ -48,6 +49,7 @@ private:
     static constexpr float kLabelYNudge = 1.0f;
 
     bool m_Visible = false;
+    bool m_Highlight = true;  // false → 不顯示選取高亮 (全部維持一般底圖)
     int  m_Selected = 0;
 
     std::shared_ptr<Util::Image> m_NormalImg;

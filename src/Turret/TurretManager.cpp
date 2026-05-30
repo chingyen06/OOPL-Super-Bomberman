@@ -4,6 +4,7 @@
 #include "InteractableManager.hpp"
 
 void TurretManager::AddTurret(std::shared_ptr<Turret> turret, Util::Renderer& root) {
+    for (auto& ov : turret->Overlays()) root.AddChild(ov);  // 冷卻條
     m_Turrets.push_back(turret);
     root.AddChild(turret);
 }
@@ -34,7 +35,10 @@ void TurretManager::Update(std::vector<std::shared_ptr<Player>>& players, const 
 }
 
 void TurretManager::Clear(Util::Renderer& root) {
-    for (auto& t : m_Turrets) root.RemoveChild(t);
+    for (auto& t : m_Turrets) {
+        for (auto& ov : t->Overlays()) root.RemoveChild(ov);
+        root.RemoveChild(t);
+    }
     for (auto& p : m_Projectiles) root.RemoveChild(p);
     m_Turrets.clear();
     m_Projectiles.clear();

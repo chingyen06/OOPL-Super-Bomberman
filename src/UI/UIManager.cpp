@@ -27,7 +27,8 @@ void UIManager::Init(Util::Renderer& root, int totalChests) {
     m_TimerBackground = std::make_shared<UIImage>(RESOURCE_DIR"/Image/timer.png", 0.0f, kTimerY, 90.0f);
     root.AddChild(m_TimerBackground);
 
-    m_CrownImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/crown.png", -1000, -1000);
+    // z=95 (< 勝利圖的 99)，避免結算時皇冠蓋在勝利畫面上
+    m_CrownImage = std::make_shared<UIImage>(RESOURCE_DIR"/Image/crown.png", -1000.0f, -1000.0f, 95.0f);
     root.AddChild(m_CrownImage);
 
     // 文字貼圖右側留白 → +5 才在膠囊內水平置中 (與選單同樣的補正)
@@ -42,7 +43,7 @@ void UIManager::Init(Util::Renderer& root, int totalChests) {
     m_LastCheatEnabled = false;
 
     for (int i = 0; i < Constants::UI::kMaxKeyIndicators; i++) {
-        auto indicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000, -1000);
+        auto indicator = std::make_shared<UIImage>(RESOURCE_DIR"/Image/key.png", -1000.0f, -1000.0f, 95.0f);
         root.AddChild(indicator);
         m_KeyIndicators.push_back(indicator);
     }

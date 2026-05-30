@@ -5,7 +5,8 @@
 #include "Util/Keycode.hpp"
 #include "Util/Input.hpp"
 
-struct Control {
+class Control {
+public:
     Util::Keycode UP;
     Util::Keycode DOWN;
     Util::Keycode LEFT;

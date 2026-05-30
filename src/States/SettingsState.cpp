@@ -1,0 +1,153 @@
+#include "States/SettingsState.hpp"
+
+#include "Core/App.hpp"
+#include "States/MainMenuState.hpp"
+#include "States/MenuCommon.hpp"
+#include "Util/Input.hpp"
+#include "Util/Keycode.hpp"
+
+void SettingsState::OnEnter(App& app) {
+    app.ShowMenuBg();
+    m_Row = 0; m_Col = 0; m_Awaiting = false;
+    auto& root = app.Root();
+
+    m_Gear = std::make_shared<UIImage>(RESOURCE_DIR"/Image/gear.png", -560.0f, 333.0f, 40.0f);
+    m_Gear->SetScale(0.5f, 0.5f);
+    root.AddChild(m_Gear);
+    m_Title = std::make_shared<UIText>("操作設定", -465.0f, 330.0f, 40.0f, DarkText());
+    root.AddChild(m_Title);
+
+    Build(app);
+    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "重設"}, {"Del", "清除"}, {"X", "返回"}});
+}
+
+void SettingsState::OnExit(App& app) {
+    auto& root = app.Root();
+    ClearTable(root);
+    root.RemoveChild(m_Gear);
+    root.RemoveChild(m_Title);
+    m_Hint.Remove(app);
+    app.HideMenuBg();
+}
+
+void SettingsState::Rebuild(App& app) {
+    ClearTable(app.Root());
+    Build(app);
+}
+
+void SettingsState::ClearTable(Util::Renderer& root) {
+    for (auto& im : m_Imgs) root.RemoveChild(im);
+    for (auto& tx : m_Txts) root.RemoveChild(tx);
+    m_Imgs.clear();
+    m_Txts.clear();
+}
+
+void SettingsState::Build(App& app) {
+    auto& root = app.Root();
+    constexpr float kTableW = 1180.0f, kColLabel = -360.0f, kColP1 = 110.0f, kColP2 = 400.0f;
+    constexpr float kHeaderY = 232.0f, kRow0Y = 178.0f, kStep = 46.0f;
+
+    AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", kHeaderY, kTableW, 18.0f);
+    AddText(root, "操作",          kColLabel, kHeaderY, DarkText());
+    AddText(root, "玩家 1 (防守)", kColP1,    kHeaderY, DarkText());
+    AddText(root, "玩家 2 (進攻)", kColP2,    kHeaderY, DarkText());
+
+    const char* names[kActions] = { "向上移動", "向下移動", "向左移動", "向右移動", "放置炸彈" };
+    for (int i = 0; i < kActions; ++i) {
+        const float y = kRow0Y - i * kStep;
+        AddStrip(root, (i % 2 == 0) ? RESOURCE_DIR"/Image/set_row_a.png"
+                                    : RESOURCE_DIR"/Image/set_row_b.png", y, kTableW, 18.0f);
+        AddText(root, names[i], kColLabel, y, DarkText());
+        for (int col = 0; col < 2; ++col) {
+            const bool sel = (i == m_Row && col == m_Col);
+            const std::string label = (sel && m_Awaiting) ? "按鍵…" : KeyName(app.Keys().Key(col, i));
+            AddKeyBox(root, label, (col == 0 ? kColP1 : kColP2), y, sel);
+        }
+    }
+    // 固定資訊列 (暫停鍵，不可改)
+    const float infoY = kRow0Y - kActions * kStep;
+    AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", infoY, kTableW, 18.0f);
+    AddText(root, "暫停", kColLabel, infoY, DarkText());
+    AddKeyBox(root, "Enter", kColP1, infoY, false);
+    AddKeyBox(root, "Enter", kColP2, infoY, false);
+}
+
+void SettingsState::AddStrip(Util::Renderer& root, const std::string& img, float y, float w, float z) {
+    auto s = std::make_shared<UIImage>(img, 0.0f, y, z);
+    s->SetScale(w / 64.0f, 42.0f / 46.0f);
+    root.AddChild(s);
+    m_Imgs.push_back(s);
+}
+
+void SettingsState::AddText(Util::Renderer& root, const std::string& t, float x, float y, Util::Color c) {
+    auto n = std::make_shared<UIText>(t, x, y, 20.0f, c);
+    n->SetScale(0.62f, 0.62f);
+    root.AddChild(n);
+    m_Txts.push_back(n);
+}
+
+// 按鍵方塊：selected→橘底深字，否則深底白字；key 空字串→空白方塊 (代表未綁定)
+void SettingsState::AddKeyBox(Util::Renderer& root, const std::string& key, float cx, float y, bool selected) {
+    constexpr float sc = 0.62f, trail = 14.0f * sc, pad = 12.0f;
+    float w = 36.0f;  // 空白方塊預設寬
+    std::shared_ptr<UIText> txt;
+    if (!key.empty()) {
+        txt = std::make_shared<UIText>(key, cx, y, 22.0f, selected ? DarkText() : WhiteText());
+        txt->SetScale(sc, sc);
+        w = txt->GetWidth() * sc - trail + pad * 2.0f;
+    }
+    const char* img = selected ? RESOURCE_DIR"/Image/keycap_sel.png" : RESOURCE_DIR"/Image/keycap_dark.png";
+    auto box = std::make_shared<UIImage>(img, cx, y, 21.0f);
+    box->SetScale(w / 60.0f, 32.0f / 42.0f);
+    root.AddChild(box);
+    m_Imgs.push_back(box);
+    if (txt) {
+        txt->SetPosition(cx + trail * 0.5f, y);
+        root.AddChild(txt);
+        m_Txts.push_back(txt);
+    }
+}
+
+void SettingsState::OnUpdate(App& app) {
+    using K = Util::Keycode;
+
+    if (m_Awaiting) {
+        // 等待新鍵：ESC 取消；偵測到任一鍵 → 綁定
+        if (Util::Input::IsKeyDown(K::ESCAPE)) { m_Awaiting = false; Rebuild(app); return; }
+        const Util::Keycode k = PollAnyKey();
+        if (k != KeyBindings::NoKey()) {
+            // 不允許重複綁定：把其他綁到同一鍵的格子清成未綁定
+            for (int c = 0; c < 2; ++c) {
+                for (int a = 0; a < kActions; ++a) {
+                    if (!(c == m_Col && a == m_Row) && app.Keys().Key(c, a) == k) {
+                        app.Keys().Key(c, a) = KeyBindings::NoKey();
+                    }
+                }
+            }
+            app.Keys().Key(m_Col, m_Row) = k;
+            // 綁的是空白/Enter → 吞掉它接下來的放開，否則會立刻又進入「重設」
+            if (k == K::SPACE || k == K::RETURN) m_IgnoreConfirm = true;
+            m_Awaiting = false;
+            Rebuild(app);
+        }
+        return;
+    }
+
+    bool dirty = false;
+    if      (Util::Input::IsKeyUp(K::UP))    { m_Row = (m_Row + kActions - 1) % kActions; dirty = true; }
+    else if (Util::Input::IsKeyUp(K::DOWN))  { m_Row = (m_Row + 1) % kActions;            dirty = true; }
+    else if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::RIGHT)) { m_Col ^= 1; dirty = true; }
+
+    const bool confirm = Util::Input::IsKeyUp(K::SPACE) || Util::Input::IsKeyUp(K::RETURN);
+    if (confirm) {
+        if (m_IgnoreConfirm) m_IgnoreConfirm = false;  // 吞掉剛綁定鍵的放開
+        else { m_Awaiting = true; dirty = true; }
+    }
+    if (Util::Input::IsKeyUp(K::BACKSPACE) || Util::Input::IsKeyUp(K::DELETE)) {
+        app.Keys().Key(m_Col, m_Row) = KeyBindings::NoKey();  // 清除→留空
+        dirty = true;
+    }
+    if (Util::Input::IsKeyUp(K::X)) { app.TransitionTo(std::make_unique<MainMenuState>()); return; }
+
+    if (dirty) Rebuild(app);
+}

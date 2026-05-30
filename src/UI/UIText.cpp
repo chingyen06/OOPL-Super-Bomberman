@@ -16,6 +16,14 @@ void UIText::SetPosition(float x, float y) {
     m_Transform.translation = { x, y };
 }
 
+void UIText::SetScale(float sx, float sy) {
+    m_Transform.scale = { sx, sy };
+}
+
 void UIText::SetColor(const Util::Color& color) {
     m_Text->SetColor(color);
+}
+
+float UIText::GetWidth() const {
+    return m_Text->GetSize().x;
 }

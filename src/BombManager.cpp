@@ -4,6 +4,7 @@
 #include "GridCoord.hpp"
 #include "InteractableManager.hpp"
 #include "Player.hpp"
+#include "Turret/TurretManager.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
 
@@ -40,7 +41,16 @@ void BombManager::PlaceBomb(Player& player, LevelManager& levelManager, Interact
 }
 
 // Update bombs and explosions
-void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players) {
+void BombManager::Update(LevelManager& levelManager, InteractableManager& interactableManager, const TurretManager& turretManager, Util::Renderer& root, std::vector<std::shared_ptr<Player>>& players) {
+    // 站在炸彈正上方的玩家暫時穿透該炸彈 (例如被砲台炸彈砸中)，避免卡在上面走不掉
+    for (const auto& bomb : m_Bombs) {
+        for (auto& p : players) {
+            if (!p->IsDead() && p->GetGridX() == bomb->GetGridX() && p->GetGridY() == bomb->GetGridY()) {
+                p->OnPlacedBombAt(bomb->GetGridX(), bomb->GetGridY());
+            }
+        }
+    }
+
     for (auto it = m_Bombs.begin(); it != m_Bombs.end(); ) {  // Bomb lifecycle and spawning explosions
         (*it)->Update(levelManager, *this, interactableManager);
 
@@ -70,6 +80,11 @@ void BombManager::Update(LevelManager& levelManager, InteractableManager& intera
                             // Destroy the brick (may drop loot)
                             levelManager.DestroyBrick(targetX, targetY, root, interactableManager);
                         }
+                        break;
+                    }
+
+                    // 砲台擋火：火焰不蔓延到 (也不覆蓋) 砲台所在格，像牆一樣中斷這個方向
+                    if (turretManager.IsTurretAt(targetX, targetY)) {
                         break;
                     }
 

@@ -7,12 +7,14 @@
 #include <functional>
 #include "Util/Logger.hpp"
 
-void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& interactableManager, Util::Renderer& root) {
+void LevelManager::LoadLevel(const std::string& filepath, const TileSet& tileset, InteractableManager& interactableManager, Util::Renderer& root) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         LOG_ERROR("Error opening file: " + filepath);
         return;
     }
+
+    m_GroundImage = tileset.Ground();  // 記住本關草地貼圖，供 DestroyBrick 沿用主題
 
     // LevelManager 只負責「spawn metadata」這類關卡座標 (Defender / Attacker / Spirit / Turret)。
     // 其他「在地圖上會被建立的 interactable 物件」全部交由 InteractableManager::HandleSymbol —
@@ -28,8 +30,8 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
     // InteractableManager::HandleSymbol 的資料化風格一致。未登記的字元一律視為草地，
     // 新增地形磚種只需在此加一行 (OCP)。
     const std::unordered_map<char, std::function<std::shared_ptr<Tile>(int, int)>> tileFactories = {
-        {'1', [](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Wall>(x, y); }},   // 無敵牆
-        {'2', [](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Brick>(x, y); }},  // 可破壞磚塊
+        {'1', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Wall>(x, y, tileset.Wall()); }},   // 無敵牆
+        {'2', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Brick>(x, y, tileset.Brick()); }}, // 可破壞磚塊
     };
 
     m_TileGrid.assign(GridCoord::kMapHeight, std::vector<std::shared_ptr<Tile>>(GridCoord::kMapWidth));
@@ -55,7 +57,7 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
             }
             else {
                 // 非地形字元：底下一律鋪草地，再決定要不要在上面放東西
-                tile = std::make_shared<Ground>(x, y);
+                tile = std::make_shared<Ground>(x, y, tileset.Ground());
 
                 // 先試 spawn handlers (LevelManager 自己管 spawn 座標)，否則委派給 InteractableManager
                 auto it = spawnHandlers.find(type);
@@ -76,7 +78,7 @@ void LevelManager::LoadLevel(const std::string& filepath, InteractableManager& i
         for (int y = 0; y < GridCoord::kMapHeight; y++) {
             for (int x = 0; x < GridCoord::kMapWidth; x++) {
                 if (!m_TileGrid[y][x]) {
-                    auto fallback = std::make_shared<Ground>(x, y);
+                    auto fallback = std::make_shared<Ground>(x, y, m_GroundImage);
                     m_TileGrid[y][x] = fallback;
                     m_Tiles.push_back(fallback);
                 }
@@ -130,8 +132,8 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root, Inte
         }
     }
 
-    auto newGround = std::make_shared<Ground>(gridX, gridY);
-    m_TileGrid[gridY][gridX] = newGround; 
+    auto newGround = std::make_shared<Ground>(gridX, gridY, m_GroundImage);  // 沿用本關主題草地
+    m_TileGrid[gridY][gridX] = newGround;
     m_Tiles.push_back(newGround);
     root.AddChild(newGround);
 

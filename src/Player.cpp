@@ -11,6 +11,11 @@
 Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
     m_CurrentDir(Direction::DOWN), m_Team(team), m_Controller(std::move(controller)), m_PlayerID(id) {
 
+    // 防守方 3 命、進攻方 1 命 (依陣營自動決定)
+    m_MaxLives = (team == Team::DEFENDER) ? Constants::Player::kDefenderLives
+                                          : Constants::Player::kAttackerLives;
+    m_Lives = m_MaxLives;
+
     m_ImgUp = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_up.png");
     m_ImgDown = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_down.png");
     m_ImgLeft = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_left.png");
@@ -61,6 +66,28 @@ void Player::Update(const IWorldContext& worldContext) {
                 Respawn();
                 m_RespawnTimer = -1;
             }
+        }
+        return;
+    }
+
+    // 倒地暈眩中：原地漸進倒下 (旋轉 0→90°) + 閃爍，不能移動；時間到起身並給予短暫無敵。
+    // 頭上的暈眩星星由 UIManager 依 IsStunned() 顯示。
+    if (m_StunTimer > 0) {
+        m_StunTimer--;
+        const int elapsed = Constants::Player::kStunFrames - m_StunTimer;
+        const float t = std::min(1.0f, static_cast<float>(elapsed) / Constants::Player::kKnockdownFallFrames);
+        m_Transform.rotation = t * Constants::Player::kKnockdownRotation;  // 漸進倒下的感覺
+        // 倒下時整個人往下沉一點，貼近地面 (而不是原地平轉)
+        m_Transform.translation = {
+            std::round(m_Pos.x),
+            std::round(m_Pos.y + Constants::Player::kSpriteYOffset - t * Constants::Player::kKnockdownDrop)
+        };
+        SetVisible((m_StunTimer / 8) % 2 == 0);  // 閃爍表示受擊
+        if (m_StunTimer == 0) {
+            m_Transform.rotation = 0.0f;  // 起身
+            m_Transform.translation = { std::round(m_Pos.x), std::round(m_Pos.y + Constants::Player::kSpriteYOffset) };
+            SetVisible(true);
+            m_Invincible = Constants::Player::kStunInvincibleAfter;  // 起身後短暫無敵
         }
         return;
     }
@@ -178,7 +205,7 @@ void Player::Update(const IWorldContext& worldContext) {
     if (m_Bounce.IsPending()) {
         glm::vec2 center = GridCoord::ToPixel(m_GridX, m_GridY);
         m_Bounce.Begin(m_Pos, center,
-            [&](glm::vec2 p) { return IsColliding(p.x, p.y, worldContext); });
+            [&](glm::vec2 p) { return IsColliding(p.x, p.y, worldContext, /*ignoreBombs=*/true); });
         ChangeDirection(m_Bounce.PendingDir());
     }
 
@@ -216,7 +243,7 @@ void Player::ChangeDirection(Direction dir) {
     }
 }
 
-bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldContext) {
+bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldContext, bool ignoreBombs) {
     float radius = Constants::Player::kCollisionRadius;
     float left = nextX - radius;
     float right = nextX + radius;
@@ -226,7 +253,7 @@ bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldCon
     // 檢查四個角落的網格是否可走或有炸彈
     auto check = [&](int gx, int gy) {
         bool isMapObstacle = !worldContext.IsWalkable(gx, gy);
-        bool isBomb        =  worldContext.IsBombAt(gx, gy);
+        bool isBomb        =  ignoreBombs ? false : worldContext.IsBombAt(gx, gy);  // 彈跳中可飛過炸彈
         bool isTurret      =  worldContext.IsTurretAt(gx, gy);
 
         // 玩家自己剛放的炸彈在 IgnoreBombs 中視為可穿透 (不擋玩家)
@@ -262,15 +289,33 @@ void Player::Respawn() {
     m_CurrentBombs = 0;
     m_MaxBombs = Constants::Player::kInitialMaxBombs;
     m_Firepower = Constants::Player::kInitialFirepower;
+
+    // 重生時恢復滿命、清除暈眩與躺下旋轉
+    m_Lives = m_MaxLives;
+    m_StunTimer = -1;
+    m_Transform.rotation = 0.0f;
     SetVisible(true);
 
     m_Invincible = Constants::Player::kInvincibleFramesOnRespawn;
 }
 
 void Player::Kill() {
-    if (m_Invincible > 0)  // 無敵時間
+    // 作弊無敵 / 重生無敵 / 暈眩中 / 彈跳飛行中 (可跨過炸彈與火焰) 皆免疫
+    if (m_GodMode || m_Invincible > 0 || m_StunTimer > 0 || m_Bounce.IsActive())
         return;
 
+    m_Lives--;
+
+    // 還有命：不死亡，改為「倒地暈一下」(原地暈眩 + 起身後短暫無敵)，命數遞減
+    if (m_Lives > 0) {
+        m_StunTimer = Constants::Player::kStunFrames;
+        m_IgnoreBombs.clear();
+        m_Bounce.Cancel();
+        LOG_INFO("Player knocked down! Lives left: " + std::to_string(m_Lives));
+        return;
+    }
+
+    // 命數歸 0：真正死亡 (掉鑰匙 + 重生倒數)
     m_IsDead = true;
     m_IgnoreBombs.clear();
     m_DeathCountdown = Constants::Player::kDeathCountdownFrames;

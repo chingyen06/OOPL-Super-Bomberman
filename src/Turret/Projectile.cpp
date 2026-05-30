@@ -1,8 +1,9 @@
-#include "Turret/Projectile.hpp"
+﻿#include "Turret/Projectile.hpp"
 #include "GameConstants.hpp"
 #include "GridCoord.hpp"
 #include "LevelManager.hpp"
 #include "BombManager.hpp"
+#include "Player.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
 
@@ -25,8 +26,18 @@ Projectile::Projectile(int startGridX, int startGridY, int targetGridX, int targ
     m_TargetPixelY = GridCoord::ToPixelY(targetGridY);
 }
 
-void Projectile::Update(std::vector<std::shared_ptr<Player>>& /*players*/, const LevelManager& /*lm*/, BombManager& bm, Util::Renderer& root) {
+void Projectile::Update(std::vector<std::shared_ptr<Player>>& players, const LevelManager& /*lm*/, BombManager& bm, Util::Renderer& root) {
     if (m_IsDead) return;
+
+    // 飛行途中直接命中玩家 → 使其暈倒 (Kill 內依命數決定暈眩或死亡)
+    for (auto& p : players) {
+        if (p->IsDead()) continue;
+        const auto pp = p->GetPixelPos();
+        if (std::abs(pp.x - m_Pos.x) < Constants::Projectile::kHitRadius &&
+            std::abs(pp.y - m_Pos.y) < Constants::Projectile::kHitRadius) {
+            p->Kill();
+        }
+    }
 
     float dx = m_TargetPixelX - m_Pos.x;
     float dy = m_TargetPixelY - m_Pos.y;

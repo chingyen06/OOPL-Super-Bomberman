@@ -38,7 +38,9 @@ add_executable(${PROJECT_NAME}
 )
 
 if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    # /utf-8: 來源與執行字元集都用 UTF-8，確保中文字串字面值 (暫停選單標籤) 以 UTF-8
+    # 進入二進位檔，供 TTF_RenderUTF8 正確繪製；同時消除 C4819 (cp950) 警告。
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /utf-8)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
 endif()

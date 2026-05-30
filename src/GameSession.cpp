@@ -17,12 +17,14 @@ GameSession::GameSession(Util::Renderer& root) : m_Root(root) {}
 void GameSession::LoadLevel(int levelIndex) {
     LOG_INFO("Loading Level " + std::to_string(levelIndex) + "...");
 
+    m_CurrentLevelIndex = levelIndex;
+
     // 清理上一局可能殘留的實體
     Clear();
 
     const std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
 
-    m_LevelManager.LoadLevel(levelPath, m_InteractableManager, m_Root);
+    m_LevelManager.LoadLevel(levelPath, TileSet::ForLevel(levelIndex), m_InteractableManager, m_Root);
     m_LevelManager.AttachToRoot(m_Root);
 
     const int totalChests = m_InteractableManager.GetObjectiveCount();
@@ -36,40 +38,61 @@ void GameSession::LoadLevel(int levelIndex) {
     static std::mt19937 g(rd());
     std::shuffle(atkSpawns.begin(), atkSpawns.end(), g);
 
+    // 玩家 1 永遠是守方 (人類)；作弊 / HUD 命數都以玩家 1 為對象。
     auto ctrl1P = std::make_unique<HumanController>(Control{
-        Util::Keycode::W,
-        Util::Keycode::S,
-        Util::Keycode::A,
-        Util::Keycode::D,
-        Util::Keycode::SPACE
-    });
+        Util::Keycode::W, Util::Keycode::S, Util::Keycode::A, Util::Keycode::D, Util::Keycode::SPACE });
 
     auto defender = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
     m_Players.push_back(defender);
     m_Root.AddChild(defender);
+    m_HumanPlayer = defender.get();
 
-    // 依地圖標示的 attacker spawn 數量產生對應數量的 AI
-    // BotController 用 playerID 做 phase offset，避免所有 AI 第一幀同時決策
+    // 進攻方依「選擇隊伍」的席位設定生成 (slot 0 = 玩家 2，1..7 = 電腦)，依序填入地圖出生點。
+    // 玩家 2 為人類時用方向鍵 + 右 Shift 放炸彈 (ENTER 留給暫停)。不會有 AI 防守。
     int nextPlayerId = 1;
-    for (const auto& spawn : atkSpawns) {
-        const int phase = nextPlayerId % Constants::Bot::kReactionFrames;
-        auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
-                                                  std::make_unique<BotController>(phase), nextPlayerId++);
+    int spawnIdx = 0;
+    for (int slot = 0; slot < MatchConfig::kMaxAttackers && spawnIdx < static_cast<int>(atkSpawns.size()); slot++) {
+        const MatchConfig::SlotMode mode = m_Config.AttackerSlot(slot);
+        if (mode == MatchConfig::SlotMode::Off) continue;
+
+        std::unique_ptr<InputController> ctrl;
+        if (mode == MatchConfig::SlotMode::Human) {
+            ctrl = std::make_unique<HumanController>(Control{
+                Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT });
+        }
+        else {
+            ctrl = std::make_unique<BotController>(nextPlayerId % Constants::Bot::kReactionFrames);
+        }
+        const auto& spawn = atkSpawns[spawnIdx++];
+        auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER, std::move(ctrl), nextPlayerId++);
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }
 
-    for (const auto& sp : m_LevelManager.GetSpiritSpawns()) {
-        auto spirit = std::make_shared<Spirit>(sp.first, sp.second);
-        m_Spirits.push_back(spirit);
-        m_Root.AddChild(spirit);
+    // 安全網：至少要有 1 名進攻方 (設定全關時，補一個 AI)
+    if (spawnIdx == 0 && !atkSpawns.empty()) {
+        const auto& spawn = atkSpawns[0];
+        auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
+                                                 std::make_unique<BotController>(0), nextPlayerId++);
+        m_Players.push_back(attacker);
+        m_Root.AddChild(attacker);
     }
 
-    for (const auto& sp : m_LevelManager.GetTurretSpawns()) {
-        m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Direction::DOWN), m_Root);
+    if (m_Config.SpiritsEnabled()) {
+        for (const auto& sp : m_LevelManager.GetSpiritSpawns()) {
+            auto spirit = std::make_shared<Spirit>(sp.first, sp.second);
+            m_Spirits.push_back(spirit);
+            m_Root.AddChild(spirit);
+        }
     }
 
-    m_GameTime = Constants::Game::kRoundDurationFrames;
+    if (m_Config.TurretsEnabled()) {
+        for (const auto& sp : m_LevelManager.GetTurretSpawns()) {
+            m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Direction::DOWN), m_Root);
+        }
+    }
+
+    m_GameTime = m_Config.RoundSeconds() * Constants::Game::kFPS;
 }
 
 void GameSession::Update() {
@@ -81,11 +104,13 @@ void GameSession::Update() {
         LOG_INFO("Time Remaining: " + std::to_string(seconds) + "s");
     }
 
-    m_BombManager.Update(m_LevelManager, m_InteractableManager, m_Root, m_Players);
+    m_CheatManager.Update(m_HumanPlayer);
+
+    m_BombManager.Update(m_LevelManager, m_InteractableManager, m_TurretManager, m_Root, m_Players);
     m_InteractableManager.Update(m_Players, m_Root);
 
     auto statusList = m_InteractableManager.GetObjectiveStatusList();
-    m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root);
+    m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root, m_CheatManager.IsEnabled());
 
     m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Spirits, m_TurretManager);
     m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Root);
@@ -134,6 +159,7 @@ void GameSession::Clear() {
 
     for (auto& player : m_Players) m_Root.RemoveChild(player);
     m_Players.clear();
+    m_HumanPlayer = nullptr;  // 指向已銷毀的玩家，避免懸空
 }
 
 bool GameSession::IsAttackerWin() const {

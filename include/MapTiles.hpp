@@ -1,6 +1,7 @@
 ﻿#ifndef MAPTILES_HPP
 #define MAPTILES_HPP
 
+#include <string>
 #include "Util/GameObject.hpp"
 
 class Tile : public Util::GameObject {
@@ -9,10 +10,10 @@ public:
     virtual bool IsDestructible() const { return false; }
 };
 
-// 草地
+// 草地 (貼圖由關卡主題 TileSet 決定)
 class Ground : public Tile {
 public:
-    Ground(int gridX, int gridY);
+    Ground(int gridX, int gridY, const std::string& imagePath);
     bool IsPassable() const override {
         return true;
     };
@@ -21,7 +22,7 @@ public:
 // 無敵牆
 class Wall : public Tile {
 public:
-    Wall(int gridX, int gridY);
+    Wall(int gridX, int gridY, const std::string& imagePath);
     bool IsPassable() const override {
         return false;
     };
@@ -30,7 +31,7 @@ public:
 // 磚塊 (可破壞)
 class Brick : public Tile {
 public:
-    Brick(int gridX, int gridY);
+    Brick(int gridX, int gridY, const std::string& imagePath);
     bool IsPassable() const override {
         return false;
     };

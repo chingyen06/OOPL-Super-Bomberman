@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "GameSession.hpp"
-#include "Menu.hpp"
+#include "PauseMenu.hpp"
 #include "UI/UIImage.hpp"
 #include "Util/Renderer.hpp"
 
@@ -35,13 +35,20 @@ public:
 
     void TransitionTo(std::unique_ptr<IGameState> nextState);
 
-    // ------- State 用的 public API (不再用 friend 開後門) -------
+    // ------- State 用的 public API -------
 
-    GameSession& Session() { return m_Session; }
-    Menu&        MainMenu()  { return m_MainMenu; }
-    Menu&        LevelMenu() { return m_LevelMenu; }
+    // 選單畫面各自建立 / 移除自己的 UI，需要直接拿到 root (取代舊的逐一封裝)。
+    Util::Renderer& Root() { return m_Root; }
+    GameSession&    Session() { return m_Session; }
 
-    // overlay 操作 (UI 圖片 add/remove 全部封裝在 App 內，State 不直接碰 Renderer)
+    // 對戰設定：目前選定的關卡 (1..kNumLevels)
+    int  SelectedLevel() const { return m_SelectedLevel; }
+    void SetSelectedLevel(int level) { m_SelectedLevel = level; }
+    static constexpr int NumLevels() { return kNumLevels; }
+
+    void StartMatch();  // 載入選定關卡並進入遊戲
+
+    // overlay 操作 (封面 / 選單背景 / 勝負畫面)
     void ShowCover();
     void HideCover();
     void ShowMenuBg();
@@ -50,9 +57,14 @@ public:
     void ShowDefenderWin();
     void HideWinScreens();
 
-    // Menu show/hide 也封裝起來，State 不需要拿 Renderer
-    void ShowMenu(Menu& menu, float x, float y);
-    void HideMenu(Menu& menu);
+    // ------- 暫停選單 -------
+    void PauseGame();
+    void ResumeGame();
+    void RestartLevel();
+    void ReturnToRoom();
+    void ShowPauseMenu();
+    void HidePauseMenu();
+    void UpdatePauseMenu();
 
     void RequestQuit() { m_CurrentState = State::END; }
 
@@ -71,8 +83,12 @@ private:
     std::shared_ptr<UIImage> m_AttackImage;
     std::shared_ptr<UIImage> m_MenuBg;
 
-    Menu m_MainMenu;
-    Menu m_LevelMenu;
+    PauseMenu m_PauseMenu;
+
+    int m_SelectedLevel = 1;
+
+    static constexpr int kNumLevels        = 3;
+    static constexpr int kCheatOptionIndex = 1;  // 暫停選單中「作弊模式」選項的索引
 };
 
 #endif

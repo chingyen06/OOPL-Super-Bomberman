@@ -13,11 +13,14 @@ set(SRC_FILES
     AIManager.cpp
     Bot/BotNavigator.cpp
     DangerMap.cpp
+    CheatManager.cpp
     Menu.cpp
+    PauseMenu.cpp
     GameWorldContext.cpp
     UI/UIManager.cpp
     UI/UIImage.cpp
     UI/UIText.cpp
+    UI/UIButtonList.cpp
     Spirit.cpp
     Turret/Projectile.cpp
     Turret/TurretManager.cpp
@@ -29,9 +32,11 @@ set(INCLUDE_FILES
     GameSession.hpp
     GameConstants.hpp
     GameTypes.hpp
+    MatchConfig.hpp
     GridCoord.hpp
     LevelManager.hpp
     MapTiles.hpp
+    TileSet.hpp
     Player.hpp
     PlayerBounce.hpp
     Bomb.hpp
@@ -42,7 +47,9 @@ set(INCLUDE_FILES
     AIManager.hpp
     Bot/BotNavigator.hpp
     DangerMap.hpp
+    CheatManager.hpp
     Menu.hpp
+    PauseMenu.hpp
     Controller/InputController.hpp
     Controller/HumanController.hpp
     Controller/BotController.hpp
@@ -54,6 +61,7 @@ set(INCLUDE_FILES
     UI/UIManager.hpp
     UI/UIImage.hpp
     UI/UIText.hpp
+    UI/UIButtonList.hpp
     Spirit.hpp
     Turret/Projectile.hpp
     Turret/TurretManager.hpp

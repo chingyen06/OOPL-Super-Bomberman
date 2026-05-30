@@ -1,9 +1,9 @@
-#include "MapTiles.hpp"
+﻿#include "MapTiles.hpp"
 #include "GridCoord.hpp"
 #include "Util/Image.hpp"
 
-Ground::Ground(int gridX, int gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/ground.png");
+Ground::Ground(int gridX, int gridY, const std::string& imagePath) {
+    auto image = std::make_shared<Util::Image>(imagePath);
     SetDrawable(image);
     SetZIndex(1);
 
@@ -11,8 +11,8 @@ Ground::Ground(int gridX, int gridY) {
     m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
 }
 
-Wall::Wall(int gridX, int gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/wall.png");
+Wall::Wall(int gridX, int gridY, const std::string& imagePath) {
+    auto image = std::make_shared<Util::Image>(imagePath);
     SetDrawable(image);
     SetZIndex(15);
 
@@ -20,8 +20,8 @@ Wall::Wall(int gridX, int gridY) {
     m_Transform.translation = GridCoord::ToPixel(gridX, gridY);
 }
 
-Brick::Brick(int gridX, int gridY) {
-    auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/brick.png");
+Brick::Brick(int gridX, int gridY, const std::string& imagePath) {
+    auto image = std::make_shared<Util::Image>(imagePath);
     SetDrawable(image);
     SetZIndex(5);
 

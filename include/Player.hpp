@@ -31,6 +31,9 @@ public:
     bool IsDead() const { return m_IsDead; }
     void Kill();
 
+    int  GetLives() const { return m_Lives; }
+    bool IsStunned() const { return m_StunTimer > 0; }
+
     // void Respawn(int gridX, int gridY
     void Respawn();
 
@@ -45,7 +48,11 @@ public:
 
     // 通知玩家「他放在 (gx, gy) 的炸彈正在那一格」— 玩家會把該格暫時加入忽略碰撞清單，
     // 走離後 (IgnoreBombClearance) 才把該格從清單移除。BombManager 在 PlaceBomb 後呼叫。
-    void OnPlacedBombAt(int gx, int gy) { m_IgnoreBombs.push_back({ gx, gy }); }
+    void OnPlacedBombAt(int gx, int gy) {
+        for (const auto& b : m_IgnoreBombs)  // 去重，避免每幀重複加入同一格
+            if (b.first == gx && b.second == gy) return;
+        m_IgnoreBombs.push_back({ gx, gy });
+    }
 
     bool HasKey() const { return m_HasKey; }
     void SetKey(bool key) { m_HasKey = key; }
@@ -64,9 +71,16 @@ public:
     int GetPlayerID() const { return m_PlayerID; };
 
     void ActivateSpeedBoost() { m_SpeedBoostTimer = Constants::Player::kSpeedBoostFrames; }
+    void CancelSpeedBoost()   { m_SpeedBoostTimer = -1; }  // 立即解除加速 (作弊關閉時用)
     void IncreaseMaxBombs();
     int GetFirepower() const { return m_Firepower; }
     void IncreaseFirepower();
+
+    // ------- 作弊模式 (CheatManager 透過這些 public API 操作，不碰私有狀態) -------
+    void SetGodMode(bool on) { m_GodMode = on; }
+    bool IsGodMode() const { return m_GodMode; }
+    void MaxOutBombs()     { m_MaxBombs = Constants::Player::kMaxBombsCap; }
+    void MaxOutFirepower() { m_Firepower = Constants::Player::kFirepowerCap; }
 
     InputController* GetController() const { return m_Controller.get(); }
 
@@ -88,7 +102,7 @@ private:
     void ChangeDirection(Direction dir);
 
     // 確認是否可以移動
-    bool IsColliding(float nextX, float nextY, const IWorldContext& worldContext);
+    bool IsColliding(float nextX, float nextY, const IWorldContext& worldContext, bool ignoreBombs = false);
 
 	bool m_IsDead = false;  // 角色是否死亡
 
@@ -99,6 +113,11 @@ private:
     std::vector<std::pair<int, int>> m_IgnoreBombs;
 
     int m_Invincible = -1;  // 無敵時間
+    bool m_GodMode = false;  // 作弊：永久無敵 (不隨時間衰減)
+
+    int m_MaxLives;          // 依陣營決定 (防守 3 / 進攻 1)，建構時設定
+    int m_Lives;             // 剩餘命數；>1 時被打中只倒地暈，歸 0 才真死亡
+    int m_StunTimer = -1;    // 倒地暈眩剩餘 frame (>0 = 暈眩中，不能移動)
 
     bool m_HasKey = false;  // 角色是否有鑰匙
     bool m_DroppedKeyPending = false;  // 死亡時持有鑰匙 → 等 GameSession 取走並放回世界

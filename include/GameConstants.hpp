@@ -33,6 +33,15 @@ namespace Constants {
         inline constexpr int   kMaxBombsCap        = 10;
         inline constexpr int   kFirepowerCap       = 5;
 
+        // Lives / knockdown (防守方多命；前幾條被打中只會「倒地暈」一下而非死亡)
+        inline constexpr int   kDefenderLives           = 3;
+        inline constexpr int   kAttackerLives           = 1;
+        inline constexpr int   kStunFrames              = 90;        // 倒地暈眩時間 (1.5s)
+        inline constexpr int   kStunInvincibleAfter     = 60;        // 起身後短暫無敵 (1s)
+        inline constexpr float kKnockdownRotation        = 1.5708f;   // 倒地時 sprite 旋轉 (約 90°)
+        inline constexpr int   kKnockdownFallFrames      = 12;        // 由站到倒下的過渡 frame (漸進旋轉)
+        inline constexpr float kKnockdownDrop            = 16.0f;     // 倒下時 sprite 往下沉的像素 (貼近地面)
+
         // Death / respawn
         inline constexpr int   kInvincibleFramesOnRespawn = 180;     // 3 seconds
         inline constexpr int   kDeathCountdownFrames      = 30;
@@ -71,6 +80,7 @@ namespace Constants {
     namespace Projectile {
         inline constexpr float kSpriteScale        = 0.6f;
         inline constexpr float kSpeed              = 6.0f;           // px/frame
+        inline constexpr float kHitRadius          = 18.0f;          // px; 飛行中擊中玩家的判定半徑
     }
 
     // ---------------- Bot (AI 控制的玩家) ----------------

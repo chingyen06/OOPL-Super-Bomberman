@@ -1,4 +1,4 @@
-#ifndef LEVELMANAGER_HPP
+﻿#ifndef LEVELMANAGER_HPP
 #define LEVELMANAGER_HPP
 
 #include <vector>
@@ -9,12 +9,13 @@
 #include "Util/GameObject.hpp"
 #include "Util/Renderer.hpp"
 #include "MapTiles.hpp"
+#include "TileSet.hpp"
 
 class InteractableManager;
 
 class LevelManager {
 public:
-    void LoadLevel(const std::string& filepath, InteractableManager& interactableManager, Util::Renderer& root);
+    void LoadLevel(const std::string& filepath, const TileSet& tileset, InteractableManager& interactableManager, Util::Renderer& root);
     void AttachToRoot(Util::Renderer& root);
     void DetachFromRoot(Util::Renderer& root);
     bool IsWalkable(int gridX, int gridY) const;  // Query whether (gridX, gridY) is walkable
@@ -32,6 +33,8 @@ public:
 private:
     std::vector<std::shared_ptr<Tile>> m_Tiles;
     std::vector<std::vector<std::shared_ptr<Tile>>> m_TileGrid;  // 2D tile grid (row-major: [y][x])
+
+    std::string m_GroundImage = RESOURCE_DIR"/Image/ground.png";  // 本關草地貼圖 (摧毀磚塊後長出的草地沿用主題)
 
     std::pair<int, int> m_DefenderSpawn = { 1, 1 };  // Defender spawn point
     std::vector<std::pair<int, int>> m_AttackerSpawns;  // Attacker spawn points

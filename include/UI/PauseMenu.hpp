@@ -29,6 +29,9 @@ public:
     // 動態改寫選項文字 (例如作弊模式「開 / 關」切換時刷新標籤)。
     void SetOptionLabel(int index, const std::string& text);
 
+    // 啟用/停用某選項：停用時變灰、導覽會略過、確認時不觸發 (例如玩家2非人類時禁用 P2 作弊)。
+    void SetOptionEnabled(int index, bool enabled);
+
     void Show(Util::Renderer& root);
     void Hide(Util::Renderer& root);
     void Update();  // 處理上下移動與確認
@@ -37,6 +40,7 @@ public:
 
 private:
     void UpdateCursor();  // 依目前選取項切換按鈕底圖
+    int  StepEnabled(int from, int dir) const;  // 朝 dir 找下一個可選 (略過停用)
 
     // ---- 版面常數 (畫面中心為原點、+y 朝上、1280x720) ----
     static constexpr float kPanelCenterX = 460.0f;  // 右側面板中心 x
@@ -64,6 +68,7 @@ private:
     std::vector<std::shared_ptr<UIImage>> m_Buttons;
     std::vector<std::shared_ptr<UIText>>  m_Labels;
     std::vector<std::function<void()>>    m_Callbacks;
+    std::vector<bool>                     m_Enabled;
 };
 
 #endif

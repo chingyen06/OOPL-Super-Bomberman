@@ -44,8 +44,8 @@ private:
 
     static constexpr float kButtonZ = 20.0f;
     static constexpr float kLabelZ  = 30.0f;
-    // 文字貼圖右側有留白 → 往右補正才水平置中；垂直只需微調 (量測值)。
-    static constexpr float kLabelXNudge = 7.0f;
+    // 文字 (Util::Text) 以中心對齊；視覺上略往右一點較順眼 (與暫停選單 / 確認框一致)。
+    static constexpr float kLabelXNudge = 5.0f;
     static constexpr float kLabelYNudge = 1.0f;
 
     bool m_Visible = false;

@@ -1,6 +1,9 @@
 ﻿#ifndef BOT_CONTROLLER_HPP
 #define BOT_CONTROLLER_HPP
 
+#include <memory>
+
+#include "Bot/BotProfile.hpp"
 #include "Controller/InputController.hpp"
 #include "Controller/IProgrammableController.hpp"
 
@@ -8,10 +11,14 @@
 //   - InputController         : 被 Player 當作輸入來源讀按鍵狀態
 //   - IProgrammableController : 被 AIManager 寫入決策結果與冷卻
 // AIManager 透過 IProgrammableController 操作 bot，不再 dynamic_cast 到具體類別。
+// 每隻 bot 注入一個性格 (IBotProfile)，讓不同 bot 有不同想法。
 class BotController : public InputController, public IProgrammableController {
 public:
-    // phaseOffset: 出生時的初始 cooldown，不同 bot 給不同值可讓首次決策錯開
-    explicit BotController(int phaseOffset = 0) : m_DecisionCooldown(phaseOffset) {}
+    // profile: 這隻 bot 的性格 (null 則退回預設)。phaseOffset: 出生時的初始 cooldown，
+    // 不同 bot 給不同值可讓首次決策錯開。
+    explicit BotController(std::shared_ptr<const IBotProfile> profile = nullptr, int phaseOffset = 0)
+        : m_Profile(profile ? std::move(profile) : BotProfileFactory::Default()),
+          m_DecisionCooldown(phaseOffset) {}
 
     // -------- InputController (讀) --------
     bool IsUpPressed() const override { return m_Up; }
@@ -33,7 +40,18 @@ public:
     void TickCooldown() override { if (m_DecisionCooldown > 0) m_DecisionCooldown--; }
     void ResetCooldown(int frames) override { m_DecisionCooldown = frames; }
 
+    const IBotProfile& Profile() const override { return *m_Profile; }
+
+    void SetGoal(int gridX, int gridY) override { m_GoalX = gridX; m_GoalY = gridY; }
+    int  GoalX() const override { return m_GoalX; }
+    int  GoalY() const override { return m_GoalY; }
+
 private:
+    std::shared_ptr<const IBotProfile> m_Profile;  // 這隻 bot 的性格 (建構時注入)
+
+    int m_GoalX = -1;  // 鎖定中的物件目標格 (anti-twitch；-1 = 無)
+    int m_GoalY = -1;
+
     bool m_Up = false;
     bool m_Down = false;
     bool m_Left = false;

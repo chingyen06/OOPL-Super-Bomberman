@@ -33,7 +33,8 @@ void App::SetCursorShown(bool shown) {
 void App::Start() {
     LOG_TRACE("Start");
 
-    m_Save.Load();  // 讀取金幣存檔 (關掉重開仍保留)
+    m_Save.Load();  // 讀取金幣 / 音量存檔 (關掉重開仍保留)
+    m_Music.SetVolume(m_Save.BgmVolume() * 128 / 100);  // 套用存檔的背景音樂音量
     m_Session.SetProfile(&m_Save);      // debug 主控台讀寫金幣用
     m_Session.SetKeyBindings(&m_Keys);  // 套用玩家按鍵設定
 
@@ -75,8 +76,8 @@ void App::Update() {
     // 依目前狀態決定滑鼠顯示 (change-detection，避免每幀閃爍)
     if (m_CurrentGameState) SetCursorShown(m_CurrentGameState->WantsCursor(*this));
 
-    // ESC 或視窗關閉 → 結束程式
-    if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) || Util::Input::IfExit()) {
+    // 只有視窗關閉鈕會直接結束；ESC 改由主選單的結束確認對話框處理 (其他畫面 ESC 無效)。
+    if (Util::Input::IfExit()) {
         m_CurrentState = State::END;
     }
 
@@ -87,7 +88,17 @@ void App::End() { LOG_TRACE("End"); }
 
 void App::ValidTask() { LOG_TRACE("ValidTask"); }
 
+const char* App::LevelName(int level) {
+    switch (level) {
+        case 1:  return "炸彈節";
+        case 2:  return "植物基地";
+        case 3:  return "磐石論壇";
+        default: return "未知關卡";
+    }
+}
+
 void App::StartMatch() {
+    m_Music.Play(RESOURCE_DIR"/Sound/battle.mp3");  // 對戰配樂
     TransitionTo(std::make_unique<GameplayState>());
     m_Session.LoadLevel(m_SelectedLevel);
 }
@@ -96,6 +107,7 @@ void App::EndMatch(bool defenderWin) {
     m_LastResult = m_Session.BuildResult(defenderWin);  // 須在 Clear() 之前
     m_Save.AddCoins(m_LastResult.coinsEarned);          // 發放並存檔
     if (defenderWin) ShowDefenderWin(); else ShowAttackerWin();
+    PlayVictorySfx();                                   // 勝利音效 (victory.mp3)
     TransitionTo(std::make_unique<ResultsState>());
 }
 
@@ -115,6 +127,7 @@ void App::ResumeGame() { TransitionTo(std::make_unique<GameplayState>()); }
 
 void App::RestartLevel() {
     LOG_INFO("Restarting level");
+    m_Music.Play(RESOURCE_DIR"/Sound/battle.mp3");  // 重開仍是對戰配樂 (同曲不重播)
     m_Session.LoadLevel(m_Session.GetCurrentLevel());
     TransitionTo(std::make_unique<GameplayState>());
 }
@@ -128,8 +141,14 @@ void App::ReturnToRoom() {
 void App::ShowPauseMenu() {
     m_PauseMenu.SetOptionLabel(kCheatP1Index,
         m_Session.IsCheatEnabled(0) ? "作弊P1：開" : "作弊P1：關");
+
+    // 玩家2 非人類時：禁用 P2 作弊選項 (變灰、無法選取)
+    const bool hasP2 = m_Session.HasHumanPlayer2();
+    m_PauseMenu.SetOptionEnabled(kCheatP2Index, hasP2);
     m_PauseMenu.SetOptionLabel(kCheatP2Index,
-        m_Session.IsCheatEnabled(1) ? "作弊P2：開" : "作弊P2：關");
+        !hasP2 ? "作弊P2：無玩家"
+               : (m_Session.IsCheatEnabled(1) ? "作弊P2：開" : "作弊P2：關"));
+
     m_PauseMenu.Show(m_Root);
 }
 void App::HidePauseMenu()   { m_PauseMenu.Hide(m_Root); }

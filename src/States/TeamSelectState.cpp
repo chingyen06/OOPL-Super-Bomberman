@@ -81,7 +81,7 @@ void TeamSelectState::Refresh(App& app) {
     for (int slot = 0; slot < kAttackers; slot++) {
         const int r = slot + 1;
         const MatchConfig::SlotMode m = cfg.AttackerSlot(slot);
-        const std::string name = (slot == 0) ? "玩家 2" : ("電腦 " + std::to_string(slot));
+        const std::string name = (slot == 0) ? "玩家 2" : ("電腦" + std::to_string(slot));
         const char* val = (m == MatchConfig::SlotMode::Off)   ? "不加入"
                         : (m == MatchConfig::SlotMode::Human)  ? "人類"
                         : (slot == 0)                          ? "電腦" : "攻擊方";

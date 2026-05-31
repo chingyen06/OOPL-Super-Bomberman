@@ -30,8 +30,8 @@ void LevelManager::LoadLevel(const std::string& filepath, const TileSet& tileset
     // InteractableManager::HandleSymbol 的資料化風格一致。未登記的字元一律視為草地，
     // 新增地形磚種只需在此加一行 (OCP)。
     const std::unordered_map<char, std::function<std::shared_ptr<Tile>(int, int)>> tileFactories = {
-        {'1', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Wall>(x, y, tileset.Wall()); }},   // 無敵牆
-        {'2', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Brick>(x, y, tileset.Brick()); }}, // 可破壞磚塊
+        {'1', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Wall>(x, y, tileset.Wall()); }},   // 藍城牆 (無敵)
+        {'2', [&](int x, int y) -> std::shared_ptr<Tile> { return std::make_shared<Brick>(x, y, tileset.Brick()); }}, // 棕木箱 (可破壞)
     };
 
     m_TileGrid.assign(GridCoord::kMapHeight, std::vector<std::shared_ptr<Tile>>(GridCoord::kMapWidth));
@@ -140,9 +140,46 @@ void LevelManager::DestroyBrick(int gridX, int gridY, Util::Renderer& root, Inte
 	interactableManager.OnBrickDestroyed(gridX, gridY, root);  // 讓互動物件管理器知道磚塊被摧毀了
 }
 
+void LevelManager::AddTemporaryWall(int gridX, int gridY, int frames, const std::string& sprite, Util::Renderer& root) {
+    if (!IsWalkable(gridX, gridY)) return;  // 只在可走的格子放屏障
+    for (const auto& tw : m_TempWalls)      // 同格已有屏障 → 不重複
+        if (tw.gridX == gridX && tw.gridY == gridY) return;
+
+    auto saved = m_TileGrid[gridY][gridX];
+    root.RemoveChild(saved);
+    for (auto it = m_Tiles.begin(); it != m_Tiles.end(); ++it) {
+        if (*it == saved) { m_Tiles.erase(it); break; }
+    }
+
+    auto wall = std::make_shared<Wall>(gridX, gridY, sprite);  // 不可穿越 (IsPassable=false)
+    m_TileGrid[gridY][gridX] = wall;
+    m_Tiles.push_back(wall);
+    root.AddChild(wall);
+
+    TempWall tw;
+    tw.gridX = gridX; tw.gridY = gridY; tw.frames = frames; tw.wall = wall; tw.saved = saved;
+    m_TempWalls.push_back(tw);
+}
+
+void LevelManager::TickTemporary(Util::Renderer& root) {
+    for (auto it = m_TempWalls.begin(); it != m_TempWalls.end();) {
+        if (--it->frames > 0) { ++it; continue; }
+        // 到期：移除暫時牆、還原原 tile
+        root.RemoveChild(it->wall);
+        for (auto t = m_Tiles.begin(); t != m_Tiles.end(); ++t) {
+            if (*t == it->wall) { m_Tiles.erase(t); break; }
+        }
+        m_TileGrid[it->gridY][it->gridX] = it->saved;
+        m_Tiles.push_back(it->saved);
+        root.AddChild(it->saved);
+        it = m_TempWalls.erase(it);
+    }
+}
+
 void LevelManager::Clear(Util::Renderer& root) {
     DetachFromRoot(root);
 
+    m_TempWalls.clear();
     m_Tiles.clear();
     m_AttackerSpawns.clear();
     m_SpiritSpawns.clear();

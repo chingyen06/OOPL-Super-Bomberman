@@ -9,11 +9,13 @@
 #include "States/MenuCommon.hpp"
 #include "States/RulesState.hpp"
 #include "States/TeamSelectState.hpp"
+#include "States/WeaponSelectState.hpp"
 #include "Util/Color.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 
 void BattleSetupState::OnEnter(App& app) {
+    app.PlayMusic(RESOURCE_DIR"/Sound/castle_intro.mp3");  // 房間 / 對戰前準備配樂
     app.ShowMenuBg();
     auto& root = app.Root();
 
@@ -25,8 +27,9 @@ void BattleSetupState::OnEnter(App& app) {
     m_Nav.AddItem("對戰開始");
     m_Nav.AddItem("更換規則");
     m_Nav.AddItem("選擇隊伍");
+    m_Nav.AddItem("選擇武器");
     m_Nav.AddItem("選擇關卡");
-    m_Nav.Show(root, -470.0f, 170.0f, 0.0f, -80.0f);
+    m_Nav.Show(root, -470.0f, 180.0f, 0.0f, -72.0f);
 
     // 成員格 8 格：card0 = 玩家1 (守)；card1..7 = 進攻席位 slot 0..6
     const MatchConfig& cfg = app.Session().Config();
@@ -63,7 +66,7 @@ void BattleSetupState::OnEnter(App& app) {
         m_SlotLabels.push_back(label);
     }
 
-    m_LevelInfo = std::make_shared<UIText>("目前關卡：" + std::to_string(app.SelectedLevel()),
+    m_LevelInfo = std::make_shared<UIText>(std::string("目前關卡：") + App::LevelName(app.SelectedLevel()),
                                            180.0f, -130.0f, 30.0f, DarkText());
     root.AddChild(m_LevelInfo);
 
@@ -86,10 +89,11 @@ void BattleSetupState::OnExit(App& app) {
 void BattleSetupState::OnUpdate(App& app) {
     const int confirmed = m_Nav.Update();
     switch (confirmed) {
-        case 0: app.StartMatch(); return;                                        // 對戰開始
-        case 1: app.TransitionTo(std::make_unique<RulesState>());      return;   // 更換規則
-        case 2: app.TransitionTo(std::make_unique<TeamSelectState>()); return;   // 選擇隊伍
-        case 3: app.TransitionTo(std::make_unique<LevelSelectState>());return;   // 選擇關卡
+        case 0: app.StartMatch(); return;                                          // 對戰開始
+        case 1: app.TransitionTo(std::make_unique<RulesState>());        return;   // 更換規則
+        case 2: app.TransitionTo(std::make_unique<TeamSelectState>());   return;   // 選擇隊伍
+        case 3: app.TransitionTo(std::make_unique<WeaponSelectState>()); return;   // 選擇武器
+        case 4: app.TransitionTo(std::make_unique<LevelSelectState>());  return;   // 選擇關卡
         default: break;
     }
     if (Util::Input::IsKeyUp(Util::Keycode::X)) {  // X = 返回

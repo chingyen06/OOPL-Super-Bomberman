@@ -3,6 +3,9 @@ set(SRC_FILES
     Core/App.cpp
     Core/GameSession.cpp
     Core/GameWorldContext.cpp
+    # ---- Audio ----
+    Audio/MusicPlayer.cpp
+    Audio/SfxPlayer.cpp
     # ---- States ----
     States/MenuCommon.cpp
     States/TitleScreenState.cpp
@@ -11,6 +14,7 @@ set(SRC_FILES
     States/BattleSetupState.cpp
     States/RulesState.cpp
     States/TeamSelectState.cpp
+    States/WeaponSelectState.cpp
     States/LevelSelectState.cpp
     States/GameplayState.cpp
     States/GamePausedState.cpp
@@ -42,11 +46,17 @@ set(SRC_FILES
     UI/UIButtonList.cpp
     UI/Menu.cpp
     UI/PauseMenu.cpp
+    UI/Slider.cpp
     UI/DebugOverlay.cpp
+    UI/ConfirmDialog.cpp
     # ---- Turret ----
     Turret/Projectile.cpp
     Turret/TurretManager.cpp
     Turret/Turret.cpp
+    # ---- Weapons (防守方武器) ----
+    Weapons/SwordWeapon.cpp
+    Weapons/LaserWeapon.cpp
+    Weapons/BarrierWeapon.cpp
 )
 
 set(INCLUDE_FILES
@@ -64,6 +74,7 @@ set(INCLUDE_FILES
     States/BattleSetupState.hpp
     States/RulesState.hpp
     States/TeamSelectState.hpp
+    States/WeaponSelectState.hpp
     States/LevelSelectState.hpp
     States/GameplayState.hpp
     States/GamePausedState.hpp
@@ -91,8 +102,12 @@ set(INCLUDE_FILES
     # ---- Map ----
     Map/MapTiles.hpp
     Map/TileSet.hpp
+    # ---- Audio ----
+    Audio/MusicPlayer.hpp
+    Audio/SfxPlayer.hpp
     # ---- Bot ----
     Bot/BotNavigator.hpp
+    Bot/BotProfile.hpp
     Bot/DangerMap.hpp
     # ---- Controller ----
     Controller/InputController.hpp
@@ -109,11 +124,20 @@ set(INCLUDE_FILES
     UI/UIButtonList.hpp
     UI/Menu.hpp
     UI/PauseMenu.hpp
+    UI/Slider.hpp
     UI/DebugOverlay.hpp
+    UI/ConfirmDialog.hpp
     # ---- Turret ----
     Turret/Projectile.hpp
     Turret/TurretManager.hpp
     Turret/Turret.hpp
+    # ---- Weapons (防守方武器) ----
+    Weapons/IWeaponEffects.hpp
+    Weapons/IDefenderWeapon.hpp
+    Weapons/SwordWeapon.hpp
+    Weapons/LaserWeapon.hpp
+    Weapons/BarrierWeapon.hpp
+    Weapons/WeaponFactory.hpp
 )
 
 set(TEST_FILES

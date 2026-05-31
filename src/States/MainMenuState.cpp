@@ -4,11 +4,13 @@
 #include "States/BattleSetupState.hpp"
 #include "States/MenuCommon.hpp"
 #include "States/SettingsState.hpp"
+#include "States/TitleScreenState.hpp"
 #include "Util/Color.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 
 void MainMenuState::OnEnter(App& app) {
+    app.PlayMusic(RESOURCE_DIR"/Sound/main_menu.mp3");
     app.ShowMenuBg();
     auto& root = app.Root();
 
@@ -31,7 +33,10 @@ void MainMenuState::OnEnter(App& app) {
     UpdateGearVisual();
 
     m_Coins = AddCoinHud(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"ESC", "離開"}});
+    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}, {"ESC", "結束遊戲"}});
+
+    m_QuitDialog.Init();
+    m_Confirming = false;
 }
 
 void MainMenuState::OnExit(App& app) {
@@ -42,6 +47,7 @@ void MainMenuState::OnExit(App& app) {
     root.RemoveChild(m_Gear);
     m_Hint.Remove(app);
     m_Coins.Remove(app);
+    if (m_Confirming) { m_QuitDialog.Hide(root); m_Confirming = false; }
     app.HideMenuBg();
 }
 
@@ -53,6 +59,27 @@ void MainMenuState::UpdateGearVisual() {
 
 void MainMenuState::OnUpdate(App& app) {
     using K = Util::Keycode;
+    auto& root = app.Root();
+
+    // 結束確認對話框 (modal)
+    if (m_Confirming) {
+        const ConfirmDialog::Result r = m_QuitDialog.Update();
+        if (r == ConfirmDialog::Result::Yes) { app.RequestQuit(); return; }
+        if (r == ConfirmDialog::Result::No)  { m_QuitDialog.Hide(root); m_Confirming = false; }
+        return;
+    }
+    // ESC → 結束遊戲確認 (僅主選單有效)
+    if (Util::Input::IsKeyUp(K::ESCAPE)) {
+        m_QuitDialog.Show(root, "確定要結束遊戲嗎?");
+        m_Confirming = true;
+        return;
+    }
+    // X → 退回封面 (仿原版回到第一頁)
+    if (Util::Input::IsKeyUp(K::X)) {
+        app.TransitionTo(std::make_unique<TitleScreenState>());
+        return;
+    }
+
     if (m_GearFocused) {
         // 焦點在齒輪：← 回到選單；空白鍵進入設定
         if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::A)) {
@@ -69,5 +96,5 @@ void MainMenuState::OnUpdate(App& app) {
     }
     const int confirmed = m_Menu.Update();
     if (confirmed == 0) { app.TransitionTo(std::make_unique<BattleSetupState>()); return; }  // 開始對戰
-    if (confirmed == 1) { app.RequestQuit(); return; }  // 離開遊戲 (ESC 亦可離開)
+    if (confirmed == 1) { m_QuitDialog.Show(root, "確定要結束遊戲嗎?"); m_Confirming = true; return; }  // 離開遊戲 → 確認
 }

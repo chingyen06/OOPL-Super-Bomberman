@@ -1,5 +1,7 @@
 #include "States/SettingsState.hpp"
 
+#include <cmath>
+
 #include "Core/App.hpp"
 #include "States/MainMenuState.hpp"
 #include "States/MenuCommon.hpp"
@@ -17,13 +19,20 @@ void SettingsState::OnEnter(App& app) {
     m_Title = std::make_shared<UIText>("操作設定", -465.0f, 330.0f, 40.0f, DarkText());
     root.AddChild(m_Title);
 
+    // 背景音樂音量：分段式滑桿放在操作表底下 (可方向鍵 / 滑鼠拖曳)，並持久化。
+    const float bgmY = 178.0f - kActions * 46.0f - 46.0f;  // 與 Build 的列排版一致
+    m_BgmSlider.Show(root, 110.0f, bgmY, 300.0f, 20.0f);
+    m_BgmSlider.SetValue(app.BgmVolume());
+    m_BgmSlider.SetOnChange([&app](int v) { app.SetBgmVolume(v); });
+
     Build(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "重設"}, {"Del", "清除"}, {"X", "返回"}});
+    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"滑鼠", "拖曳"}, {"空格鍵", "重設"}, {"X", "返回"}});
 }
 
 void SettingsState::OnExit(App& app) {
     auto& root = app.Root();
     ClearTable(root);
+    m_BgmSlider.Hide(root);
     root.RemoveChild(m_Gear);
     root.RemoveChild(m_Title);
     m_Hint.Remove(app);
@@ -52,15 +61,20 @@ void SettingsState::Build(App& app) {
     AddText(root, "玩家 1 (防守)", kColP1,    kHeaderY, DarkText());
     AddText(root, "玩家 2 (進攻)", kColP2,    kHeaderY, DarkText());
 
-    const char* names[kActions] = { "向上移動", "向下移動", "向左移動", "向右移動", "放置炸彈" };
+    const char* names[kActions] = { "向上移動", "向下移動", "向左移動", "向右移動", "放置炸彈", "武器發動" };
     for (int i = 0; i < kActions; ++i) {
         const float y = kRow0Y - i * kStep;
         AddStrip(root, (i % 2 == 0) ? RESOURCE_DIR"/Image/set_row_a.png"
                                     : RESOURCE_DIR"/Image/set_row_b.png", y, kTableW, 18.0f);
         AddText(root, names[i], kColLabel, y, DarkText());
         for (int col = 0; col < 2; ++col) {
-            const bool sel = (i == m_Row && col == m_Col);
-            const std::string label = (sel && m_Awaiting) ? "按鍵…" : KeyName(app.Keys().Key(col, i));
+            // 玩家2 沒有武器 → (武器發動, P2) 不可編輯，顯示「—」
+            const bool editable = !(i == kActions - 1 && col == 1);
+            const bool sel = (i == m_Row && col == m_Col) && editable;
+            std::string label;
+            if (!editable)            label = "—";
+            else if (sel && m_Awaiting) label = "按鍵…";
+            else                       label = KeyName(app.Keys().Key(col, i));
             AddKeyBox(root, label, (col == 0 ? kColP1 : kColP2), y, sel);
         }
     }
@@ -70,6 +84,14 @@ void SettingsState::Build(App& app) {
     AddText(root, "暫停", kColLabel, infoY, DarkText());
     AddKeyBox(root, "Enter", kColP1, infoY, false);
     AddKeyBox(root, "Enter", kColP2, infoY, false);
+
+    // 背景音樂音量列 (分段式滑桿；滑桿本身在 OnEnter 已掛上、跨 Rebuild 保留)
+    const float bgmY = infoY - kStep;
+    const bool bgmSel = (m_Row == kBgmRow);
+    AddStrip(root, bgmSel ? RESOURCE_DIR"/Image/btn_sel.png" : RESOURCE_DIR"/Image/set_row_a.png",
+             bgmY, kTableW, 18.0f);
+    AddText(root, "背景音樂", kColLabel, bgmY, bgmSel ? WhiteText() : DarkText());
+    m_BgmSlider.SetFocused(bgmSel);
 }
 
 void SettingsState::AddStrip(Util::Renderer& root, const std::string& img, float y, float w, float z) {
@@ -133,20 +155,62 @@ void SettingsState::OnUpdate(App& app) {
         return;
     }
 
-    bool dirty = false;
-    if      (Util::Input::IsKeyUp(K::UP))    { m_Row = (m_Row + kActions - 1) % kActions; dirty = true; }
-    else if (Util::Input::IsKeyUp(K::DOWN))  { m_Row = (m_Row + 1) % kActions;            dirty = true; }
-    else if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::RIGHT)) { m_Col ^= 1; dirty = true; }
+    // (武器發動, 玩家2) 不可編輯 → 導覽略過
+    auto editable = [](int row, int col) { return !(row == kActions - 1 && col == 1); };
 
-    const bool confirm = Util::Input::IsKeyUp(K::SPACE) || Util::Input::IsKeyUp(K::RETURN);
-    if (confirm) {
-        if (m_IgnoreConfirm) m_IgnoreConfirm = false;  // 吞掉剛綁定鍵的放開
-        else { m_Awaiting = true; dirty = true; }
-    }
-    if (Util::Input::IsKeyUp(K::BACKSPACE) || Util::Input::IsKeyUp(K::DELETE)) {
-        app.Keys().Key(m_Col, m_Row) = KeyBindings::NoKey();  // 清除→留空
+    // 導覽支援方向鍵與 WASD；上下會在「操作列 + 聲音設定入口」之間循環。
+    bool dirty = false;
+    if (Util::Input::IsKeyUp(K::UP) || Util::Input::IsKeyUp(K::W)) {
+        m_Row = (m_Row + kRows - 1) % kRows;
+        if (m_Row < kActions && !editable(m_Row, m_Col)) m_Col = 0;  // 落在不可編輯格 → 跳回 P1
         dirty = true;
     }
+    else if (Util::Input::IsKeyUp(K::DOWN) || Util::Input::IsKeyUp(K::S)) {
+        m_Row = (m_Row + 1) % kRows;
+        if (m_Row < kActions && !editable(m_Row, m_Col)) m_Col = 0;
+        dirty = true;
+    }
+    else if (m_Row == kBgmRow) {
+        // ---- 背景音樂列：方向鍵左右 ±5 調整音量 (滑桿自行更新、不需 Rebuild) ----
+        if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::A)) m_BgmSlider.Adjust(-5);
+        else if (Util::Input::IsKeyUp(K::RIGHT) || Util::Input::IsKeyUp(K::D)) m_BgmSlider.Adjust(+5);
+    }
+    else {
+        // ---- 操作列：左右換玩家欄 / 空白重設該鍵 / Del 清除 ----
+        if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::RIGHT) ||
+            Util::Input::IsKeyUp(K::A)    || Util::Input::IsKeyUp(K::D)) {
+            if (editable(m_Row, m_Col ^ 1)) { m_Col ^= 1; dirty = true; }  // 目標格不可編輯則不切換
+        }
+        const bool confirm = Util::Input::IsKeyUp(K::SPACE) || Util::Input::IsKeyUp(K::RETURN);
+        if (confirm) {
+            if (m_IgnoreConfirm) m_IgnoreConfirm = false;  // 吞掉剛綁定鍵的放開
+            else if (editable(m_Row, m_Col)) { m_Awaiting = true; dirty = true; }
+        }
+        if ((Util::Input::IsKeyUp(K::BACKSPACE) || Util::Input::IsKeyUp(K::DELETE)) && editable(m_Row, m_Col)) {
+            app.Keys().Key(m_Col, m_Row) = KeyBindings::NoKey();  // 清除→留空
+            dirty = true;
+        }
+    }
+
+    // ---- 滑鼠：拖曳背景音樂滑桿；點某格選取並開始改鍵 ----
+    const auto cur = Util::Input::GetCursorPosition();
+    const float wx = cur.x - 640.0f, wy = 360.0f - cur.y;  // 視窗左上原點 → 畫面中心原點
+    if (m_BgmSlider.HandleMouse(wx, wy, Util::Input::IsKeyPressed(K::MOUSE_LB))) {
+        if (m_Row != kBgmRow) { m_Row = kBgmRow; dirty = true; }  // 拖曳即聚焦該列
+    }
+    if (Util::Input::IsKeyDown(K::MOUSE_LB)) {
+        constexpr float kRow0Y = 178.0f, kStep = 46.0f, kColP1 = 110.0f, kColP2 = 400.0f;
+        for (int i = 0; i < kActions; ++i) {
+            if (std::abs(wy - (kRow0Y - i * kStep)) < 23.0f) {
+                int col = -1;
+                if (std::abs(wx - kColP1) < 130.0f) col = 0;
+                else if (std::abs(wx - kColP2) < 130.0f) col = 1;
+                if (col >= 0 && editable(i, col)) { m_Row = i; m_Col = col; m_Awaiting = true; dirty = true; }
+                break;
+            }
+        }
+    }
+
     if (Util::Input::IsKeyUp(K::X)) { app.TransitionTo(std::make_unique<MainMenuState>()); return; }
 
     if (dirty) Rebuild(app);

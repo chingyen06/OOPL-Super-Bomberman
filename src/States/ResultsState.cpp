@@ -10,6 +10,7 @@
 #include "Util/Logger.hpp"
 
 void ResultsState::OnEnter(App& app) {
+    app.PlayMusic(RESOURCE_DIR"/Sound/main_menu.mp3");  // 結算回到選單氛圍
     auto& root = app.Root();
     const MatchResult& r = app.LastResult();
     const int total = app.Profile().Coins();

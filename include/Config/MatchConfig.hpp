@@ -8,6 +8,10 @@ public:
     // 進攻方席位模式 (enum class，避免裸 enum 汙染命名空間)。Human 僅用於玩家 2 席位 (slot 0)。
     enum class SlotMode { Off, Computer, Human };
 
+    // 防守方武器 (城堡模式：開局前三選一)。
+    enum class Weapon { Sword, Laser, Barrier };
+    static constexpr int kWeaponCount = 3;
+
     static constexpr int kMaxAttackers = 8;  // 進攻方上限 (= 席位數；slot 0 = 玩家 2，1..7 = 電腦)
 
     MatchConfig() {
@@ -23,6 +27,9 @@ public:
 
     bool TurretsEnabled() const { return m_Turrets; }
     void SetTurretsEnabled(bool b) { m_Turrets = b; }
+
+    Weapon DefenderWeapon() const { return m_Weapon; }
+    void   SetDefenderWeapon(Weapon w) { m_Weapon = w; }
 
     // -------- 隊伍 (玩家 1 永遠是唯一守方；此處只設定進攻方席位) --------
     SlotMode AttackerSlot(int i) const {
@@ -41,9 +48,10 @@ public:
     }
 
 private:
-    int  m_RoundSeconds = 180;   // 預設 3 分鐘 (= 原本的 kRoundDurationSeconds)
-    bool m_Spirits      = true;
-    bool m_Turrets      = true;
+    int    m_RoundSeconds = 180;   // 預設 3 分鐘 (= 原本的 kRoundDurationSeconds)
+    bool   m_Spirits      = true;
+    bool   m_Turrets      = true;
+    Weapon m_Weapon       = Weapon::Sword;  // 防守方武器 (預設劍)
 
     SlotMode m_Slots[kMaxAttackers];  // 進攻方席位 (建構子初始化為全 AI)
 };

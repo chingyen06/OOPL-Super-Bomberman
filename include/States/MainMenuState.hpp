@@ -5,6 +5,7 @@
 
 #include "States/IGameState.hpp"
 #include "States/MenuCommon.hpp"
+#include "UI/ConfirmDialog.hpp"
 #include "UI/UIButtonList.hpp"
 #include "UI/UIImage.hpp"
 #include "UI/UIText.hpp"
@@ -26,6 +27,9 @@ private:
     bool m_GearFocused = false;  // true = 焦點在右下角齒輪上
     KeyHint m_Hint;
     CoinHud m_Coins;
+
+    ConfirmDialog m_QuitDialog;     // ESC / 離開遊戲 → 結束確認
+    bool m_Confirming = false;
 };
 
 #endif

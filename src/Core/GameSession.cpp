@@ -15,6 +15,7 @@
 #include "GridCoord.hpp"
 #include "KeyBindings.hpp"
 #include "SaveData.hpp"
+#include "Weapons/WeaponFactory.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
@@ -47,7 +48,7 @@ void GameSession::LoadLevel(int levelIndex) {
 
     // 玩家 1 永遠是守方 (人類)；作弊 / HUD 命數都以玩家 1 為對象。
     const Control p1Ctrl = m_Keys ? m_Keys->p[0]
-        : Control{ Util::Keycode::W, Util::Keycode::S, Util::Keycode::A, Util::Keycode::D, Util::Keycode::SPACE };
+        : Control{ Util::Keycode::W, Util::Keycode::S, Util::Keycode::A, Util::Keycode::D, Util::Keycode::SPACE, Util::Keycode::E };
     auto ctrl1P = std::make_unique<HumanController>(p1Ctrl);
 
     auto defender = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
@@ -66,11 +67,13 @@ void GameSession::LoadLevel(int levelIndex) {
         std::unique_ptr<InputController> ctrl;
         if (mode == MatchConfig::SlotMode::Human) {
             const Control p2Ctrl = m_Keys ? m_Keys->p[1]
-                : Control{ Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT };
+                : Control{ Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT, static_cast<Util::Keycode>(0) };
             ctrl = std::make_unique<HumanController>(p2Ctrl);
         }
         else {
-            ctrl = std::make_unique<BotController>(nextPlayerId % Constants::Bot::kReactionFrames);
+            // 依席位給不同性格，讓同場每隻 AI 想法各異 (獵人 / 拾荒 / 狂戰 / 謹慎輪替)。
+            ctrl = std::make_unique<BotController>(BotProfileFactory::ForSlot(slot),
+                                                   nextPlayerId % Constants::Bot::kReactionFrames);
         }
         const auto& spawn = atkSpawns[spawnIdx++];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER, std::move(ctrl), nextPlayerId++);
@@ -83,7 +86,7 @@ void GameSession::LoadLevel(int levelIndex) {
     if (spawnIdx == 0 && !atkSpawns.empty()) {
         const auto& spawn = atkSpawns[0];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
-                                                 std::make_unique<BotController>(0), nextPlayerId++);
+                                                 std::make_unique<BotController>(BotProfileFactory::Default(), 0), nextPlayerId++);
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }
@@ -102,7 +105,71 @@ void GameSession::LoadLevel(int levelIndex) {
         }
     }
 
+    // 防守方武器 + 充能槽 (依本場選擇建立；充能條浮在防守方頭上)
+    m_Weapon = WeaponFactory::Create(m_Config.DefenderWeapon());
+    m_Charge = 0.0f;
+    m_DefenderKills = 0;
+    m_ChargeBg   = std::make_shared<UIImage>(RESOURCE_DIR"/Image/charge_bg.png",   -1000.0f, -1000.0f, 86.0f);
+    m_ChargeFill = std::make_shared<UIImage>(RESOURCE_DIR"/Image/charge_fill.png", -1000.0f, -1000.0f, 87.0f);
+    m_Root.AddChild(m_ChargeBg);
+    m_Root.AddChild(m_ChargeFill);
+
     m_GameTime = m_Config.RoundSeconds() * Constants::Game::kFPS;
+}
+
+void GameSession::AddEffect(float px, float py, const std::string& sprite, int frames) {
+    auto e = std::make_shared<UIImage>(sprite, px, py, 85.0f);
+    m_Root.AddChild(e);
+    m_WeaponFx.emplace_back(e, frames);
+}
+
+void GameSession::UpdateDefenderWeapon() {
+    constexpr float kPerFrame  = 1.0f / (12.0f * Constants::Game::kFPS);  // 約 12 秒充滿
+    constexpr float kKillBonus = 0.34f;                                   // 每擊倒 1 名大幅回充
+
+    // 作弊 P1 (防守方)：充能永遠維持滿格，武器隨時可發動。
+    const bool cheatFullCharge = m_CheatManager.IsEnabled(0);
+    if (cheatFullCharge) m_Charge = 1.0f;
+
+    // 時間慢回 (作弊時已滿，不需再回)
+    if (!cheatFullCharge && m_HumanPlayer && !m_HumanPlayer->IsDead() && m_Charge < 1.0f) {
+        m_Charge += kPerFrame;
+        if (m_Charge > 1.0f) m_Charge = 1.0f;
+    }
+    // 滿了且按發動鍵 → 發動，依擊倒回充
+    if (m_Weapon && m_HumanPlayer && !m_HumanPlayer->IsDead() && m_Charge >= 1.0f) {
+        InputController* ctrl = m_HumanPlayer->GetController();
+        if (ctrl && ctrl->IsWeaponJustPressed()) {
+            const int kills = m_Weapon->Fire(*m_HumanPlayer, m_Players, m_LevelManager, m_Root, *this);
+            m_DefenderKills += kills;
+            float bonus = kills * kKillBonus;
+            m_Charge = (bonus > 1.0f) ? 1.0f : bonus;  // 歸零後依擊倒回充
+            if (cheatFullCharge) m_Charge = 1.0f;      // 作弊：發動後立即補滿
+        }
+    }
+    // 特效壽命
+    for (auto it = m_WeaponFx.begin(); it != m_WeaponFx.end();) {
+        if (--it->second <= 0) { m_Root.RemoveChild(it->first); it = m_WeaponFx.erase(it); }
+        else ++it;
+    }
+    // 屏障到期還原地形
+    m_LevelManager.TickTemporary(m_Root);
+
+    // 充能條：浮在防守方頭上，由左往右填滿
+    if (m_ChargeBg && m_ChargeFill) {
+        if (m_HumanPlayer && !m_HumanPlayer->IsDead()) {
+            const glm::vec2 p = m_HumanPlayer->GetPixelPos();
+            const float full = 32.0f, by = p.y + 62.0f, left = p.x - full * 0.5f;
+            const float c = m_Charge < 0.02f ? 0.02f : m_Charge;
+            m_ChargeBg->SetPosition(p.x, by);
+            m_ChargeFill->SetScale(c, 1.0f);
+            m_ChargeFill->SetPosition(left + full * c * 0.5f, by);
+        }
+        else {
+            m_ChargeBg->SetPosition(-1000.0f, -1000.0f);
+            m_ChargeFill->SetPosition(-1000.0f, -1000.0f);
+        }
+    }
 }
 
 void GameSession::Update() {
@@ -130,10 +197,6 @@ void GameSession::Update() {
     m_BombManager.Update(m_LevelManager, m_InteractableManager, m_TurretManager, m_Root, m_Players);
     m_InteractableManager.Update(m_Players, m_Root);
 
-    auto statusList = m_InteractableManager.GetObjectiveStatusList();
-    m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root,
-                       m_CheatManager.IsEnabled(0) || m_CheatManager.IsEnabled(1));
-
     m_AIManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Spirits, m_TurretManager);
     m_TurretManager.Update(m_Players, m_LevelManager, m_BombManager, m_InteractableManager, m_Root);
 
@@ -156,6 +219,12 @@ void GameSession::Update() {
             m_InteractableManager.AddKey(drop.first, drop.second, m_Root);
         }
     }
+
+    // HUD (計時 / 皇冠 / 鑰匙指示) 必須在玩家移動「之後」才更新，否則皇冠等浮標會
+    // 沿用上一幀的座標而落後玩家一格 (走路時皇冠拖在後面)。
+    auto statusList = m_InteractableManager.GetObjectiveStatusList();
+    m_UIManager.Update(m_GameTime, m_Players, statusList, m_Root,
+                       m_CheatManager.IsEnabled(0) || m_CheatManager.IsEnabled(1));
 
     for (auto it = m_Spirits.begin(); it != m_Spirits.end();) {
         auto& spirit = *it;
@@ -183,6 +252,8 @@ void GameSession::Update() {
     }
     // 危險地圖紅塊仍由場景空間的 overlay 繪製 (ImGui 無法畫在遊戲世界裡)
     m_DebugOverlay.Update(m_Root, {}, dangerCells);
+
+    UpdateDefenderWeapon();  // 防守方充能 / 發動 / 特效 / 充能條
 }
 
 void GameSession::RenderDebugConsole() {
@@ -277,6 +348,15 @@ void GameSession::Clear() {
     m_Players.clear();
     m_HumanPlayer  = nullptr;  // 指向已銷毀的玩家，避免懸空
     m_HumanPlayer2 = nullptr;
+
+    // 武器 / 充能 / 特效
+    m_Weapon.reset();
+    if (m_ChargeBg)   { m_Root.RemoveChild(m_ChargeBg);   m_ChargeBg.reset(); }
+    if (m_ChargeFill) { m_Root.RemoveChild(m_ChargeFill); m_ChargeFill.reset(); }
+    for (auto& e : m_WeaponFx) m_Root.RemoveChild(e.first);
+    m_WeaponFx.clear();
+    m_Charge = 0.0f;
+    m_DefenderKills = 0;
 }
 
 bool GameSession::IsAttackerWin() const {
@@ -318,11 +398,14 @@ MatchResult GameSession::BuildResult(bool defenderWin) const {
     const int remainingSeconds = (m_GameTime > 0 ? m_GameTime : 0) / Constants::Game::kFPS;
     r.elapsedSeconds = m_Config.RoundSeconds() - remainingSeconds;
 
-    // 金幣獎勵：完成一場底分 150 + 防守方獲勝加成 350 + 每個守住的寶箱 50。
+    r.defenderKills = m_DefenderKills;
+
+    // 金幣獎勵：底分 150 + 防守方獲勝 350 + 每守住寶箱 50 + 每武器擊倒進攻方 100。
     // 永遠為正值，讓結算畫面一定看得到「+」。
     int coins = 150;
     if (defenderWin) coins += 350;
     coins += r.chestsDefended * 50;
+    coins += r.defenderKills * 100;  // 擊殺加成計入金幣
     r.coinsEarned = coins;
 
     return r;

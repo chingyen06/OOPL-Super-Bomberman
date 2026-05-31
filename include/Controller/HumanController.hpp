@@ -12,6 +12,7 @@ public:
     Util::Keycode LEFT;
     Util::Keycode RIGHT;
     Util::Keycode PLACEBOMB;
+    Util::Keycode WEAPON;  // 防守方武器發動
 };
 
 class HumanController : public InputController {
@@ -23,6 +24,7 @@ public:
     bool IsLeftPressed() const override { return Util::Input::IsKeyPressed(m_Control.LEFT); }
     bool IsRightPressed() const override { return Util::Input::IsKeyPressed(m_Control.RIGHT); }
     bool IsPlaceBombJustPressed() const override { return Util::Input::IsKeyDown(m_Control.PLACEBOMB); }
+    bool IsWeaponJustPressed() const override { return Util::Input::IsKeyDown(m_Control.WEAPON); }
 
     Util::Keycode GetBombKey() const { return m_Control.PLACEBOMB; }
 

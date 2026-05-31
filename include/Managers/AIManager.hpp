@@ -45,10 +45,13 @@ private:
                                                      const std::vector<std::shared_ptr<Interactable>>& items,
                                                      const std::unordered_set<Interactable*>& claimed) const;
 
-    // botPixelPos: bot 的實際像素座標 — 用來偵測「已漂離目標格中心」並補反向鍵自動校正
-    // 不依賴力場方向，對輸送帶 / bounce 殘留 / 任何外力造成的漂移都通用
-    void ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb,
-                     glm::vec2 botPixelPos) const;
+    // 回傳 (gridX,gridY) 上、對本 bot 仍有效 (priority>0) 的物件目標；用於「目標承諾」續追。
+    std::shared_ptr<Interactable> FindTargetAt(int gridX, int gridY, bool hasKey,
+                                               const std::vector<std::shared_ptr<Interactable>>& items) const;
+
+    // 只送出主方向鍵；垂直/水平的格中心對齊交由 Player 的自動歸位 (clamp、不過衝) 負責，
+    // 避免在這裡做未夾住的反向校正造成中線抽搐。
+    void ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb) const;
 
     DangerMap m_DangerMap;  // 危險地圖 (拆分自原 AIManager 內聚實作)
 };

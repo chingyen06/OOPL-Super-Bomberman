@@ -25,13 +25,15 @@ void PauseMenu::AddOption(const std::string& text, std::function<void()> onSelec
     const float y = kFirstOptionY - static_cast<float>(m_RawTexts.size()) * kOptionStepY;
 
     auto button = std::make_shared<UIImage>(RESOURCE_DIR"/Image/pause_btn.png", kPanelCenterX, y, kButtonZ);
-    auto label  = std::make_shared<UIText>(text, kPanelCenterX, y, kTextZ,
+    // 文字略往右一點 (與其他按鈕一致)
+    auto label  = std::make_shared<UIText>(text, kPanelCenterX + 5.0f, y, kTextZ,
                                            Util::Color::FromName(Util::Colors::WHITE));
 
     m_RawTexts.push_back(text);
     m_Buttons.push_back(button);
     m_Labels.push_back(label);
     m_Callbacks.push_back(onSelect);
+    m_Enabled.push_back(true);
 }
 
 void PauseMenu::SetOptionLabel(int index, const std::string& text) {
@@ -40,10 +42,30 @@ void PauseMenu::SetOptionLabel(int index, const std::string& text) {
     m_Labels[index]->SetText(text);
 }
 
+void PauseMenu::SetOptionEnabled(int index, bool enabled) {
+    if (index < 0 || index >= static_cast<int>(m_Enabled.size())) return;
+    m_Enabled[index] = enabled;
+    if (m_IsVisible) {
+        if (!m_Enabled[m_SelectedIndex]) m_SelectedIndex = StepEnabled(m_SelectedIndex, +1);
+        UpdateCursor();
+    }
+}
+
+int PauseMenu::StepEnabled(int from, int dir) const {
+    const int n = static_cast<int>(m_Buttons.size());
+    if (n == 0) return 0;
+    int idx = from;
+    for (int i = 0; i < n; i++) {
+        idx = (idx + dir + n) % n;
+        if (m_Enabled[idx]) return idx;
+    }
+    return (from < 0) ? 0 : from;  // 全部停用：維持原樣
+}
+
 void PauseMenu::Show(Util::Renderer& root) {
     if (m_IsVisible) return;
     m_IsVisible = true;
-    m_SelectedIndex = 0;
+    m_SelectedIndex = StepEnabled(-1, +1);  // 落在第一個可選項
 
     root.AddChild(m_Dim);
     root.AddChild(m_Panel);
@@ -74,16 +96,8 @@ void PauseMenu::Update() {
                       Util::Input::IsKeyUp(Util::Keycode::S)    || Util::Input::IsKeyUp(Util::Keycode::D);
 
     bool changed = false;
-    if (prev) {
-        m_SelectedIndex--;
-        if (m_SelectedIndex < 0) m_SelectedIndex = static_cast<int>(m_Buttons.size()) - 1;
-        changed = true;
-    }
-    else if (next) {
-        m_SelectedIndex++;
-        if (m_SelectedIndex >= static_cast<int>(m_Buttons.size())) m_SelectedIndex = 0;
-        changed = true;
-    }
+    if (prev)      { m_SelectedIndex = StepEnabled(m_SelectedIndex, -1); changed = true; }
+    else if (next) { m_SelectedIndex = StepEnabled(m_SelectedIndex, +1); changed = true; }
 
     if (changed) UpdateCursor();
 
@@ -91,13 +105,17 @@ void PauseMenu::Update() {
     if (Util::Input::IsKeyUp(Util::Keycode::SPACE)) {
         // 注意：callback 可能會 TransitionTo 並隱藏本選單，呼叫後立即 return，
         // 不再觸碰任何成員 (與專案其餘 state 轉移慣例一致)。
-        if (m_Callbacks[m_SelectedIndex]) m_Callbacks[m_SelectedIndex]();
+        if (m_Enabled[m_SelectedIndex] && m_Callbacks[m_SelectedIndex]) m_Callbacks[m_SelectedIndex]();
         return;
     }
 }
 
 void PauseMenu::UpdateCursor() {
     for (size_t i = 0; i < m_Buttons.size(); i++) {
-        m_Buttons[i]->SetDrawable(static_cast<int>(i) == m_SelectedIndex ? m_BtnSelected : m_BtnNormal);
+        const bool sel = (static_cast<int>(i) == m_SelectedIndex);
+        m_Buttons[i]->SetDrawable(sel ? m_BtnSelected : m_BtnNormal);
+        // 停用項變灰，其餘白字
+        m_Labels[i]->SetColor(m_Enabled[i] ? Util::Color::FromName(Util::Colors::WHITE)
+                                           : Util::Color::FromName(Util::Colors::GRAY));
     }
 }

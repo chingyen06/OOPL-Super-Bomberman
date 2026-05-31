@@ -116,13 +116,26 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
 
         botController->TickCooldown();
 
+        const IBotProfile& profile = botController->Profile();  // 這隻 bot 的性格 / 想法
+
         int botX = bot->GetGridX();
         int botY = bot->GetGridY();
         int botFirepower = bot->GetFirepower();
 
         // 本幀尋路所需的環境查詢與成本函式都集中在 nav (取代散落的 lambda)
         BotNavigator nav(levelManager, bombManager, m_DangerMap, spirits, turretManager, players, bot.get(), botFirepower);
-        auto safeCost = [&](int x, int y) { return nav.SafeWalkCost(x, y); };
+
+        // 每隻 bot 一個固定的「繞路偏好」種子：在等長的多條安全路線中，不同 bot 會偏好
+        // 不同走法，使整體動線較不機械、不一致 (不會全擠同一條路)。微擾只依 (id,x,y)、不依
+        // 時間，所以同一幀到同一目標的路徑穩定、逐幀一致，不會造成抽搐。-1 (不可走) 不加擾。
+        const unsigned wanderSeed = static_cast<unsigned>(bot->GetPlayerID()) * 2654435761u;
+        auto safeCost = [&, wanderSeed](int x, int y) {
+            const int c = nav.SafeWalkCost(x, y);
+            if (c < 0) return c;
+            const unsigned h = wanderSeed ^ (static_cast<unsigned>(x) * 73856093u)
+                                          ^ (static_cast<unsigned>(y) * 19349663u);
+            return c + static_cast<int>(h & 1u);
+        };
 
         // 反應延遲：cooldown 中跳過決策，input 保持上一次設定。
         // 下列情況必須 bypass、每幀重決策：
@@ -150,9 +163,10 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             int frames;
             ~ResetGuard() { ctrl->ResetCooldown(frames); }
         };
+        // 反應幀數改由性格決定：積極的 bot 反應快、較少在原地發呆，謹慎的較慢。
         const int nextCooldown = needsImmediate
             ? 0
-            : Constants::Bot::kReactionFrames + (bot->GetPlayerID() % 3);
+            : profile.ReactionFrames() + (bot->GetPlayerID() % 3);
         ResetGuard guard{ botController, nextCooldown };
 
         // 策略 1：身處危險 — 逃往最近的安全格 (穿越危險也要逃，故用 RetreatCost)
@@ -161,8 +175,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             if (safeSpot.found) {
                 auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH,
                                      [&](int x, int y) { return nav.RetreatCost(x, y); });
-                if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false,
-                                                bot->GetPixelPos());
+                if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false);
             }
             continue;
         }
@@ -180,17 +193,29 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
         }
 
-        // 目標選擇：優先撿物件 (priority hook)，否則追最近 defender
+        // 目標選擇：一律優先撿鑰匙 / 道具 / 寶箱 — 這才是進攻方致勝的路 (沒鑰匙就開不了
+        // 寶箱)。沒有可撿的物件時才去追防守方。性格差異改體現在「反應速度、佈彈積極度、
+        // 自殺突擊膽量」上，而不是叫 bot 放著鑰匙不撿。
+        //
+        // 目標承諾 (anti-twitch)：先續追上次鎖定的物件 (該格仍有對本 bot 有效的物件、且
+        // 未被別人 claim)；否則才重挑最近的。避免多隻 bot 互搶鄰近鑰匙時目標每幀互換、原地抽搐。
         int targetX = -1, targetY = -1;
-        auto nearestTarget = FindNearestTarget(botX, botY, bot->HasKey(), interactables, claimedTargets);
+        auto committed = FindTargetAt(botController->GoalX(), botController->GoalY(), bot->HasKey(), interactables);
+        if (committed && claimedTargets.count(committed.get())) committed = nullptr;  // 已被別的 bot 鎖定
+        auto chosenTarget = committed ? committed
+                                      : FindNearestTarget(botX, botY, bot->HasKey(), interactables, claimedTargets);
 
-        if (nearestTarget) {
-            targetX = nearestTarget->GetGridX();
-            targetY = nearestTarget->GetGridY();
-            claimedTargets.insert(nearestTarget.get());  // 鎖定，後續 bot 不重複追
-        } else if (targetDefender) {
-            targetX = targetDefender->GetGridX();
-            targetY = targetDefender->GetGridY();
+        if (chosenTarget) {
+            targetX = chosenTarget->GetGridX();
+            targetY = chosenTarget->GetGridY();
+            claimedTargets.insert(chosenTarget.get());  // 鎖定，後續 bot 不重複追
+            botController->SetGoal(targetX, targetY);    // 記住，下一幀續追同一目標
+        } else {
+            botController->SetGoal(-1, -1);              // 沒有物件可撿 → 清除承諾
+            if (targetDefender) {
+                targetX = targetDefender->GetGridX();
+                targetY = targetDefender->GetGridY();
+            }
         }
 
         if (targetX == -1) {
@@ -211,6 +236,14 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             if (!wantBomb && nav.BombHitsAnySpirit(botX, botY)) {
                 wantBomb = true;
             }
+            // 好戰性格 (HuntsDefender)：就算正趕往物件，途中若防守方落在攻擊範圍 (BombChaseRange)
+            // 內、有視線且火力掃得到，也會順手佈彈逼退 — 性格越好戰、範圍越大越敢炸。
+            if (!wantBomb && profile.HuntsDefender() && targetDefender &&
+                defenderDist <= profile.BombChaseRange() &&
+                nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY()) &&
+                nav.BombReaches(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+                wantBomb = true;
+            }
 
             // 預設朝目標走；想放彈則先驗證逃生路徑，可行才放並改朝逃生點走 (否則自己走進爆炸圈)
             bool placeBomb = false;
@@ -225,7 +258,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 }
             }
 
-            ExecuteMove(botController, botX, botY, moveToX, moveToY, placeBomb, bot->GetPixelPos());
+            ExecuteMove(botController, botX, botY, moveToX, moveToY, placeBomb);
             continue;
         }
 
@@ -243,7 +276,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 // 已站在 brick 前：驗證逃生路徑走得到，可行才炸並朝逃生點走
                 std::pair<int, int> escapeStep;
                 if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
-                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, bot->GetPixelPos());
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true);
                 }
                 else {
                     botController->SetInput(false, false, false, false, false);
@@ -251,8 +284,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
             else {
                 auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, safeCost);
-                if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false,
-                                                       bot->GetPixelPos());
+                if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
                 else botController->SetInput(false, false, false, false, false);
             }
             continue;
@@ -262,12 +294,13 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH,
                                        [&](int x, int y) { return nav.SuicideCost(x, y); });
         if (!pathIgnoreFire.empty()) {
-            // 僅在「對 defender 有直線視野且夠近」時才值得自殺放彈，且仍要逃生路徑走得到
-            if (targetDefender && defenderDist <= 5 &&
+            // 僅在「對 defender 有直線視野且夠近」時才值得自殺放彈，且仍要逃生路徑走得到。
+            // 容許距離隨性格膽量加大：膽大的 bot 願意從更遠處拼命突擊。
+            if (targetDefender && defenderDist <= 5 + profile.SuicideBoldness() &&
                 nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
                 std::pair<int, int> escapeStep;
                 if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
-                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, bot->GetPixelPos());
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true);
                     continue;
                 }
             }
@@ -305,29 +338,31 @@ std::shared_ptr<Interactable> AIManager::FindNearestTarget(int botX, int botY, b
     return bestByPriority.begin()->second.first;  // 最低 priority 編號 = 最優先
 }
 
-void AIManager::ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb,
-                             glm::vec2 botPixelPos) const {
-    bool up = false, down = false, left = false, right = false;
-    const float targetPixelX = GridCoord::ToPixelX(toX);
-    const float targetPixelY = GridCoord::ToPixelY(toY);
-    constexpr float kAlignTolerance = 2.0f;  // 像素級漂移容忍度
+std::shared_ptr<Interactable> AIManager::FindTargetAt(int gridX, int gridY, bool hasKey,
+                                                      const std::vector<std::shared_ptr<Interactable>>& items) const {
+    if (gridX < 0 || gridY < 0) return nullptr;
+    for (const auto& item : items) {
+        if (item->GetGridX() == gridX && item->GetGridY() == gridY &&
+            item->GetAttackerTargetPriority(hasKey) > 0) {
+            return item;  // 該格上仍有對本 bot 有效的目標 (e.g. 鑰匙還在、寶箱還沒開)
+        }
+    }
+    return nullptr;  // 目標已被撿走 / 開啟 / 失效 → 呼叫端會改挑新目標
+}
 
-    // 主方向 (toX != fromX 或 toY != fromY) + 副方向 (校正另一軸的漂移)
+void AIManager::ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb) const {
+    bool up = false, down = false, left = false, right = false;
+
+    // 只下「主方向」鍵；另一軸的置中交給 Player 的自動歸位 (有 clamp、不會過衝)。
+    // 不再在這裡用「未夾住的方向鍵」做垂直/水平校正 —— 那會與 Player 的歸位疊加而在
+    // 中線兩側反覆過衝 (尤其加速時)，正是 bot 原地抽搐的主因。
     if (toX != fromX) {
-        // 水平主移動：另外看 Y 軸有沒有漂走，有就補 up/down 拉回中線
         if (toX > fromX) right = true;
         else             left  = true;
-
-        if (botPixelPos.y < targetPixelY - kAlignTolerance)       up   = true;
-        else if (botPixelPos.y > targetPixelY + kAlignTolerance)  down = true;
     }
     else if (toY != fromY) {
-        // 垂直主移動：另外看 X 軸有沒有漂走，有就補 left/right
         if (toY > fromY) down = true;
         else             up   = true;
-
-        if (botPixelPos.x < targetPixelX - kAlignTolerance)       right = true;
-        else if (botPixelPos.x > targetPixelX + kAlignTolerance)  left  = true;
     }
 
     botController->SetInput(up, down, left, right, placeBomb);

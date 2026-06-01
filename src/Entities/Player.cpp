@@ -175,11 +175,12 @@ void Player::Update(const IWorldContext& worldContext) {
     bool isForced = (envForce.x != 0.0f || envForce.y != 0.0f);  // 被推動
 
     // 完全靜止 (沒按鍵、沒外力)：把人物收回「所在格」中心，避免停在格子邊角而半身
-    // 留在隔壁格、被隔壁格的爆風波及 (AI 只走到某格角落就停尤其明顯)。
+    // 留在隔壁格、被隔壁格的爆風波及 (AI 只走到某格角落就停尤其明顯)。僅 AI 啟用——
+    // 人類玩家若被自動歸位，停下時會有「被硬拽到格中心」的差手感、又容易被預判利用。
     // std::min 夾住位移量，最多剛好到中心、不會越過，因此不會在中心左右抖動。
     constexpr float kCenterEps = 0.5f;
     bool centering = false;
-    if (!moveX && !moveY && !isForced) {
+    if (m_AutoCenterIdle && !moveX && !moveY && !isForced) {
         if (m_Pos.x < centerX - kCenterEps)      { nextX += std::min(speed, centerX - m_Pos.x); centering = true; }
         else if (m_Pos.x > centerX + kCenterEps) { nextX -= std::min(speed, m_Pos.x - centerX); centering = true; }
         if (m_Pos.y < centerY - kCenterEps)      { nextY += std::min(speed, centerY - m_Pos.y); centering = true; }

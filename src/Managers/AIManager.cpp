@@ -175,7 +175,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             if (safeSpot.found) {
                 auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH,
                                      [&](int x, int y) { return nav.RetreatCost(x, y); });
-                if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false);
+                if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false, forceHere);
             }
             continue;
         }
@@ -226,22 +226,25 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 3：有安全路徑可達目標
         auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, safeCost);
         if (!pathSafe.empty()) {
-            // 「想要放炸彈」的觸發條件：能炸到 defender 或精靈
+            const int defX = targetDefender ? targetDefender->GetGridX() : -999;
+            const int defY = targetDefender ? targetDefender->GetGridY() : -999;
+            const bool defenderOnTarget = targetDefender && targetX == defX && targetY == defY;
+
+            // 「想要放炸彈」的觸發條件。重點：只有「真的在追防守方」(沒有物件目標) 時，才會
+            // 因為目標格上站著防守方而開炸；若我的目標是寶箱/鑰匙，就算防守方站在上面，也是
+            // 走過去「開」它而不是炸它 (玩家不互相碰撞，可同格) — 修掉「站在寶箱上卡住 AI」。
             bool wantBomb = false;
-            if (targetDefender && targetX == targetDefender->GetGridX() && targetY == targetDefender->GetGridY()) {
-                if (nav.BombReaches(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
-                    wantBomb = true;
-                }
-            }
-            if (!wantBomb && nav.BombHitsAnySpirit(botX, botY)) {
+            if (!chosenTarget && defenderOnTarget && nav.BombReaches(botX, botY, defX, defY)) {
                 wantBomb = true;
             }
-            // 好戰性格 (HuntsDefender)：就算正趕往物件，途中若防守方落在攻擊範圍 (BombChaseRange)
-            // 內、有視線且火力掃得到，也會順手佈彈逼退 — 性格越好戰、範圍越大越敢炸。
-            if (!wantBomb && profile.HuntsDefender() && targetDefender &&
+            if (!wantBomb && nav.BombHitsAnySpirit(botX, botY)) {
+                wantBomb = true;  // 順手炸到精靈 → 清路
+            }
+            // 好戰性格順手佈彈逼退防守方；但若防守方正站在我的物件目標上，別炸 (要去開它)。
+            if (!wantBomb && profile.HuntsDefender() && targetDefender && !defenderOnTarget &&
                 defenderDist <= profile.BombChaseRange() &&
-                nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY()) &&
-                nav.BombReaches(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+                nav.HasLineOfSight(botX, botY, defX, defY) &&
+                nav.BombReaches(botX, botY, defX, defY)) {
                 wantBomb = true;
             }
 
@@ -258,8 +261,31 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 }
             }
 
-            ExecuteMove(botController, botX, botY, moveToX, moveToY, placeBomb);
+            ExecuteMove(botController, botX, botY, moveToX, moveToY, placeBomb, forceHere);
             continue;
+        }
+
+        // 策略 3.5：衝向「物件目標」(鑰匙 / 寶箱 / 道具)。沒有完全安全路徑時，若判斷「能趕在
+        // 火焰蔓延到之前」抵達，就算路上有即將爆炸 (尚未噴火) 的格也衝過去 —— 例如趕著開寶箱。
+        // 逐格比對「該格還有幾 frame 變致命」與「bot 走到該格約需幾 frame」，全部來得及才衝。
+        // 只在追物件時啟用 (追防守方不冒這個險)，且不會踩進「正在燒」的火焰 (RushCost 已擋)。
+        if (chosenTarget) {
+            auto rushPath = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+                                     [&](int x, int y) { return nav.RushCost(x, y); });
+            if (!rushPath.empty()) {
+                constexpr int kFramesPerCell = 12;  // ~32px / 3px每幀
+                constexpr int kMargin = 6;          // 安全餘量
+                bool inTime = true;
+                for (int i = 0; i < static_cast<int>(rushPath.size()); ++i) {
+                    const int arrive = (i + 1) * kFramesPerCell;
+                    if (bombManager.FramesUntilLethalAt(rushPath[i].first, rushPath[i].second, levelManager)
+                            <= arrive + kMargin) { inTime = false; break; }
+                }
+                if (inTime) {
+                    ExecuteMove(botController, botX, botY, rushPath[0].first, rushPath[0].second, false, forceHere);
+                    continue;
+                }
+            }
         }
 
         // 策略 4：無安全路徑 — 嘗試炸牆開路
@@ -276,7 +302,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 // 已站在 brick 前：驗證逃生路徑走得到，可行才炸並朝逃生點走
                 std::pair<int, int> escapeStep;
                 if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
-                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true);
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, forceHere);
                 }
                 else {
                     botController->SetInput(false, false, false, false, false);
@@ -284,32 +310,61 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
             }
             else {
                 auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, safeCost);
-                if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false);
+                if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false, forceHere);
                 else botController->SetInput(false, false, false, false, false);
             }
             continue;
         }
 
-        // 策略 5：無路可走 — 自殺攻擊 (無視火焰，砲台仍是物理碰撞穿不過)
-        auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH,
-                                       [&](int x, int y) { return nav.SuicideCost(x, y); });
-        if (!pathIgnoreFire.empty()) {
-            // 僅在「對 defender 有直線視野且夠近」時才值得自殺放彈，且仍要逃生路徑走得到。
-            // 容許距離隨性格膽量加大：膽大的 bot 願意從更遠處拼命突擊。
-            if (targetDefender && defenderDist <= 5 + profile.SuicideBoldness() &&
-                nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+        // 策略 5：對防守方自殺式突擊 (僅「真的在追防守方」、有視線且夠近時；無視火焰衝過去開炸)。
+        if (targetDefender && defenderDist <= 5 + profile.SuicideBoldness() &&
+            nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
+            auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+                                           [&](int x, int y) { return nav.SuicideCost(x, y); });
+            if (!pathIgnoreFire.empty()) {
                 std::pair<int, int> escapeStep;
                 if (TryPlanBombEscape(botX, botY, mapW, mapH, levelManager, bombManager, botFirepower, safeCost, escapeStep)) {
-                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true);
+                    ExecuteMove(botController, botX, botY, escapeStep.first, escapeStep.second, true, forceHere);
                     continue;
                 }
             }
-            botController->SetInput(false, false, false, false, false);
-            continue;
         }
 
-        botController->SetInput(false, false, false, false, false);
+        // 最後手段：無法安全抵達目標時，靠近到「安全可達、離目標最近」的格並等待，
+        // 而不是直接放棄、原地發呆 (例如寶箱旁有人放炸彈，先靠過去等火焰過再開)。
+        if (!ApproachTarget(botController, botX, botY, targetX, targetY, mapW, mapH, safeCost, forceHere)) {
+            botController->SetInput(false, false, false, false, false);
+        }
     }
+}
+
+bool AIManager::ApproachTarget(IProgrammableController* botController, int botX, int botY, int targetX, int targetY,
+                               int mapW, int mapH, const std::function<int(int, int)>& safeCost, glm::vec2 force) {
+    // BFS：從 bot 在「安全可走」格上擴散，記錄離目標 (曼哈頓) 最近的可達格。
+    std::vector<std::vector<bool>> seen(mapH, std::vector<bool>(mapW, false));
+    std::queue<std::pair<int, int>> q;
+    q.push({ botX, botY });
+    seen[botY][botX] = true;
+    int bestX = botX, bestY = botY, bestD = std::abs(botX - targetX) + std::abs(botY - targetY);
+
+    while (!q.empty()) {
+        const auto cur = q.front(); q.pop();
+        for (const auto& off : kCardinalOffsets) {
+            const int nx = cur.first + off.dx, ny = cur.second + off.dy;
+            if (nx < 0 || nx >= mapW || ny < 0 || ny >= mapH || seen[ny][nx]) continue;
+            if (safeCost(nx, ny) < 0) continue;  // 不可安全走
+            seen[ny][nx] = true;
+            q.push({ nx, ny });
+            const int d = std::abs(nx - targetX) + std::abs(ny - targetY);
+            if (d < bestD) { bestD = d; bestX = nx; bestY = ny; }
+        }
+    }
+
+    if (bestX == botX && bestY == botY) return false;  // 已是最靠近的位置，無處可再靠近
+    auto path = FindPath(botX, botY, bestX, bestY, mapW, mapH, safeCost);
+    if (path.empty()) return false;
+    ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false, force);
+    return true;
 }
 
 std::shared_ptr<Interactable> AIManager::FindNearestTarget(int botX, int botY, bool hasKey,
@@ -350,19 +405,25 @@ std::shared_ptr<Interactable> AIManager::FindTargetAt(int gridX, int gridY, bool
     return nullptr;  // 目標已被撿走 / 開啟 / 失效 → 呼叫端會改挑新目標
 }
 
-void AIManager::ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb) const {
+void AIManager::ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY,
+                            bool placeBomb, glm::vec2 force) const {
     bool up = false, down = false, left = false, right = false;
 
-    // 只下「主方向」鍵；另一軸的置中交給 Player 的自動歸位 (有 clamp、不會過衝)。
-    // 不再在這裡用「未夾住的方向鍵」做垂直/水平校正 —— 那會與 Player 的歸位疊加而在
-    // 中線兩側反覆過衝 (尤其加速時)，正是 bot 原地抽搐的主因。
+    // 主方向：朝目標格 (路徑每步皆為上下左右其一)。一般地面只送這個方向——另一軸的
+    // 置中交給 Player 的自動歸位 (有 clamp、不過衝)，避免中線抽搐。
     if (toX != fromX) {
         if (toX > fromX) right = true;
         else             left  = true;
+        // 在輸送帶上橫向移動時，Player 不會對「有帶力的那一軸」自動歸位，會被帶偏離本列
+        // 而過不去轉角。這裡主動補按與上下帶力相反的方向抵銷之 (force.y>0 表示往上推)。
+        if (force.y < 0.0f)      down = false, up = true;
+        else if (force.y > 0.0f) down = true;
     }
     else if (toY != fromY) {
         if (toY > fromY) down = true;
         else             up   = true;
+        if (force.x < 0.0f)      right = true;   // 帶往左推 → 補按右
+        else if (force.x > 0.0f) left = true;    // 帶往右推 → 補按左
     }
 
     botController->SetInput(up, down, left, right, placeBomb);

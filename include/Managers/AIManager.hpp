@@ -49,9 +49,15 @@ private:
     std::shared_ptr<Interactable> FindTargetAt(int gridX, int gridY, bool hasKey,
                                                const std::vector<std::shared_ptr<Interactable>>& items) const;
 
-    // 只送出主方向鍵；垂直/水平的格中心對齊交由 Player 的自動歸位 (clamp、不過衝) 負責，
-    // 避免在這裡做未夾住的反向校正造成中線抽搐。
-    void ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY, bool placeBomb) const;
+    // 無法安全抵達目標時的「靠近並等待」：移動到安全可達、且離目標最近的格 (而非原地放棄)。
+    // 有移動回 true。例如目標旁有人放炸彈，先靠過去、等火焰過了策略 3 再接手開寶箱。
+    bool ApproachTarget(IProgrammableController* botController, int botX, int botY, int targetX, int targetY,
+                        int mapW, int mapH, const std::function<int(int, int)>& safeCost, glm::vec2 force);
+
+    // 送出主方向鍵；若身處輸送帶 (force≠0)，再補按一個與帶力垂直分量相反的方向，
+    // 抵銷側向被帶偏移 (否則過不去轉角、原地抽搐)。一般地面 force=0 → 只送主方向。
+    void ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY,
+                     bool placeBomb, glm::vec2 force) const;
 
     DangerMap m_DangerMap;  // 危險地圖 (拆分自原 AIManager 內聚實作)
 };

@@ -18,15 +18,11 @@ void SaveData::Load() {
         file >> j;
         if (j.contains("coins")) m_Coins = j["coins"].get<int>();
         if (m_Coins < 0) m_Coins = 0;
-        // 音量：相容舊存檔的 "musicVolume" → 視為 BGM
+        // 背景音樂音量：相容舊存檔的 "musicVolume"
         if (j.contains("musicVolume")) m_BgmVolume = Clamp100(j["musicVolume"].get<int>());
-        if (j.contains("bgmVolume"))   m_BgmVolume   = Clamp100(j["bgmVolume"].get<int>());
-        if (j.contains("sfxVolume"))   m_SfxVolume   = Clamp100(j["sfxVolume"].get<int>());
-        if (j.contains("voiceVolume")) m_VoiceVolume = Clamp100(j["voiceVolume"].get<int>());
+        if (j.contains("bgmVolume"))   m_BgmVolume = Clamp100(j["bgmVolume"].get<int>());
         LOG_INFO("Loaded save: coins=" + std::to_string(m_Coins) +
-                 " bgm=" + std::to_string(m_BgmVolume) +
-                 " sfx=" + std::to_string(m_SfxVolume) +
-                 " voice=" + std::to_string(m_VoiceVolume));
+                 " bgm=" + std::to_string(m_BgmVolume));
     }
     catch (...) {
         LOG_WARN("save.json parse failed; resetting coins to 0");
@@ -37,9 +33,7 @@ void SaveData::Load() {
 void SaveData::Save() const {
     nlohmann::json j;
     j["coins"] = m_Coins;
-    j["bgmVolume"]   = m_BgmVolume;
-    j["sfxVolume"]   = m_SfxVolume;
-    j["voiceVolume"] = m_VoiceVolume;
+    j["bgmVolume"] = m_BgmVolume;
     std::ofstream file(kSavePath);
     if (!file) {
         LOG_WARN("cannot write save.json");
@@ -62,6 +56,4 @@ void SaveData::SetCoins(int amount) {
     Save();
 }
 
-void SaveData::SetBgmVolume(int percent)   { m_BgmVolume   = Clamp100(percent); Save(); }
-void SaveData::SetSfxVolume(int percent)   { m_SfxVolume   = Clamp100(percent); Save(); }
-void SaveData::SetVoiceVolume(int percent) { m_VoiceVolume = Clamp100(percent); Save(); }
+void SaveData::SetBgmVolume(int percent) { m_BgmVolume = Clamp100(percent); Save(); }

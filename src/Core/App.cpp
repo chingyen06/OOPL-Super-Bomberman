@@ -107,8 +107,7 @@ void App::EndMatch(bool defenderWin) {
     m_LastResult = m_Session.BuildResult(defenderWin);  // 須在 Clear() 之前
     m_Save.AddCoins(m_LastResult.coinsEarned);          // 發放並存檔
     if (defenderWin) ShowDefenderWin(); else ShowAttackerWin();
-    PlayVictorySfx();                                   // 勝利音效 (victory.mp3)
-    TransitionTo(std::make_unique<ResultsState>());
+    TransitionTo(std::make_unique<ResultsState>());     // 勝利曲由 ResultsState 以單一 BGM 播放
 }
 
 void App::ShowMenuBg()      { m_Root.AddChild(m_MenuBg); }

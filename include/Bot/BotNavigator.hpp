@@ -28,6 +28,7 @@ public:
 
     // A* 成本函式：回傳 -1 表示不可走，正數為步進成本
     int SafeWalkCost(int x, int y) const;    // 一般安全行走 (避開危險/炸彈/精靈/砲台)
+    int RushCost(int x, int y) const;        // 衝目標用：避開正在燒的火焰，但「即將爆炸尚未噴火」的格可走 (高成本)
     int RetreatCost(int x, int y) const;     // 逃離危險用 (同上但不避開致命格)
     int BrickCost(int x, int y) const;       // 炸牆開路 (磚塊可走但成本高)
     int SuicideCost(int x, int y) const;     // 自殺攻擊 (無視火焰，只有牆與砲台擋)

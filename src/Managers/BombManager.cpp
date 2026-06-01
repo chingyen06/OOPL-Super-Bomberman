@@ -6,6 +6,7 @@
 #include "Player.hpp"
 #include "Turret/TurretManager.hpp"
 #include "Util/Logger.hpp"
+#include <algorithm>
 #include <cmath>
 
 // Place a bomb on the player's current grid
@@ -179,6 +180,27 @@ int BombManager::GetFirepowerAt(int gridX, int gridY) const {
         if (b->GetGridX() == gridX && b->GetGridY() == gridY) return b->GetFirepower();
     }
     return 0; // No bomb here, firepower is 0
+}
+
+int BombManager::FramesUntilLethalAt(int gridX, int gridY, const LevelManager& levelManager) const {
+    if (HasExplosionAt(gridX, gridY)) return 0;  // 已經在燒
+    int best = kNever;
+    for (const auto& b : m_Bombs) {
+        const int bx = b->GetGridX(), by = b->GetGridY(), fp = b->GetFirepower();
+        bool hit = (bx == gridX && by == gridY);
+        if (!hit) {
+            for (const auto& off : kCardinalOffsets) {
+                for (int step = 1; step <= fp; ++step) {
+                    const int cx = bx + off.dx * step, cy = by + off.dy * step;
+                    if (cx == gridX && cy == gridY) { hit = true; break; }
+                    if (!levelManager.IsWalkable(cx, cy)) break;  // 牆/磚擋住爆風
+                }
+                if (hit) break;
+            }
+        }
+        if (hit) best = std::min(best, b->RemainingFuse());
+    }
+    return best;
 }
 
 void BombManager::SpawnBomb(int gridX, int gridY, int firepower, int ownerID, Util::Renderer& root) {

@@ -10,8 +10,8 @@ bool GameplayState::WantsCursor(App& app) {
 }
 
 void GameplayState::OnUpdate(App& app) {
-    // ENTER 進入暫停 (凍結這一幀之後的所有 gameplay 更新)
-    if (Util::Input::IsKeyUp(Util::Keycode::RETURN) || Util::Input::IsKeyUp(Util::Keycode::KP_ENTER)) {
+    // 暫停鍵 (可設定，預設 Enter) → 進入暫停 (凍結這一幀之後的所有 gameplay 更新)
+    if (Util::Input::IsKeyUp(app.Keys().pause)) {
         app.PauseGame();
         return;
     }

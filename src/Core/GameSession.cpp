@@ -77,7 +77,8 @@ void GameSession::LoadLevel(int levelIndex) {
         }
         const auto& spawn = atkSpawns[spawnIdx++];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER, std::move(ctrl), nextPlayerId++);
-        if (mode == MatchConfig::SlotMode::Human) m_HumanPlayer2 = attacker.get();  // 玩家2 (作弊對象)
+        if (mode == MatchConfig::SlotMode::Human) m_HumanPlayer2 = attacker.get();   // 玩家2 (作弊對象)
+        else attacker->SetAutoCenterIdle(true);                                       // AI 才自動歸位格中心
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }
@@ -87,6 +88,7 @@ void GameSession::LoadLevel(int levelIndex) {
         const auto& spawn = atkSpawns[0];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
                                                  std::make_unique<BotController>(BotProfileFactory::Default(), 0), nextPlayerId++);
+        attacker->SetAutoCenterIdle(true);  // AI
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }
@@ -136,8 +138,8 @@ void GameSession::UpdateDefenderWeapon() {
         m_Charge += kPerFrame;
         if (m_Charge > 1.0f) m_Charge = 1.0f;
     }
-    // 滿了且按發動鍵 → 發動，依擊倒回充
-    if (m_Weapon && m_HumanPlayer && !m_HumanPlayer->IsDead() && m_Charge >= 1.0f) {
+    // 滿了且按發動鍵 → 發動 (暈倒中不能發動武器)，依擊倒回充
+    if (m_Weapon && m_HumanPlayer && !m_HumanPlayer->IsDead() && !m_HumanPlayer->IsStunned() && m_Charge >= 1.0f) {
         InputController* ctrl = m_HumanPlayer->GetController();
         if (ctrl && ctrl->IsWeaponJustPressed()) {
             const int kills = m_Weapon->Fire(*m_HumanPlayer, m_Players, m_LevelManager, m_Root, *this);

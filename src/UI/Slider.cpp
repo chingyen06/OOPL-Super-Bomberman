@@ -1,7 +1,5 @@
 #include "UI/Slider.hpp"
 
-#include <cmath>
-
 #include "Util/Color.hpp"
 
 namespace {
@@ -38,7 +36,6 @@ void Slider::Hide(Util::Renderer& root) {
     for (auto& s : m_Segments) root.RemoveChild(s);
     m_Segments.clear();
     if (m_ValueText) { root.RemoveChild(m_ValueText); m_ValueText.reset(); }
-    m_Dragging = false;
 }
 
 void Slider::SetValue(int percent) {
@@ -54,21 +51,6 @@ void Slider::SetFocused(bool focused) {
 void Slider::Adjust(int delta) {
     const int nv = Clamp100(m_Value + delta);
     if (nv != m_Value) { m_Value = nv; UpdateVisual(); if (m_OnChange) m_OnChange(m_Value); }
-}
-
-bool Slider::HandleMouse(float worldX, float worldY, bool lDown) {
-    if (m_Segments.empty()) return false;
-    const float left = Left();
-    const bool overTrack = worldX >= left - 12.0f && worldX <= left + m_TrackW + 12.0f &&
-                           std::abs(worldY - m_Y) <= 22.0f;
-    if (lDown && (overTrack || m_Dragging)) {
-        m_Dragging = true;
-        int nv = Clamp100(static_cast<int>(std::lround((worldX - left) / m_TrackW * 100.0f)));
-        if (nv != m_Value) { m_Value = nv; UpdateVisual(); if (m_OnChange) m_OnChange(m_Value); }
-        return true;
-    }
-    if (!lDown) m_Dragging = false;
-    return false;
 }
 
 void Slider::UpdateVisual() {

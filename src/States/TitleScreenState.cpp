@@ -5,6 +5,7 @@
 #include "Core/App.hpp"
 #include "States/MainMenuState.hpp"
 #include "States/MenuCommon.hpp"
+#include "Util/Color.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
@@ -20,6 +21,12 @@ void TitleScreenState::OnEnter(App& app) {
     m_Press = std::make_shared<UIText>("- 請按空白鍵 -", 0.0f, -250.0f, 10.0f, DarkText());
     root.AddChild(m_Press);
 
+    // 左下角版本號 (右下角留給 ESC 提示)
+    m_Version = std::make_shared<UIText>("版本 1.0", -560.0f, -340.0f, 10.0f,
+                                         Util::Color::FromName(Util::Colors::DIM_GRAY));
+    m_Version->SetScale(0.6f, 0.6f);
+    root.AddChild(m_Version);
+
     m_Hint = AddKeyHint(app, {{"ESC", "結束遊戲"}});
 
     m_Tick = 0;
@@ -32,6 +39,7 @@ void TitleScreenState::OnExit(App& app) {
     auto& root = app.Root();
     root.RemoveChild(m_Logo);
     root.RemoveChild(m_Press);
+    root.RemoveChild(m_Version);
     m_Hint.Remove(app);
     if (m_Confirming) { m_QuitDialog.Hide(root); m_Confirming = false; }
     app.HideMenuBg();

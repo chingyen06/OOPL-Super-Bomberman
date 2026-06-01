@@ -1,7 +1,5 @@
 #include "States/SettingsState.hpp"
 
-#include <cmath>
-
 #include "Core/App.hpp"
 #include "States/MainMenuState.hpp"
 #include "States/MenuCommon.hpp"
@@ -26,7 +24,7 @@ void SettingsState::OnEnter(App& app) {
     m_BgmSlider.SetOnChange([&app](int v) { app.SetBgmVolume(v); });
 
     Build(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"滑鼠", "拖曳"}, {"空格鍵", "重設"}, {"X", "返回"}});
+    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"空格鍵", "設定"}, {"Del", "清除"}, {"X", "返回"}});
 }
 
 void SettingsState::OnExit(App& app) {
@@ -78,18 +76,25 @@ void SettingsState::Build(App& app) {
             AddKeyBox(root, label, (col == 0 ? kColP1 : kColP2), y, sel);
         }
     }
-    // 固定資訊列 (暫停鍵，不可改)
-    const float infoY = kRow0Y - kActions * kStep;
-    AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", infoY, kTableW, 18.0f);
-    AddText(root, "暫停", kColLabel, infoY, DarkText());
-    AddKeyBox(root, "Enter", kColP1, infoY, false);
-    AddKeyBox(root, "Enter", kColP2, infoY, false);
+    // 暫停列：兩名玩家共用的「單一」可設定鍵 (合併成一個，置於中央)
+    const float pauseY = kRow0Y - kActions * kStep;
+    const bool pauseSel = (m_Row == kPauseRow);
+    AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", pauseY, kTableW, 18.0f);
+    AddText(root, "暫停", kColLabel, pauseY, DarkText());  // 標題不反白，選取提示靠右側鍵框
+    const std::string pauseLabel = (pauseSel && m_Awaiting) ? "按鍵…" : KeyName(app.Keys().pause);
+    AddKeyBox(root, pauseLabel, (kColP1 + kColP2) * 0.5f, pauseY, pauseSel);
 
-    // 背景音樂音量列 (分段式滑桿；滑桿本身在 OnEnter 已掛上、跨 Rebuild 保留)
-    const float bgmY = infoY - kStep;
+    // 背景音樂音量列：選取時整列底圖變橘 (用 keycap_sel 拉成正確列高的橘帶，不會過大);
+    // 未選取則用一般列底圖。滑桿本身在 OnEnter 已掛上、跨 Rebuild 保留。
+    const float bgmY = pauseY - kStep;
     const bool bgmSel = (m_Row == kBgmRow);
-    AddStrip(root, bgmSel ? RESOURCE_DIR"/Image/btn_sel.png" : RESOURCE_DIR"/Image/set_row_a.png",
-             bgmY, kTableW, 18.0f);
+    if (bgmSel) {
+        auto hl = std::make_shared<UIImage>(RESOURCE_DIR"/Image/keycap_sel.png", 0.0f, bgmY, 18.0f);
+        hl->SetScale(kTableW / 60.0f, 1.0f);  // keycap_sel 60x42 → 1180x42 橘色列
+        root.AddChild(hl); m_Imgs.push_back(hl);
+    } else {
+        AddStrip(root, RESOURCE_DIR"/Image/set_row_a.png", bgmY, kTableW, 18.0f);
+    }
     AddText(root, "背景音樂", kColLabel, bgmY, bgmSel ? WhiteText() : DarkText());
     m_BgmSlider.SetFocused(bgmSel);
 }
@@ -138,15 +143,19 @@ void SettingsState::OnUpdate(App& app) {
         if (Util::Input::IsKeyDown(K::ESCAPE)) { m_Awaiting = false; Rebuild(app); return; }
         const Util::Keycode k = PollAnyKey();
         if (k != KeyBindings::NoKey()) {
-            // 不允許重複綁定：把其他綁到同一鍵的格子清成未綁定
-            for (int c = 0; c < 2; ++c) {
-                for (int a = 0; a < kActions; ++a) {
-                    if (!(c == m_Col && a == m_Row) && app.Keys().Key(c, a) == k) {
-                        app.Keys().Key(c, a) = KeyBindings::NoKey();
+            if (m_Row == kPauseRow) {
+                app.Keys().pause = k;  // 暫停為共用單一鍵，直接綁定
+            } else {
+                // 不允許重複綁定：把其他綁到同一鍵的格子清成未綁定
+                for (int c = 0; c < 2; ++c) {
+                    for (int a = 0; a < kActions; ++a) {
+                        if (!(c == m_Col && a == m_Row) && app.Keys().Key(c, a) == k) {
+                            app.Keys().Key(c, a) = KeyBindings::NoKey();
+                        }
                     }
                 }
+                app.Keys().Key(m_Col, m_Row) = k;
             }
-            app.Keys().Key(m_Col, m_Row) = k;
             // 綁的是空白/Enter → 吞掉它接下來的放開，否則會立刻又進入「重設」
             if (k == K::SPACE || k == K::RETURN) m_IgnoreConfirm = true;
             m_Awaiting = false;
@@ -175,6 +184,16 @@ void SettingsState::OnUpdate(App& app) {
         if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::A)) m_BgmSlider.Adjust(-5);
         else if (Util::Input::IsKeyUp(K::RIGHT) || Util::Input::IsKeyUp(K::D)) m_BgmSlider.Adjust(+5);
     }
+    else if (m_Row == kPauseRow) {
+        // ---- 暫停列：空白/Enter 設定鍵；Del 清除 ----
+        if (Util::Input::IsKeyUp(K::SPACE) || Util::Input::IsKeyUp(K::RETURN)) {
+            if (m_IgnoreConfirm) m_IgnoreConfirm = false;
+            else { m_Awaiting = true; dirty = true; }
+        }
+        if (Util::Input::IsKeyUp(K::BACKSPACE) || Util::Input::IsKeyUp(K::DELETE)) {
+            app.Keys().pause = KeyBindings::NoKey(); dirty = true;
+        }
+    }
     else {
         // ---- 操作列：左右換玩家欄 / 空白重設該鍵 / Del 清除 ----
         if (Util::Input::IsKeyUp(K::LEFT) || Util::Input::IsKeyUp(K::RIGHT) ||
@@ -189,25 +208,6 @@ void SettingsState::OnUpdate(App& app) {
         if ((Util::Input::IsKeyUp(K::BACKSPACE) || Util::Input::IsKeyUp(K::DELETE)) && editable(m_Row, m_Col)) {
             app.Keys().Key(m_Col, m_Row) = KeyBindings::NoKey();  // 清除→留空
             dirty = true;
-        }
-    }
-
-    // ---- 滑鼠：拖曳背景音樂滑桿；點某格選取並開始改鍵 ----
-    const auto cur = Util::Input::GetCursorPosition();
-    const float wx = cur.x - 640.0f, wy = 360.0f - cur.y;  // 視窗左上原點 → 畫面中心原點
-    if (m_BgmSlider.HandleMouse(wx, wy, Util::Input::IsKeyPressed(K::MOUSE_LB))) {
-        if (m_Row != kBgmRow) { m_Row = kBgmRow; dirty = true; }  // 拖曳即聚焦該列
-    }
-    if (Util::Input::IsKeyDown(K::MOUSE_LB)) {
-        constexpr float kRow0Y = 178.0f, kStep = 46.0f, kColP1 = 110.0f, kColP2 = 400.0f;
-        for (int i = 0; i < kActions; ++i) {
-            if (std::abs(wy - (kRow0Y - i * kStep)) < 23.0f) {
-                int col = -1;
-                if (std::abs(wx - kColP1) < 130.0f) col = 0;
-                else if (std::abs(wx - kColP2) < 130.0f) col = 1;
-                if (col >= 0 && editable(i, col)) { m_Row = i; m_Col = col; m_Awaiting = true; dirty = true; }
-                break;
-            }
         }
     }
 

@@ -23,6 +23,7 @@ private:
     int m_Tick = 0;
     std::shared_ptr<UIImage> m_Logo;
     std::shared_ptr<UIText>  m_Press;
+    std::shared_ptr<UIText>  m_Version;  // 右下角版本號
     KeyHint m_Hint;
 
     ConfirmDialog m_QuitDialog;     // ESC → 結束確認

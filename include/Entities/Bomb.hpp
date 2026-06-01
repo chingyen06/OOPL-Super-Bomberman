@@ -24,6 +24,7 @@ public:
     int GetFirepower() const { return m_Firepower; }
 
     int GetOwnerID() const { return m_OwnerID; }
+    int RemainingFuse() const { return m_Tick; }  // 距離引爆還有幾 frame (m_Tick 由 kFuseFrames 倒數至 0)
 
 	void ForceDetonate() { m_State = State::DONE; }  // Force detonation (used for chain reactions when another bomb's fire reaches this one)
 

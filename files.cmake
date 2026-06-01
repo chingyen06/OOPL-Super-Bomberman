@@ -5,7 +5,6 @@ set(SRC_FILES
     Core/GameWorldContext.cpp
     # ---- Audio ----
     Audio/MusicPlayer.cpp
-    Audio/SfxPlayer.cpp
     # ---- States ----
     States/MenuCommon.cpp
     States/TitleScreenState.cpp
@@ -104,7 +103,6 @@ set(INCLUDE_FILES
     Map/TileSet.hpp
     # ---- Audio ----
     Audio/MusicPlayer.hpp
-    Audio/SfxPlayer.hpp
     # ---- Bot ----
     Bot/BotNavigator.hpp
     Bot/BotProfile.hpp

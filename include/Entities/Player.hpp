@@ -85,6 +85,10 @@ public:
 
     InputController* GetController() const { return m_Controller.get(); }
 
+    // 靜止時是否自動歸位到格中心：僅 AI 開啟 (避免 bot 停在格角被波及)；
+    // 人類玩家關閉，否則停下會被「硬拽」到格中心、手感差又易被預判。
+    void SetAutoCenterIdle(bool on) { m_AutoCenterIdle = on; }
+
     bool TriggerBounce(Direction dir, int distance);  // 彈跳板
 
 private:
@@ -124,6 +128,7 @@ private:
     bool m_DroppedKeyPending = false;  // 死亡時持有鑰匙 → 等 GameSession 取走並放回世界
 
     Team m_Team;
+    bool m_AutoCenterIdle = false;  // true = 靜止時自動歸位格中心 (僅 AI)
     std::unique_ptr<InputController> m_Controller;
 
     int m_SpawnX;

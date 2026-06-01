@@ -19,13 +19,14 @@ public:
     void OnEnter(App& app) override;
     void OnExit(App& app) override;
     void OnUpdate(App& app) override;
-    bool WantsCursor(App& /*app*/) override { return true; }  // 允許滑鼠：點格選取 / 改鍵
+    bool WantsCursor(App& /*app*/) override { return false; }  // 與其他選單一致：隱藏滑鼠 (純鍵盤操作)
 
 private:
-    static constexpr int kActions = KeyBindings::kActions;  // 操作列數 (上/下/左/右/放炸彈/武器)
-    static constexpr int kBgmRow  = kActions;               // 「背景音樂」音量列 (排在操作列之後)
-    static constexpr int kRows    = kActions + 1;           // 可上下導覽的總列數 (操作 + 背景音樂)
-    int  m_Row = 0;             // 0..kActions-1 = 操作列；kBgmRow = 背景音樂音量列
+    static constexpr int kActions  = KeyBindings::kActions;  // 操作列數 (上/下/左/右/放炸彈/武器)
+    static constexpr int kPauseRow = kActions;               // 「暫停」列 (單一可設定鍵)
+    static constexpr int kBgmRow   = kActions + 1;           // 「背景音樂」音量列
+    static constexpr int kRows     = kActions + 2;           // 可上下導覽的總列數
+    int  m_Row = 0;             // 0..kActions-1 = 操作；kPauseRow = 暫停；kBgmRow = 背景音樂
     int  m_Col = 0;             // 0 = 玩家1，1 = 玩家2
     bool m_Awaiting = false;    // 等待輸入新鍵中
     bool m_IgnoreConfirm = false;  // 綁定空白/Enter 後，吞掉其放開避免又觸發「重設」

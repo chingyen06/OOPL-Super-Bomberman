@@ -15,6 +15,9 @@ public:
         { Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT, static_cast<Util::Keycode>(0) },
     };
 
+    // 暫停：兩名玩家共用的單一按鍵 (可在設定畫面修改)，預設 Enter。
+    Util::Keycode pause = Util::Keycode::RETURN;
+
     static Util::Keycode NoKey() { return static_cast<Util::Keycode>(0); }
 
     Util::Keycode& Key(int player, int action) {

@@ -43,6 +43,16 @@ int BotNavigator::SafeWalkCost(int x, int y) const {
     return IsBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
 }
 
+// 衝目標用：擋住牆/磚/炸彈/「正在燒的火焰」與精靈/砲台，但允許走「即將爆炸、尚未噴火」
+// 的格 (高成本)。是否真的衝，由 AIManager 依爆炸時限判斷；這裡只負責讓路徑可規劃出來。
+int BotNavigator::RushCost(int x, int y) const {
+    if (!m_Lm.IsWalkable(x, y) || m_Bm.IsBombAt(x, y) || m_Bm.HasExplosionAt(x, y)) return -1;
+    if (IsSpiritAt(x, y) || IsTurretAt(x, y)) return -1;
+    int base = IsBlockedByOther(x, y) ? kOtherPlayerPenalty : 1;
+    if (m_Danger.IsLethal(x, y, m_Lm, m_Fp)) base += 6;  // 即將爆炸的格：可走但盡量少踩
+    return base;
+}
+
 // 逃離危險用：同 SafeWalkCost 但「不」排除致命格 — 本來就要穿越危險逃出去
 int BotNavigator::RetreatCost(int x, int y) const {
     if (!m_Lm.IsWalkable(x, y) || m_Bm.IsBombAt(x, y) || m_Bm.HasExplosionAt(x, y)) return -1;

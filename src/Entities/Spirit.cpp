@@ -28,9 +28,13 @@ void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const IEnemyW
     UpdatePixelMovement();
     m_Tick++;
 
+    // 以「實際像素位置」判定接觸，而非格子座標：精靈移動中時 m_GridX/Y 已是目的格，
+    // 用格子判定會讓精靈「還沒走到就先殺了那一格的進攻方」。用像素重疊才符合畫面。
+    constexpr float kCatchRadius = 16.0f;  // 約半格；中心距離夠近才算抓到
     for (auto& p : players) {
         if (p->GetTeam() == Team::ATTACKER && !p->IsDead()) {
-            if (p->GetGridX() == m_GridX && p->GetGridY() == m_GridY) {
+            const glm::vec2 pp = p->GetPixelPos();
+            if (std::abs(pp.x - m_Pos.x) < kCatchRadius && std::abs(pp.y - m_Pos.y) < kCatchRadius) {
                 p->Kill();
                 LOG_INFO("Attacker was caught and killed by Spirit!");
             }
@@ -60,7 +64,11 @@ void Spirit::Update(std::vector<std::shared_ptr<Player>>& players, const IEnemyW
 }
 
 void Spirit::CheckDamage(const IEnemyWorldContext& world) {
-    if (world.HasExplosionAt(m_GridX, m_GridY)) {
+    // 用精靈「目前實際所在格」(由像素位置換算) 判定，而非 m_GridX/Y (移動中是目的格)，
+    // 否則精靈經過火焰時可能不會被炸死 → 感覺打不死。
+    const int gx = GridCoord::ToGridX(m_Pos.x);
+    const int gy = GridCoord::ToGridY(m_Pos.y);
+    if (world.HasExplosionAt(gx, gy) || world.HasExplosionAt(m_GridX, m_GridY)) {
         m_ShouldDelete = true;
         m_State = State::DEAD;
         SetVisible(false);

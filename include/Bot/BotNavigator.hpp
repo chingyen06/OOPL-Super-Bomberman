@@ -39,7 +39,9 @@ public:
     bool HasLineOfSight(int bx, int by, int tx, int ty) const; // 同行/列且中間無牆
 
 private:
-    static constexpr int kOtherPlayerPenalty = 25;  // 走過其他玩家格的高成本，強烈傾向繞路
+    // 走過其他玩家所在格的額外成本。玩家之間不會實體碰撞 (可同格)，所以這裡只要「輕微」
+    // 傾向避開即可；用太高 (原 25) 會讓多隻 bot 靠近時最短路徑一直被對方位置擾動而每幀改線、抽搐。
+    static constexpr int kOtherPlayerPenalty = 4;
 
     const LevelManager& m_Lm;
     const BombManager& m_Bm;

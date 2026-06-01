@@ -78,7 +78,12 @@ void GameSession::LoadLevel(int levelIndex) {
         const auto& spawn = atkSpawns[spawnIdx++];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER, std::move(ctrl), nextPlayerId++);
         if (mode == MatchConfig::SlotMode::Human) m_HumanPlayer2 = attacker.get();   // 玩家2 (作弊對象)
-        else attacker->SetAutoCenterIdle(true);                                       // AI 才自動歸位格中心
+        else {
+            attacker->SetAutoCenterIdle(true);
+            // 每隻 AI 速度略不同 (0.80~0.89，皆 < 防守方 1.0)：即使走同一條路也會逐漸拉開、
+            // 不再整排同步移動 (「走路一致」)。
+            attacker->SetSpeedFactor(0.80f + (attacker->GetPlayerID() % 4) * 0.03f);
+        }
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }
@@ -88,7 +93,8 @@ void GameSession::LoadLevel(int levelIndex) {
         const auto& spawn = atkSpawns[0];
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
                                                  std::make_unique<BotController>(BotProfileFactory::Default(), 0), nextPlayerId++);
-        attacker->SetAutoCenterIdle(true);  // AI
+        attacker->SetAutoCenterIdle(true);
+        attacker->SetSpeedFactor(0.80f + (attacker->GetPlayerID() % 4) * 0.03f);  // AI：略慢且各異
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }

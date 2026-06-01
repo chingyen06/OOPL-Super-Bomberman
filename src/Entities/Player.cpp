@@ -50,6 +50,7 @@ void Player::Update(const IWorldContext& worldContext) {
     else {
         speed = Constants::Player::kNormalSpeed;
     }
+    speed *= m_SpeedFactor;  // AI 進攻方 <1：讓人類防守方有機動優勢
 
     if (m_IsDead) {
         if (m_DeathCountdown > 0) {

@@ -89,6 +89,9 @@ public:
     // 人類玩家關閉，否則停下會被「硬拽」到格中心、手感差又易被預判。
     void SetAutoCenterIdle(bool on) { m_AutoCenterIdle = on; }
 
+    // 移動速度倍率 (1.0 = 正常)。AI 進攻方設略小於 1，讓人類防守方能拉開身位 / 搶先抵達。
+    void SetSpeedFactor(float f) { m_SpeedFactor = f; }
+
     bool TriggerBounce(Direction dir, int distance);  // 彈跳板
 
 private:
@@ -129,6 +132,7 @@ private:
 
     Team m_Team;
     bool m_AutoCenterIdle = false;  // true = 靜止時自動歸位格中心 (僅 AI)
+    float m_SpeedFactor = 1.0f;     // 移動速度倍率 (AI 進攻方 <1，給防守方機動優勢)
     std::unique_ptr<InputController> m_Controller;
 
     int m_SpawnX;

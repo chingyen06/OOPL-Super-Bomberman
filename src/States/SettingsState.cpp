@@ -84,17 +84,12 @@ void SettingsState::Build(App& app) {
     const std::string pauseLabel = (pauseSel && m_Awaiting) ? "按鍵…" : KeyName(app.Keys().pause);
     AddKeyBox(root, pauseLabel, (kColP1 + kColP2) * 0.5f, pauseY, pauseSel);
 
-    // 背景音樂音量列：選取時整列底圖變橘 (用 keycap_sel 拉成正確列高的橘帶，不會過大);
+    // 背景音樂音量列：選取時整列底圖變橘 (用矩形橘條 row_sel，邊緣不會像 keycap 那樣彎);
     // 未選取則用一般列底圖。滑桿本身在 OnEnter 已掛上、跨 Rebuild 保留。
     const float bgmY = pauseY - kStep;
     const bool bgmSel = (m_Row == kBgmRow);
-    if (bgmSel) {
-        auto hl = std::make_shared<UIImage>(RESOURCE_DIR"/Image/keycap_sel.png", 0.0f, bgmY, 18.0f);
-        hl->SetScale(kTableW / 60.0f, 1.0f);  // keycap_sel 60x42 → 1180x42 橘色列
-        root.AddChild(hl); m_Imgs.push_back(hl);
-    } else {
-        AddStrip(root, RESOURCE_DIR"/Image/set_row_a.png", bgmY, kTableW, 18.0f);
-    }
+    AddStrip(root, bgmSel ? RESOURCE_DIR"/Image/row_sel.png" : RESOURCE_DIR"/Image/set_row_a.png",
+             bgmY, kTableW, 18.0f);
     AddText(root, "背景音樂", kColLabel, bgmY, bgmSel ? WhiteText() : DarkText());
     m_BgmSlider.SetFocused(bgmSel);
 }

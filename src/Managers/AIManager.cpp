@@ -104,8 +104,9 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
     int mapW = levelManager.GetMapWidth();
     int mapH = levelManager.GetMapHeight();
 
-    // 跨 bot 共享的目標鎖定表：本幀內某物件被某 bot 鎖定後，其他 bot 不再追同一物
-    std::unordered_set<Interactable*> claimedTargets;
+    // 先做目標分派：保留各 bot 仍有效的承諾，再把沒目標的指派到最近未佔用物件。
+    // 之後決策迴圈只「讀取」各 bot 已分派好的目標 → 目標穩定 (不抽搐) 且彼此不同 (不浪費)。
+    AssignTargets(players, interactables);
 
     for (auto& bot : players) {
         if (bot->IsDead()) continue;
@@ -132,9 +133,11 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         auto safeCost = [&, wanderSeed](int x, int y) {
             const int c = nav.SafeWalkCost(x, y);
             if (c < 0) return c;
+            // 每隻 bot 對每格加 0~2 的固定偏好擾動：不同 bot 偏好不同走法 → 路線分散、不會整排
+            // 走同一條。只依 (id,x,y) 不依時間，所以路徑逐幀穩定、不抽搐。
             const unsigned h = wanderSeed ^ (static_cast<unsigned>(x) * 73856093u)
                                           ^ (static_cast<unsigned>(y) * 19349663u);
-            return c + static_cast<int>(h & 1u);
+            return c + static_cast<int>(h % 3u);
         };
 
         // 反應延遲：cooldown 中跳過決策，input 保持上一次設定。
@@ -199,23 +202,16 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         //
         // 目標承諾 (anti-twitch)：先續追上次鎖定的物件 (該格仍有對本 bot 有效的物件、且
         // 未被別人 claim)；否則才重挑最近的。避免多隻 bot 互搶鄰近鑰匙時目標每幀互換、原地抽搐。
+        // 目標已由 AssignTargets 分派好 (每隻 bot 各異且穩定)；這裡只讀取。
+        // 有分派到物件 → 追該物件；沒有 (物件比 bot 少) → 去追防守方。
         int targetX = -1, targetY = -1;
-        auto committed = FindTargetAt(botController->GoalX(), botController->GoalY(), bot->HasKey(), interactables);
-        if (committed && claimedTargets.count(committed.get())) committed = nullptr;  // 已被別的 bot 鎖定
-        auto chosenTarget = committed ? committed
-                                      : FindNearestTarget(botX, botY, bot->HasKey(), interactables, claimedTargets);
-
+        auto chosenTarget = FindTargetAt(botController->GoalX(), botController->GoalY(), bot->HasKey(), interactables);
         if (chosenTarget) {
             targetX = chosenTarget->GetGridX();
             targetY = chosenTarget->GetGridY();
-            claimedTargets.insert(chosenTarget.get());  // 鎖定，後續 bot 不重複追
-            botController->SetGoal(targetX, targetY);    // 記住，下一幀續追同一目標
-        } else {
-            botController->SetGoal(-1, -1);              // 沒有物件可撿 → 清除承諾
-            if (targetDefender) {
-                targetX = targetDefender->GetGridX();
-                targetY = targetDefender->GetGridY();
-            }
+        } else if (targetDefender) {
+            targetX = targetDefender->GetGridX();
+            targetY = targetDefender->GetGridY();
         }
 
         if (targetX == -1) {
@@ -268,8 +264,9 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 3.5：衝向「物件目標」(鑰匙 / 寶箱 / 道具)。沒有完全安全路徑時，若判斷「能趕在
         // 火焰蔓延到之前」抵達，就算路上有即將爆炸 (尚未噴火) 的格也衝過去 —— 例如趕著開寶箱。
         // 逐格比對「該格還有幾 frame 變致命」與「bot 走到該格約需幾 frame」，全部來得及才衝。
-        // 只在追物件時啟用 (追防守方不冒這個險)，且不會踩進「正在燒」的火焰 (RushCost 已擋)。
-        if (chosenTarget) {
+        // 只在追物件、且性格「敢冒險」時啟用 (追防守方不冒這個險)；不會踩進「正在燒」的火焰
+        // (RushCost 已擋)。多數性格不衝 → 防守方在寶箱旁佈彈/用武器就能嚇阻、守得住。
+        if (chosenTarget && profile.RushesObjectives()) {
             auto rushPath = FindPath(botX, botY, targetX, targetY, mapW, mapH,
                                      [&](int x, int y) { return nav.RushCost(x, y); });
             if (!rushPath.empty()) {
@@ -391,6 +388,32 @@ std::shared_ptr<Interactable> AIManager::FindNearestTarget(int botX, int botY, b
 
     if (bestByPriority.empty()) return nullptr;
     return bestByPriority.begin()->second.first;  // 最低 priority 編號 = 最優先
+}
+
+void AIManager::AssignTargets(std::vector<std::shared_ptr<Player>>& players,
+                              const std::vector<std::shared_ptr<Interactable>>& items) {
+    std::unordered_set<Interactable*> claimed;
+
+    // Pass 1：保留「仍有效」的承諾 (該格物件還在、對該 bot 仍有效、且未被更前面的 bot 佔走)。
+    // 失效或撞車的 → 清掉 goal，留待 Pass 2 重新指派。
+    for (auto& b : players) {
+        if (b->IsDead()) continue;
+        auto ctrl = dynamic_cast<IProgrammableController*>(b->GetController());
+        if (!ctrl) continue;
+        auto t = FindTargetAt(ctrl->GoalX(), ctrl->GoalY(), b->HasKey(), items);
+        if (t && !claimed.count(t.get())) claimed.insert(t.get());  // 保留此承諾並佔用
+        else ctrl->SetGoal(-1, -1);
+    }
+
+    // Pass 2：沒有效承諾的 bot → 指派「最近、尚未被佔用」的物件，確保每隻追不同目標。
+    for (auto& b : players) {
+        if (b->IsDead()) continue;
+        auto ctrl = dynamic_cast<IProgrammableController*>(b->GetController());
+        if (!ctrl || ctrl->GoalX() >= 0) continue;  // 已有承諾
+        auto t = FindNearestTarget(b->GetGridX(), b->GetGridY(), b->HasKey(), items, claimed);
+        if (t) { ctrl->SetGoal(t->GetGridX(), t->GetGridY()); claimed.insert(t.get()); }
+        // 沒物件可派 → goal 維持 -1，決策迴圈會改去追防守方
+    }
 }
 
 std::shared_ptr<Interactable> AIManager::FindTargetAt(int gridX, int gridY, bool hasKey,

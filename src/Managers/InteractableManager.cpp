@@ -118,6 +118,14 @@ bool InteractableManager::AreAllObjectivesComplete() const {
     return true;
 }
 
+void InteractableManager::ForceCompleteObjectives() {
+    for (auto& item : m_Interactables) {
+        if (item->IsScoringObjective() && !item->IsObjectiveComplete()) {
+            item->ForceComplete();
+        }
+    }
+}
+
 int InteractableManager::GetObjectiveCount() const {
     int count = 0;
     for (const auto& item : m_Interactables) {

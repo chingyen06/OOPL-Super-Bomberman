@@ -57,41 +57,53 @@ KeyHint AddKeyHint(App& app, const std::vector<std::pair<std::string, std::strin
     constexpr float capNativeW = 60.0f, capNativeH = 42.0f;
     constexpr float trailPad   = 14.0f * scale;  // 文字貼圖右側留白 (半值即置中補正)
 
-    class Item { public: std::shared_ptr<UIText> key, act; float keyW, actW, capW; };
+    // keycap + 動作字一段的版面資料 (封裝；建構時算好字寬與膠囊寬)
+    class Item {
+    public:
+        Item(const std::string& keyStr, const std::string& actStr,
+             float scale, float trailPad, float capPadX, float y) {
+            m_Key = std::make_shared<UIText>(keyStr, 0.0f, y, 60.0f, DarkText());
+            m_Key->SetScale(scale, scale);
+            m_Act = std::make_shared<UIText>(actStr, 0.0f, y, 60.0f,
+                                             Util::Color::FromName(Util::Colors::DIM_GRAY));
+            m_Act->SetScale(scale, scale);
+            const float keyW = m_Key->GetWidth() * scale - trailPad;  // 扣掉右側留白才是實際字寬
+            m_ActW = m_Act->GetWidth() * scale - trailPad;
+            m_CapW = keyW + capPadX * 2.0f;
+        }
+        const std::shared_ptr<UIText>& Key() const { return m_Key; }
+        const std::shared_ptr<UIText>& Act() const { return m_Act; }
+        float ActW() const { return m_ActW; }
+        float CapW() const { return m_CapW; }
+    private:
+        std::shared_ptr<UIText> m_Key, m_Act;
+        float m_ActW, m_CapW;
+    };
     std::vector<Item> items;
     float total = 0.0f;
     for (const auto& s : segs) {
-        Item it;
-        it.key = std::make_shared<UIText>(s.first, 0.0f, y, 60.0f, DarkText());
-        it.key->SetScale(scale, scale);
-        it.act = std::make_shared<UIText>(s.second, 0.0f, y, 60.0f,
-                                          Util::Color::FromName(Util::Colors::DIM_GRAY));
-        it.act->SetScale(scale, scale);
-        it.keyW = it.key->GetWidth() * scale - trailPad;  // 扣掉右側留白才是實際字寬
-        it.actW = it.act->GetWidth() * scale - trailPad;
-        it.capW = it.keyW + capPadX * 2.0f;
-        items.push_back(it);
-        total += it.capW + keyActGap + it.actW + segGap;
+        items.emplace_back(s.first, s.second, scale, trailPad, capPadX, y);
+        total += items.back().CapW() + keyActGap + items.back().ActW() + segGap;
     }
     if (!items.empty()) total -= segGap;  // 末段不計尾距
 
     float cursor = rightEdge - total;  // 整列左緣
-    for (auto& it : items) {
-        const float capCx = cursor + it.capW * 0.5f;
+    for (const auto& it : items) {
+        const float capCx = cursor + it.CapW() * 0.5f;
         auto cap = std::make_shared<UIImage>(RESOURCE_DIR"/Image/keycap.png", capCx, y, 59.0f);
-        cap->SetScale(it.capW / capNativeW, capH / capNativeH);
+        cap->SetScale(it.CapW() / capNativeW, capH / capNativeH);
         root.AddChild(cap);
         hint.caps.push_back(cap);
 
-        it.key->SetPosition(capCx + trailPad * 0.5f, y);  // 往右補抵銷貼圖留白
-        root.AddChild(it.key);
-        hint.labels.push_back(it.key);
-        cursor += it.capW + keyActGap;
+        it.Key()->SetPosition(capCx + trailPad * 0.5f, y);  // 往右補抵銷貼圖留白
+        root.AddChild(it.Key());
+        hint.labels.push_back(it.Key());
+        cursor += it.CapW() + keyActGap;
 
-        it.act->SetPosition(cursor + it.actW * 0.5f + trailPad * 0.5f, y);
-        root.AddChild(it.act);
-        hint.labels.push_back(it.act);
-        cursor += it.actW + segGap;
+        it.Act()->SetPosition(cursor + it.ActW() * 0.5f + trailPad * 0.5f, y);
+        root.AddChild(it.Act());
+        hint.labels.push_back(it.Act());
+        cursor += it.ActW() + segGap;
     }
     return hint;
 }

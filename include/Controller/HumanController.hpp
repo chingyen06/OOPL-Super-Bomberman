@@ -5,13 +5,14 @@
 #include "Util/Keycode.hpp"
 #include "Util/Input.hpp"
 
+// 一名玩家的按鍵設定。成員維持公開：KeyBindings::Key() 直接回傳其 reference 供設定畫面就地改鍵。
 class Control {
 public:
-    Util::Keycode UP;
-    Util::Keycode DOWN;
-    Util::Keycode LEFT;
-    Util::Keycode RIGHT;
-    Util::Keycode PLACEBOMB;
+    Control(Util::Keycode up, Util::Keycode down, Util::Keycode left, Util::Keycode right,
+            Util::Keycode placeBomb, Util::Keycode weapon)
+        : UP(up), DOWN(down), LEFT(left), RIGHT(right), PLACEBOMB(placeBomb), WEAPON(weapon) {}
+
+    Util::Keycode UP, DOWN, LEFT, RIGHT, PLACEBOMB;
     Util::Keycode WEAPON;  // 防守方武器發動
 };
 

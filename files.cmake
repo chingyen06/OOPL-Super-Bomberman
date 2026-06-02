@@ -3,6 +3,7 @@ set(SRC_FILES
     Core/App.cpp
     Core/GameSession.cpp
     Core/GameWorldContext.cpp
+    Core/DefenderWeaponSystem.cpp
     # ---- Audio ----
     Audio/MusicPlayer.cpp
     # ---- States ----
@@ -38,12 +39,13 @@ set(SRC_FILES
     # ---- Bot ----
     Bot/BotNavigator.cpp
     Bot/DangerMap.cpp
+    Bot/Pathfinder.cpp
     # ---- UI ----
     UI/UIManager.cpp
     UI/UIImage.cpp
     UI/UIText.cpp
     UI/UIButtonList.cpp
-    UI/Menu.cpp
+    UI/DebugConsole.cpp
     UI/PauseMenu.cpp
     UI/Slider.cpp
     UI/DebugOverlay.cpp
@@ -64,6 +66,7 @@ set(INCLUDE_FILES
     Core/GameSession.hpp
     Core/GameWorldContext.hpp
     Core/WorldContext.hpp
+    Core/DefenderWeaponSystem.hpp
     # ---- States ----
     States/IGameState.hpp
     States/MenuCommon.hpp
@@ -107,6 +110,7 @@ set(INCLUDE_FILES
     Bot/BotNavigator.hpp
     Bot/BotProfile.hpp
     Bot/DangerMap.hpp
+    Bot/Pathfinder.hpp
     # ---- Controller ----
     Controller/InputController.hpp
     Controller/HumanController.hpp
@@ -120,7 +124,7 @@ set(INCLUDE_FILES
     UI/UIImage.hpp
     UI/UIText.hpp
     UI/UIButtonList.hpp
-    UI/Menu.hpp
+    UI/DebugConsole.hpp
     UI/PauseMenu.hpp
     UI/Slider.hpp
     UI/DebugOverlay.hpp

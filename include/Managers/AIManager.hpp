@@ -7,6 +7,7 @@
 #include <utility>
 #include <functional>
 #include "glm/vec2.hpp"
+#include "Bot/Pathfinder.hpp"
 #include "DangerMap.hpp"
 #include "Player.hpp"
 #include "LevelManager.hpp"
@@ -30,9 +31,6 @@ public:
     bool IsDangerAt(int x, int y) const { return m_DangerMap.IsDanger(x, y); }
 
 private:
-    // 泛用型 A*；尋路規則透過 cost function 注入
-    std::vector<std::pair<int, int>> FindPath(int startX, int startY, int targetX, int targetY, int mapW, int mapH, std::function<int(int, int)> costFunc);
-
     // 放彈前驗證逃生路徑可行 (FindSafeSpot + 走得到)。可行則回 true、outFirstStep 設為逃生第一步，
     // 並把這顆 pending 炸彈登記進 DangerMap。三個放彈策略 (追擊/炸牆/自殺) 共用，消除重複。
     bool TryPlanBombEscape(int botX, int botY, int mapW, int mapH,
@@ -64,7 +62,8 @@ private:
     void ExecuteMove(IProgrammableController* botController, int fromX, int fromY, int toX, int toY,
                      bool placeBomb, glm::vec2 force) const;
 
-    DangerMap m_DangerMap;  // 危險地圖 (拆分自原 AIManager 內聚實作)
+    DangerMap  m_DangerMap;  // 危險地圖 (拆分自原 AIManager 內聚實作)
+    Pathfinder m_Pathfinder; // 泛用 A* 尋路 (拆分自原 AIManager 內聚實作)
 };
 
 #endif

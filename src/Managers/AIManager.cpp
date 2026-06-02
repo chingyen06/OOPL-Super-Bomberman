@@ -14,65 +14,6 @@
 #include <functional>
 #include <map>
 
-class AStarNode {
-public:
-    int x, y;
-    int g, h;
-    std::shared_ptr<AStarNode> parent;
-    int f() const { return g + h; }
-};
-
-class CompareNode {
-public:
-    bool operator()(const std::shared_ptr<AStarNode>& a, const std::shared_ptr<AStarNode>& b) {
-        return a->f() > b->f();
-    }
-};
-
-std::vector<std::pair<int, int>> AIManager::FindPath(int startX, int startY, int targetX, int targetY, int mapW, int mapH, std::function<int(int, int)> costFunc) {
-    std::vector<std::pair<int, int>> path;
-    if (startX == targetX && startY == targetY) return path;
-
-    std::vector<std::vector<bool>> closedList(mapH, std::vector<bool>(mapW, false));
-    std::priority_queue<std::shared_ptr<AStarNode>, std::vector<std::shared_ptr<AStarNode>>, CompareNode> openList;
-
-    int startH = std::abs(startX - targetX) + std::abs(startY - targetY);
-    openList.push(std::make_shared<AStarNode>(AStarNode{ startX, startY, 0, startH, nullptr }));
-
-    while (!openList.empty()) {
-        auto current = openList.top();
-        openList.pop();
-
-        if (closedList[current->y][current->x]) continue;
-        closedList[current->y][current->x] = true;
-
-        if (current->x == targetX && current->y == targetY) {
-            auto currNode = current;
-            while (currNode->parent != nullptr) {
-                path.push_back({ currNode->x, currNode->y });
-                currNode = currNode->parent;
-            }
-            std::reverse(path.begin(), path.end());
-            return path;
-        }
-
-        for (const auto& off : kCardinalOffsets) {
-            int nx = current->x + off.dx;
-            int ny = current->y + off.dy;
-
-            if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
-                int cost = costFunc(nx, ny);
-                if (cost >= 0 && !closedList[ny][nx]) {
-                    int g = current->g + cost;
-                    int h = std::abs(nx - targetX) + std::abs(ny - targetY);
-                    openList.push(std::make_shared<AStarNode>(AStarNode{ nx, ny, g, h, current }));
-                }
-            }
-        }
-    }
-    return path;
-}
-
 bool AIManager::TryPlanBombEscape(int botX, int botY, int mapW, int mapH,
                                   const LevelManager& lm, const BombManager& bm, int fp,
                                   const std::function<int(int, int)>& walkCost,
@@ -80,9 +21,9 @@ bool AIManager::TryPlanBombEscape(int botX, int botY, int mapW, int mapH,
     // 放彈前確認逃生路徑「不只存在，還走得到」。escape path 只避開「已存在」的炸彈/爆炸與
     // 危險格，不避開這顆 pretend bomb 自己的火力 — 它有 3 秒引信，bot 來得及穿出去。
     auto testSafe = m_DangerMap.FindSafeSpot(botX, botY, lm, bm, fp, botX, botY);
-    if (!testSafe.found) return false;
+    if (!testSafe.Found()) return false;
 
-    auto escapePath = FindPath(botX, botY, testSafe.x, testSafe.y, mapW, mapH, walkCost);
+    auto escapePath = m_Pathfinder.FindPath(botX, botY, testSafe.X(), testSafe.Y(), mapW, mapH, walkCost);
     if (escapePath.empty()) return false;
 
     outFirstStep = escapePath[0];
@@ -162,9 +103,11 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // immediate 情境 (危險 / 輸送帶 / 像素偏離) cooldown = 0，每幀都會繼續微調 — 避免 S 型走
         class ResetGuard {
         public:
-            IProgrammableController* ctrl;
-            int frames;
-            ~ResetGuard() { ctrl->ResetCooldown(frames); }
+            ResetGuard(IProgrammableController* ctrl, int frames) : m_Ctrl(ctrl), m_Frames(frames) {}
+            ~ResetGuard() { m_Ctrl->ResetCooldown(m_Frames); }
+        private:
+            IProgrammableController* m_Ctrl;
+            int m_Frames;
         };
         // 反應幀數改由性格決定：積極的 bot 反應快、較少在原地發呆，謹慎的較慢。
         const int nextCooldown = needsImmediate
@@ -175,8 +118,8 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 1：身處危險 — 逃往最近的安全格 (穿越危險也要逃，故用 RetreatCost)
         if (inDanger) {
             auto safeSpot = m_DangerMap.FindSafeSpot(botX, botY, levelManager, bombManager, botFirepower);
-            if (safeSpot.found) {
-                auto path = FindPath(botX, botY, safeSpot.x, safeSpot.y, mapW, mapH,
+            if (safeSpot.Found()) {
+                auto path = m_Pathfinder.FindPath(botX, botY, safeSpot.X(), safeSpot.Y(), mapW, mapH,
                                      [&](int x, int y) { return nav.RetreatCost(x, y); });
                 if (!path.empty()) ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false, forceHere);
             }
@@ -220,7 +163,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         }
 
         // 策略 3：有安全路徑可達目標
-        auto pathSafe = FindPath(botX, botY, targetX, targetY, mapW, mapH, safeCost);
+        auto pathSafe = m_Pathfinder.FindPath(botX, botY, targetX, targetY, mapW, mapH, safeCost);
         if (!pathSafe.empty()) {
             const int defX = targetDefender ? targetDefender->GetGridX() : -999;
             const int defY = targetDefender ? targetDefender->GetGridY() : -999;
@@ -267,7 +210,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 只在追物件、且性格「敢冒險」時啟用 (追防守方不冒這個險)；不會踩進「正在燒」的火焰
         // (RushCost 已擋)。多數性格不衝 → 防守方在寶箱旁佈彈/用武器就能嚇阻、守得住。
         if (chosenTarget && profile.RushesObjectives()) {
-            auto rushPath = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+            auto rushPath = m_Pathfinder.FindPath(botX, botY, targetX, targetY, mapW, mapH,
                                      [&](int x, int y) { return nav.RushCost(x, y); });
             if (!rushPath.empty()) {
                 constexpr int kFramesPerCell = 12;  // ~32px / 3px每幀
@@ -286,7 +229,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         }
 
         // 策略 4：無安全路徑 — 嘗試炸牆開路
-        auto pathThroughBricks = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+        auto pathThroughBricks = m_Pathfinder.FindPath(botX, botY, targetX, targetY, mapW, mapH,
                                           [&](int x, int y) { return nav.BrickCost(x, y); });
         if (!pathThroughBricks.empty()) {
             int walkToX = botX, walkToY = botY;
@@ -306,7 +249,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
                 }
             }
             else {
-                auto pathToBrick = FindPath(botX, botY, walkToX, walkToY, mapW, mapH, safeCost);
+                auto pathToBrick = m_Pathfinder.FindPath(botX, botY, walkToX, walkToY, mapW, mapH, safeCost);
                 if (!pathToBrick.empty()) ExecuteMove(botController, botX, botY, pathToBrick[0].first, pathToBrick[0].second, false, forceHere);
                 else botController->SetInput(false, false, false, false, false);
             }
@@ -316,7 +259,7 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         // 策略 5：對防守方自殺式突擊 (僅「真的在追防守方」、有視線且夠近時；無視火焰衝過去開炸)。
         if (targetDefender && defenderDist <= 5 + profile.SuicideBoldness() &&
             nav.HasLineOfSight(botX, botY, targetDefender->GetGridX(), targetDefender->GetGridY())) {
-            auto pathIgnoreFire = FindPath(botX, botY, targetX, targetY, mapW, mapH,
+            auto pathIgnoreFire = m_Pathfinder.FindPath(botX, botY, targetX, targetY, mapW, mapH,
                                            [&](int x, int y) { return nav.SuicideCost(x, y); });
             if (!pathIgnoreFire.empty()) {
                 std::pair<int, int> escapeStep;
@@ -358,7 +301,7 @@ bool AIManager::ApproachTarget(IProgrammableController* botController, int botX,
     }
 
     if (bestX == botX && bestY == botY) return false;  // 已是最靠近的位置，無處可再靠近
-    auto path = FindPath(botX, botY, bestX, bestY, mapW, mapH, safeCost);
+    auto path = m_Pathfinder.FindPath(botX, botY, bestX, bestY, mapW, mapH, safeCost);
     if (path.empty()) return false;
     ExecuteMove(botController, botX, botY, path[0].first, path[0].second, false, force);
     return true;

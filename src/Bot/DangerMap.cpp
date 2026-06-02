@@ -82,22 +82,22 @@ DangerMap::SafeSpot DangerMap::FindSafeSpot(int startX, int startY,
         const auto current = q.front();
         q.pop();
 
-        if (!IsLethal(current.x, current.y, levelManager, botFp, pretendX, pretendY)) {
-            bestSafe = { current.x, current.y, current.dist, true };
+        if (!IsLethal(current.X(), current.Y(), levelManager, botFp, pretendX, pretendY)) {
+            bestSafe = { current.X(), current.Y(), current.Dist(), true };
             break;
         }
 
-        if (current.dist >= 5) continue;
+        if (current.Dist() >= 5) continue;
 
         for (const auto& off : kCardinalOffsets) {
-            const int nx = current.x + off.dx;
-            const int ny = current.y + off.dy;
+            const int nx = current.X() + off.dx;
+            const int ny = current.Y() + off.dy;
 
             if (nx >= 0 && nx < mapW && ny >= 0 && ny < mapH) {
                 if (!visited[ny][nx] && levelManager.IsWalkable(nx, ny) &&
                     !bombManager.IsBombAt(nx, ny) && !bombManager.HasExplosionAt(nx, ny)) {
                     visited[ny][nx] = true;
-                    q.push({ nx, ny, current.dist + 1, false });
+                    q.push({ nx, ny, current.Dist() + 1, false });
                 }
             }
         }

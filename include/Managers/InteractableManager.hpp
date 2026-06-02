@@ -50,6 +50,10 @@ public:
     // 不再對 Chest 做 dynamic_cast — 新增目標型別不必改這裡。
     bool AreAllObjectivesComplete() const;
 
+    // Debug 用：把所有計分目標 (寶箱等) 強制標記完成 → 觸發進攻方獲勝。透過 Interactable::ForceComplete
+    // 的虛擬 hook，不對具體型別做判斷。
+    void ForceCompleteObjectives();
+
     int GetObjectiveCount() const;
 
     std::vector<bool> GetObjectiveStatusList() const;

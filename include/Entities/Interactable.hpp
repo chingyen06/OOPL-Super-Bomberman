@@ -43,6 +43,10 @@ public:
     // 不必再動 InteractableManager 的目標計數 / 狀態查詢 / 勝負邏輯 (OCP)。
     virtual bool IsScoringObjective() const { return false; }
     virtual bool IsObjectiveComplete() const { return false; }
+
+    // Debug 用：強制把本目標標記為完成 (e.g. 主控台「強制進攻方獲勝」)。預設空操作；
+    // 具體目標型別覆寫之 (Chest → Open)。同樣以虛擬 hook 取代型別判斷，符合 OCP。
+    virtual void ForceComplete() {}
 };
 
 class Key : public Interactable {
@@ -80,6 +84,7 @@ public:
     // Chest 是攻擊方的計分目標；開啟即視為完成
     bool IsScoringObjective() const override { return true; }
     bool IsObjectiveComplete() const override { return m_Opened; }
+    void ForceComplete() override { Open(); }  // debug 強制開啟
 
     bool OnInteract(Player& player) override;
 

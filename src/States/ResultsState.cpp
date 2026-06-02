@@ -26,11 +26,11 @@ void ResultsState::OnEnter(App& app) {
     };
 
     // 左側「獲得寶石」明細：參加戰鬥 (+本場) / 總計
-    add(earnedStr, 18.0f, -200.0f, 0.7f, GoldText());
+    add(earnedStr, 18.0f, -201.0f, 0.7f, GoldText());
     add(totalStr,  18.0f, -233.0f, 0.7f, DarkText());
     // 右側金幣面板：總額 (緊鄰品牌幣) + 本場 callout (+金幣，略往下對齊膠囊)
-    add(totalStr,  280.0f, -205.0f, 0.85f, DarkText());
-    add(earnedStr, 479.0f, -205.0f, 0.7f,  GoldText());
+    add(totalStr,  280.0f, -201.0f, 0.85f, DarkText());
+    add(earnedStr, 479.0f, -201.0f, 0.7f,  GoldText());
 }
 
 void ResultsState::OnExit(App& app) {

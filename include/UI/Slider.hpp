@@ -31,6 +31,12 @@ private:
     void UpdateVisual();
     float Left() const { return m_CenterX - m_TrackW * 0.5f; }
 
+    // 取代原本散在 .cpp 匿名 namespace 的常數與自由函式 (傳統 OOP：收進類別)
+    static constexpr float kKeycapW = 60.0f, kKeycapH = 42.0f;  // keycap 貼圖原始尺寸
+    static constexpr float kSegH    = 26.0f;                    // 區塊高
+    static int Clamp100(int v);                                 // clamp 0..100
+    static int FilledCount(int value);                          // value(%) → 已填區塊數
+
     float m_CenterX = 0.0f, m_Y = 0.0f, m_TrackW = 240.0f, m_Z = 21.0f;
     int   m_Value = 0;
     bool  m_Focused = false;

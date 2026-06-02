@@ -2,12 +2,8 @@
 
 #include "Util/Color.hpp"
 
-namespace {
-constexpr float kKeycapW = 60.0f, kKeycapH = 42.0f;  // keycap 圖原始尺寸
-constexpr float kSegH = 26.0f;                        // 區塊顯示高度
-int Clamp100(int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }
-int FilledCount(int value) { return (value * Slider::kSegments + 50) / 100; }  // 四捨五入到區塊數
-}
+int Slider::Clamp100(int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }
+int Slider::FilledCount(int value) { return (value * kSegments + 50) / 100; }  // 四捨五入到區塊數
 
 void Slider::Show(Util::Renderer& root, float centerX, float y, float trackW, float z) {
     m_CenterX = centerX; m_Y = y; m_TrackW = trackW; m_Z = z;

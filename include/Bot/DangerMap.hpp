@@ -11,7 +11,21 @@ class BombManager;
 // 我在 (px,py) 放一顆 fp 火力的炸彈」也透過介面 (pretendX/Y)，不必直接動內部資料。
 class DangerMap {
 public:
-    class SafeSpot { public: int x, y, dist; bool found; };
+    // BFS 找到的安全格 (封裝；取代原本的公開資料 struct 式 class)
+    class SafeSpot {
+    public:
+        SafeSpot(int x, int y, int dist, bool found)
+            : m_X(x), m_Y(y), m_Dist(dist), m_Found(found) {}
+        int  X() const { return m_X; }
+        int  Y() const { return m_Y; }
+        int  Dist() const { return m_Dist; }
+        bool Found() const { return m_Found; }
+    private:
+        int  m_X;
+        int  m_Y;
+        int  m_Dist;
+        bool m_Found;
+    };
 
     // 重新計算危險地圖：包含 (1) 既有爆炸火焰 (2) 倒數中的炸彈未來爆炸範圍
     void Rebuild(const LevelManager& lm, const BombManager& bm);

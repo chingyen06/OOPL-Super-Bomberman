@@ -1,4 +1,4 @@
-#ifndef SETTINGSSTATE_HPP
+﻿#ifndef SETTINGSSTATE_HPP
 #define SETTINGSSTATE_HPP
 
 #include <memory>
@@ -9,6 +9,7 @@
 #include "States/IGameState.hpp"
 #include "States/MenuCommon.hpp"
 #include "UI/Slider.hpp"
+#include "UI/UIGroup.hpp"
 #include "UI/UIImage.hpp"
 #include "UI/UIText.hpp"
 #include "Util/Renderer.hpp"
@@ -40,8 +41,7 @@ private:
 
     std::shared_ptr<UIImage> m_Gear;
     std::shared_ptr<UIText>  m_Title;
-    std::vector<std::shared_ptr<UIImage>> m_Imgs;
-    std::vector<std::shared_ptr<UIText>>  m_Txts;
+    UIGroup m_Table;       // 操作表的所有列底圖 / 文字 / 鍵框 (Rebuild 時整批清除重建)
     Slider  m_BgmSlider;   // 背景音樂音量 (分段式、可滑鼠拖曳)
     KeyHint m_Hint;
 };

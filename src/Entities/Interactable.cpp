@@ -5,7 +5,7 @@
 #include "Util/Image.hpp"
 #include "Util/Logger.hpp"
 
-Key::Key(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {
+Key::Key(int gridX, int gridY) : Interactable(gridX, gridY) {
     auto image = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/key.png");
     SetDrawable(image);
     SetZIndex(6);
@@ -26,7 +26,7 @@ bool Key::OnInteract(Player& player) {
     return false;
 }
 
-Chest::Chest(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {
+Chest::Chest(int gridX, int gridY) : Interactable(gridX, gridY) {
     m_ClosedImage = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_closed.png");
     m_OpenedImage = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/chest_opened.png");
 
@@ -60,7 +60,7 @@ bool Chest::OnInteract(Player& player) {
 
 
 PowerUp::PowerUp(int gridX, int gridY, std::unique_ptr<IPlayerEffect> effect, const std::string& imagePath)
-    : m_GridX(gridX), m_GridY(gridY), m_Effect(std::move(effect)) {
+    : Interactable(gridX, gridY), m_Effect(std::move(effect)) {
     auto image = std::make_shared<Util::Image>(imagePath);
     SetDrawable(image);
     SetZIndex(6);
@@ -76,7 +76,7 @@ bool PowerUp::OnInteract(Player& player) {
 }
 
 // Conveyor
-Conveyor::Conveyor(int gridX, int gridY, Direction dir) : m_GridX(gridX), m_GridY(gridY), m_Dir(dir) {
+Conveyor::Conveyor(int gridX, int gridY, Direction dir) : Interactable(gridX, gridY), m_Dir(dir) {
     std::string imgPath;
     switch (dir) {
         case Direction::UP: 
@@ -119,7 +119,7 @@ glm::vec2 Conveyor::GetForce() const {
 
 // BouncePad
 BouncePad::BouncePad(int gridX, int gridY, Direction dir)
-    : m_GridX(gridX), m_GridY(gridY), m_Dir(dir) {
+    : Interactable(gridX, gridY), m_Dir(dir) {
 
     std::string activePath;
     std::string inactivePath;

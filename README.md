@@ -77,3 +77,10 @@
   - [x] 修復目前存在的已知 Bug
 - Week 17：完成實習成果
   - [ ] 完成並繳交書面報告
+
+# 打包 release 版本指令
+```
+cmake -S . -B out\build\x64-Release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build out\build\x64-Release --target superbomberman
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+```

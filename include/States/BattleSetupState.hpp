@@ -1,4 +1,4 @@
-#ifndef BATTLESETUPSTATE_HPP
+﻿#ifndef BATTLESETUPSTATE_HPP
 #define BATTLESETUPSTATE_HPP
 
 #include <memory>
@@ -7,6 +7,7 @@
 #include "States/IGameState.hpp"
 #include "States/MenuCommon.hpp"
 #include "UI/UIButtonList.hpp"
+#include "UI/UIGroup.hpp"
 #include "UI/UIImage.hpp"
 #include "UI/UIText.hpp"
 
@@ -23,8 +24,7 @@ private:
     std::shared_ptr<UIText> m_LevelInfo;
     KeyHint m_Hint;
     CoinHud m_Coins;
-    std::vector<std::shared_ptr<UIImage>> m_Slots;
-    std::vector<std::shared_ptr<UIText>>  m_SlotLabels;
+    UIGroup m_SlotGroup;  // 8 個成員格底圖 + 名稱 (整批進出場景)
 };
 
 #endif

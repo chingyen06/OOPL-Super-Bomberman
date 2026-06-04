@@ -1,4 +1,4 @@
-#include "States/RulesState.hpp"
+﻿#include "States/RulesState.hpp"
 
 #include <string>
 
@@ -22,12 +22,12 @@ void RulesState::OnEnter(App& app) {
     m_BtnNormal = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/btn.png");
     m_BtnSel    = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/btn_sel.png");
 
-    m_Title = std::make_shared<UIText>("更換規則", -505.0f, 320.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("更換規則", -505.0f, 320.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     // 固定顯示列 (不可選)
     m_FixedRow = std::make_shared<UIImage>(RESOURCE_DIR"/Image/row_grey.png", 0.0f, 200.0f, 20.0f);
-    m_FixedLabel = std::make_shared<UIText>("對戰模式：城堡", kLabelXNudge, 200.0f - kLabelYNudge, 30.0f, WhiteText());
+    m_FixedLabel = std::make_shared<UIText>("對戰模式：城堡", kLabelXNudge, 200.0f - kLabelYNudge, 30.0f, MenuCommon::WhiteText());
     root.AddChild(m_FixedRow);
     root.AddChild(m_FixedLabel);
 
@@ -36,7 +36,7 @@ void RulesState::OnEnter(App& app) {
     for (int i = 0; i < kRows; i++) {
         m_Rows[i] = std::make_shared<UIImage>(0.0f, ys[i], 20.0f);
         m_Rows[i]->SetDrawable(m_RowNormal);
-        m_RowLabels[i] = std::make_shared<UIText>("-", kLabelXNudge, ys[i] - kLabelYNudge, 30.0f, WhiteText());
+        m_RowLabels[i] = std::make_shared<UIText>("-", kLabelXNudge, ys[i] - kLabelYNudge, 30.0f, MenuCommon::WhiteText());
         root.AddChild(m_Rows[i]);
         root.AddChild(m_RowLabels[i]);
     }
@@ -44,13 +44,13 @@ void RulesState::OnEnter(App& app) {
     // 確定鈕
     m_DoneBtn = std::make_shared<UIImage>(0.0f, -90.0f, 20.0f);
     m_DoneBtn->SetDrawable(m_BtnNormal);
-    m_DoneLabel = std::make_shared<UIText>("確定", kLabelXNudge, -90.0f - kLabelYNudge, 30.0f, DarkText());
+    m_DoneLabel = std::make_shared<UIText>("確定", kLabelXNudge, -90.0f - kLabelYNudge, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_DoneBtn);
     root.AddChild(m_DoneLabel);
 
     m_Sel = 0;
     Refresh(app);
-    m_Hint = AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空格鍵", "確定"}, {"X", "返回"}});
 }
 
 void RulesState::OnExit(App& app) {
@@ -90,7 +90,7 @@ void RulesState::Refresh(App& app) {
     for (int i = 0; i < kRows; i++) m_Rows[i]->SetDrawable(m_Sel == i ? m_RowSel : m_RowNormal);
     const bool doneSel = (m_Sel == kRows);
     m_DoneBtn->SetDrawable(doneSel ? m_BtnSel : m_BtnNormal);
-    m_DoneLabel->SetColor(doneSel ? WhiteText() : DarkText());
+    m_DoneLabel->SetColor(doneSel ? MenuCommon::WhiteText() : MenuCommon::DarkText());
 }
 
 void RulesState::OnUpdate(App& app) {

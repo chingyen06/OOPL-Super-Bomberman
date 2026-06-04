@@ -1,4 +1,4 @@
-#include "States/SettingsState.hpp"
+﻿#include "States/SettingsState.hpp"
 
 #include "Core/App.hpp"
 #include "States/MainMenuState.hpp"
@@ -14,7 +14,7 @@ void SettingsState::OnEnter(App& app) {
     m_Gear = std::make_shared<UIImage>(RESOURCE_DIR"/Image/gear.png", -560.0f, 333.0f, 40.0f);
     m_Gear->SetScale(0.5f, 0.5f);
     root.AddChild(m_Gear);
-    m_Title = std::make_shared<UIText>("操作設定", -465.0f, 330.0f, 40.0f, DarkText());
+    m_Title = std::make_shared<UIText>("操作設定", -465.0f, 330.0f, 40.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     // 背景音樂音量：分段式滑桿放在操作表底下 (可方向鍵 / 滑鼠拖曳)，並持久化。
@@ -24,7 +24,7 @@ void SettingsState::OnEnter(App& app) {
     m_BgmSlider.SetOnChange([&app](int v) { app.SetBgmVolume(v); });
 
     Build(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"空格鍵", "設定"}, {"Del", "清除"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"空格鍵", "設定"}, {"Del", "清除"}, {"X", "返回"}});
 }
 
 void SettingsState::OnExit(App& app) {
@@ -43,10 +43,7 @@ void SettingsState::Rebuild(App& app) {
 }
 
 void SettingsState::ClearTable(Util::Renderer& root) {
-    for (auto& im : m_Imgs) root.RemoveChild(im);
-    for (auto& tx : m_Txts) root.RemoveChild(tx);
-    m_Imgs.clear();
-    m_Txts.clear();
+    m_Table.Clear(root);
 }
 
 void SettingsState::Build(App& app) {
@@ -55,16 +52,16 @@ void SettingsState::Build(App& app) {
     constexpr float kHeaderY = 232.0f, kRow0Y = 178.0f, kStep = 46.0f;
 
     AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", kHeaderY, kTableW, 18.0f);
-    AddText(root, "操作",          kColLabel, kHeaderY, DarkText());
-    AddText(root, "玩家 1 (防守)", kColP1,    kHeaderY, DarkText());
-    AddText(root, "玩家 2 (進攻)", kColP2,    kHeaderY, DarkText());
+    AddText(root, "操作",          kColLabel, kHeaderY, MenuCommon::DarkText());
+    AddText(root, "玩家 1 (防守)", kColP1,    kHeaderY, MenuCommon::DarkText());
+    AddText(root, "玩家 2 (進攻)", kColP2,    kHeaderY, MenuCommon::DarkText());
 
     const char* names[kActions] = { "向上移動", "向下移動", "向左移動", "向右移動", "放置炸彈", "武器發動" };
     for (int i = 0; i < kActions; ++i) {
         const float y = kRow0Y - i * kStep;
         AddStrip(root, (i % 2 == 0) ? RESOURCE_DIR"/Image/set_row_a.png"
                                     : RESOURCE_DIR"/Image/set_row_b.png", y, kTableW, 18.0f);
-        AddText(root, names[i], kColLabel, y, DarkText());
+        AddText(root, names[i], kColLabel, y, MenuCommon::DarkText());
         for (int col = 0; col < 2; ++col) {
             // 玩家2 沒有武器 → (武器發動, P2) 不可編輯，顯示「—」
             const bool editable = !(i == kActions - 1 && col == 1);
@@ -72,7 +69,7 @@ void SettingsState::Build(App& app) {
             std::string label;
             if (!editable)            label = "—";
             else if (sel && m_Awaiting) label = "按鍵…";
-            else                       label = KeyName(app.Keys().Key(col, i));
+            else                       label = MenuCommon::KeyName(app.Keys().Key(col, i));
             AddKeyBox(root, label, (col == 0 ? kColP1 : kColP2), y, sel);
         }
     }
@@ -80,8 +77,8 @@ void SettingsState::Build(App& app) {
     const float pauseY = kRow0Y - kActions * kStep;
     const bool pauseSel = (m_Row == kPauseRow);
     AddStrip(root, RESOURCE_DIR"/Image/set_row_b.png", pauseY, kTableW, 18.0f);
-    AddText(root, "暫停", kColLabel, pauseY, DarkText());  // 標題不反白，選取提示靠右側鍵框
-    const std::string pauseLabel = (pauseSel && m_Awaiting) ? "按鍵…" : KeyName(app.Keys().pause);
+    AddText(root, "暫停", kColLabel, pauseY, MenuCommon::DarkText());  // 標題不反白，選取提示靠右側鍵框
+    const std::string pauseLabel = (pauseSel && m_Awaiting) ? "按鍵…" : MenuCommon::KeyName(app.Keys().pause);
     AddKeyBox(root, pauseLabel, (kColP1 + kColP2) * 0.5f, pauseY, pauseSel);
 
     // 背景音樂音量列：選取時整列底圖變橘 (用矩形橘條 row_sel，邊緣不會像 keycap 那樣彎);
@@ -90,22 +87,20 @@ void SettingsState::Build(App& app) {
     const bool bgmSel = (m_Row == kBgmRow);
     AddStrip(root, bgmSel ? RESOURCE_DIR"/Image/row_sel.png" : RESOURCE_DIR"/Image/set_row_a.png",
              bgmY, kTableW, 18.0f);
-    AddText(root, "背景音樂", kColLabel, bgmY, bgmSel ? WhiteText() : DarkText());
+    AddText(root, "背景音樂", kColLabel, bgmY, bgmSel ? MenuCommon::WhiteText() : MenuCommon::DarkText());
     m_BgmSlider.SetFocused(bgmSel);
 }
 
 void SettingsState::AddStrip(Util::Renderer& root, const std::string& img, float y, float w, float z) {
     auto s = std::make_shared<UIImage>(img, 0.0f, y, z);
     s->SetScale(w / 64.0f, 42.0f / 46.0f);
-    root.AddChild(s);
-    m_Imgs.push_back(s);
+    m_Table.Add(root, s);
 }
 
 void SettingsState::AddText(Util::Renderer& root, const std::string& t, float x, float y, Util::Color c) {
     auto n = std::make_shared<UIText>(t, x, y, 20.0f, c);
     n->SetScale(0.62f, 0.62f);
-    root.AddChild(n);
-    m_Txts.push_back(n);
+    m_Table.Add(root, n);
 }
 
 // 按鍵方塊：selected→橘底深字，否則深底白字；key 空字串→空白方塊 (代表未綁定)
@@ -114,19 +109,17 @@ void SettingsState::AddKeyBox(Util::Renderer& root, const std::string& key, floa
     float w = 36.0f;  // 空白方塊預設寬
     std::shared_ptr<UIText> txt;
     if (!key.empty()) {
-        txt = std::make_shared<UIText>(key, cx, y, 22.0f, selected ? DarkText() : WhiteText());
+        txt = std::make_shared<UIText>(key, cx, y, 22.0f, selected ? MenuCommon::DarkText() : MenuCommon::WhiteText());
         txt->SetScale(sc, sc);
         w = txt->GetWidth() * sc - trail + pad * 2.0f;
     }
     const char* img = selected ? RESOURCE_DIR"/Image/keycap_sel.png" : RESOURCE_DIR"/Image/keycap_dark.png";
     auto box = std::make_shared<UIImage>(img, cx, y, 21.0f);
     box->SetScale(w / 60.0f, 32.0f / 42.0f);
-    root.AddChild(box);
-    m_Imgs.push_back(box);
+    m_Table.Add(root, box);
     if (txt) {
         txt->SetPosition(cx + trail * 0.5f, y);
-        root.AddChild(txt);
-        m_Txts.push_back(txt);
+        m_Table.Add(root, txt);
     }
 }
 
@@ -136,7 +129,7 @@ void SettingsState::OnUpdate(App& app) {
     if (m_Awaiting) {
         // 等待新鍵：ESC 取消；偵測到任一鍵 → 綁定
         if (Util::Input::IsKeyDown(K::ESCAPE)) { m_Awaiting = false; Rebuild(app); return; }
-        const Util::Keycode k = PollAnyKey();
+        const Util::Keycode k = MenuCommon::PollAnyKey();
         if (k != KeyBindings::NoKey()) {
             if (m_Row == kPauseRow) {
                 app.Keys().pause = k;  // 暫停為共用單一鍵，直接綁定

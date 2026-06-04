@@ -1,4 +1,4 @@
-#include "States/ResultsState.hpp"
+﻿#include "States/ResultsState.hpp"
 
 #include <string>
 
@@ -21,22 +21,20 @@ void ResultsState::OnEnter(App& app) {
     auto add = [&](const std::string& s, float x, float y, float scale, Util::Color col) {
         auto t = std::make_shared<UIText>(s, x, y, 100.0f, col);
         t->SetScale(scale, scale);
-        root.AddChild(t);
-        m_Nodes.push_back(t);
+        m_Nodes.Add(root, t);
     };
 
     // 左側「獲得寶石」明細：參加戰鬥 (+本場) / 總計
-    add(earnedStr, 18.0f, -201.0f, 0.7f, GoldText());
-    add(totalStr,  18.0f, -233.0f, 0.7f, DarkText());
+    add(earnedStr, 18.0f, -200.0f, 0.7f, MenuCommon::GoldText());
+    add(totalStr,  18.0f, -233.0f, 0.7f, MenuCommon::DarkText());
     // 右側金幣面板：總額 (緊鄰品牌幣) + 本場 callout (+金幣，略往下對齊膠囊)
-    add(totalStr,  280.0f, -201.0f, 0.85f, DarkText());
-    add(earnedStr, 479.0f, -201.0f, 0.7f,  GoldText());
+    add(totalStr,  280.0f, -201.0f, 0.85f, MenuCommon::DarkText());
+    add(earnedStr, 479.0f, -201.0f, 0.7f,  MenuCommon::GoldText());
 }
 
 void ResultsState::OnExit(App& app) {
     auto& root = app.Root();
-    for (auto& n : m_Nodes) root.RemoveChild(n);
-    m_Nodes.clear();
+    m_Nodes.Clear(root);
     app.HideWinScreens();
     app.Session().Clear();
 }

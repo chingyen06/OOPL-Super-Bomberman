@@ -1,4 +1,4 @@
-#include "States/MainMenuState.hpp"
+﻿#include "States/MainMenuState.hpp"
 
 #include "Core/App.hpp"
 #include "States/BattleSetupState.hpp"
@@ -14,7 +14,7 @@ void MainMenuState::OnEnter(App& app) {
     app.ShowMenuBg();
     auto& root = app.Root();
 
-    m_Title = std::make_shared<UIText>("SUPER BOMBERMAN", 0.0f, 250.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("SUPER BOMBERMAN", 0.0f, 250.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
     m_Subtitle = std::make_shared<UIText>("城堡模式", 0.0f, 195.0f, 30.0f,
                                           Util::Color::FromName(Util::Colors::DIM_GRAY));
@@ -32,8 +32,8 @@ void MainMenuState::OnEnter(App& app) {
     m_GearFocused = false;
     UpdateGearVisual();
 
-    m_Coins = AddCoinHud(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}, {"ESC", "結束遊戲"}});
+    m_Coins = MenuCommon::AddCoinHud(app);
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}, {"ESC", "結束遊戲"}});
 
     m_QuitDialog.Init();
     m_Confirming = false;

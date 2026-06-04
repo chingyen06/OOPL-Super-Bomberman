@@ -1,4 +1,4 @@
-#include "App.hpp"
+﻿#include "App.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
@@ -10,7 +10,35 @@
 #include <crtdbg.h>
 #endif
 
+#ifdef _WIN32
+// windows.h 必須在所有專案標頭「之後」才 include：它的 DELETE / IN / OUT 等巨集會與
+// Util::Keycode 的列舉名衝突，放到最後可避免污染上方標頭的解析。
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
+// 把工作目錄切到 exe 所在資料夾：讓相對路徑的 Resources/ 與 config.json 一律可解析
+// (打包後雙擊、或從任意目錄啟動皆可)。用寬字元版本以支援含非 ASCII 字元的路徑。
+static void SetCwdToExeDir() {
+    wchar_t path[MAX_PATH];
+    DWORD n = GetModuleFileNameW(nullptr, path, MAX_PATH);
+    if (n > 0 && n < MAX_PATH) {
+        for (DWORD i = n; i-- > 0; ) {
+            if (path[i] == L'\\' || path[i] == L'/') { path[i] = L'\0'; break; }
+        }
+        SetCurrentDirectoryW(path);
+    }
+}
+#endif
+
 int main(int, char**) {
+#ifdef _WIN32
+    SetCwdToExeDir();
+#endif
 #if defined(_MSC_VER) && defined(_DEBUG)
     // Debug 建置：程式正常結束時，把仍未釋放的 CRT 堆積配置 (記憶體洩漏) 傾印到 stdout。
     // 本專案所有遊戲物件皆以 shared_ptr / unique_ptr 管理，App 解構時連同 Renderer 一併釋放，

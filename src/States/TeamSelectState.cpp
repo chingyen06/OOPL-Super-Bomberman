@@ -1,4 +1,4 @@
-#include "States/TeamSelectState.hpp"
+﻿#include "States/TeamSelectState.hpp"
 
 #include <string>
 
@@ -18,27 +18,27 @@ void TeamSelectState::OnEnter(App& app) {
     m_BtnNormal = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/btn.png");
     m_BtnSel    = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/btn_sel.png");
 
-    m_Title = std::make_shared<UIText>("選擇隊伍", -505.0f, 320.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("選擇隊伍", -505.0f, 320.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     for (int i = 0; i < kRows; i++) {  // row 0 = 玩家1；row 1..8 = 進攻席位 (slot 0..7)
         const float y = 230.0f - i * 48.0f;
         m_Rows[i] = std::make_shared<UIImage>(0.0f, y, 20.0f);
         m_Rows[i]->SetDrawable(m_RowGrey);
-        m_RowLabels[i] = std::make_shared<UIText>("-", kLabelXNudge, y - kLabelYNudge, 30.0f, WhiteText());
+        m_RowLabels[i] = std::make_shared<UIText>("-", kLabelXNudge, y - kLabelYNudge, 30.0f, MenuCommon::WhiteText());
         root.AddChild(m_Rows[i]);
         root.AddChild(m_RowLabels[i]);
     }
 
     m_DoneBtn = std::make_shared<UIImage>(0.0f, -215.0f, 20.0f);
     m_DoneBtn->SetDrawable(m_BtnNormal);
-    m_DoneLabel = std::make_shared<UIText>("確定", kLabelXNudge, -215.0f - kLabelYNudge, 30.0f, DarkText());
+    m_DoneLabel = std::make_shared<UIText>("確定", kLabelXNudge, -215.0f - kLabelYNudge, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_DoneBtn);
     root.AddChild(m_DoneLabel);
 
     m_Sel = 0;
     Refresh(app);
-    m_Hint = AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空格鍵", "確定"}, {"X", "返回"}});
 }
 
 void TeamSelectState::OnExit(App& app) {
@@ -75,7 +75,7 @@ void TeamSelectState::Refresh(App& app) {
     // row 0：玩家 1 (固定守方)
     m_Rows[0]->SetDrawable(m_RowDef);
     m_RowLabels[0]->SetText("玩家 1　防守方");
-    m_RowLabels[0]->SetColor(WhiteText());
+    m_RowLabels[0]->SetColor(MenuCommon::WhiteText());
 
     // row 1..8：進攻席位
     for (int slot = 0; slot < kAttackers; slot++) {
@@ -87,12 +87,12 @@ void TeamSelectState::Refresh(App& app) {
                         : (slot == 0)                          ? "電腦" : "攻擊方";
         m_Rows[r]->SetDrawable(m == MatchConfig::SlotMode::Off ? m_RowGrey : m_RowAtk);
         m_RowLabels[r]->SetText(name + "　" + val);
-        m_RowLabels[r]->SetColor(m_Sel == slot ? YellowText() : WhiteText());  // 選取席位→黃字
+        m_RowLabels[r]->SetColor(m_Sel == slot ? MenuCommon::YellowText() : MenuCommon::WhiteText());  // 選取席位→黃字
     }
 
     const bool doneSel = (m_Sel == kDoneIndex);
     m_DoneBtn->SetDrawable(doneSel ? m_BtnSel : m_BtnNormal);
-    m_DoneLabel->SetColor(doneSel ? WhiteText() : DarkText());
+    m_DoneLabel->SetColor(doneSel ? MenuCommon::WhiteText() : MenuCommon::DarkText());
 }
 
 void TeamSelectState::OnUpdate(App& app) {

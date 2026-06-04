@@ -1,4 +1,4 @@
-#include "States/LevelSelectState.hpp"
+﻿#include "States/LevelSelectState.hpp"
 
 #include <string>
 
@@ -12,7 +12,7 @@ void LevelSelectState::OnEnter(App& app) {
     app.ShowMenuBg();
     auto& root = app.Root();
 
-    m_Title = std::make_shared<UIText>("選擇關卡", -505.0f, 320.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("選擇關卡", -505.0f, 320.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     // 各關縮圖預載 + 大張預覽 (置中上方)
@@ -34,7 +34,7 @@ void LevelSelectState::OnEnter(App& app) {
 
     m_LastSel = -1;  // 強制首幀更新預覽
 
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
 }
 
 void LevelSelectState::OnExit(App& app) {

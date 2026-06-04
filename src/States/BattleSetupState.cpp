@@ -1,4 +1,4 @@
-#include "States/BattleSetupState.hpp"
+﻿#include "States/BattleSetupState.hpp"
 
 #include <string>
 
@@ -19,7 +19,7 @@ void BattleSetupState::OnEnter(App& app) {
     app.ShowMenuBg();
     auto& root = app.Root();
 
-    m_Title = std::make_shared<UIText>("離線戰鬥", -505.0f, 320.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("離線戰鬥", -505.0f, 320.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     // 左側導覽
@@ -41,7 +41,7 @@ void BattleSetupState::OnEnter(App& app) {
         auto slot = std::make_shared<UIImage>(RESOURCE_DIR"/Image/slot.png", x, y, 20.0f);
 
         std::string name;
-        Util::Color color = DarkText();
+        Util::Color color = MenuCommon::DarkText();
         if (i == 0) {
             name = "玩家 1";
         }
@@ -60,18 +60,16 @@ void BattleSetupState::OnEnter(App& app) {
             }
         }
         auto label = std::make_shared<UIText>(name, x + kLabelXNudge, y - kLabelYNudge, 30.0f, color);
-        root.AddChild(slot);
-        root.AddChild(label);
-        m_Slots.push_back(slot);
-        m_SlotLabels.push_back(label);
+        m_SlotGroup.Add(root, slot);
+        m_SlotGroup.Add(root, label);
     }
 
     m_LevelInfo = std::make_shared<UIText>(std::string("目前關卡：") + App::LevelName(app.SelectedLevel()),
-                                           180.0f, -130.0f, 30.0f, DarkText());
+                                           180.0f, -130.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_LevelInfo);
 
-    m_Coins = AddCoinHud(app);
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Coins = MenuCommon::AddCoinHud(app);
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
 }
 
 void BattleSetupState::OnExit(App& app) {
@@ -81,8 +79,7 @@ void BattleSetupState::OnExit(App& app) {
     root.RemoveChild(m_LevelInfo);
     m_Hint.Remove(app);
     m_Coins.Remove(app);
-    for (auto& s : m_Slots)      root.RemoveChild(s);
-    for (auto& l : m_SlotLabels) root.RemoveChild(l);
+    m_SlotGroup.Clear(root);
     app.HideMenuBg();
 }
 

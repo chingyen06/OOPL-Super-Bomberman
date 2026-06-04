@@ -20,8 +20,10 @@ public:
     virtual ~Interactable() = default;
     virtual void Update() {};
 
-    virtual int GetGridX() const = 0;
-    virtual int GetGridY() const = 0;
+    // 網格座標收進基底：所有 interactable 都在某一格上，
+    // 不必每個子類重複宣告 m_GridX/m_GridY 與相同的 getter。
+    int GetGridX() const { return m_GridX; }
+    int GetGridY() const { return m_GridY; }
 
     virtual bool IsBlocksBomb() const { return false; }
     virtual bool IsBlocksFire() const { return false; }
@@ -47,14 +49,18 @@ public:
     // Debug 用：強制把本目標標記為完成 (e.g. 主控台「強制進攻方獲勝」)。預設空操作；
     // 具體目標型別覆寫之 (Chest → Open)。同樣以虛擬 hook 取代型別判斷，符合 OCP。
     virtual void ForceComplete() {}
+
+protected:
+    // 子類透過此建構子提供所在格座標 (座標欄位與 getter 收進基底，消除子類重複)。
+    Interactable(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {}
+
+    int m_GridX;
+    int m_GridY;
 };
 
 class Key : public Interactable {
 public:
     Key(int gridX, int gridY);
-
-    int GetGridX() const override { return m_GridX; }
-    int GetGridY() const override { return m_GridY; }
 
     bool IsBlocksBomb() const override { return true; }
 
@@ -64,18 +70,12 @@ public:
     int GetAttackerTargetPriority(bool botHasKey) const override {
         return botHasKey ? 0 : 2;
     }
-
-private:
-    int m_GridX;
-    int m_GridY;
 };
 
 class Chest : public Interactable {
 public:
     Chest(int gridX, int gridY);
 
-    int GetGridX() const override { return m_GridX; }
-    int GetGridY() const override { return m_GridY; }
     bool IsOpened() const { return m_Opened; }
 
     bool IsBlocksBomb() const override { return true; }
@@ -96,8 +96,6 @@ public:
     void Open();
 
 private:
-    int m_GridX;
-    int m_GridY;
     bool m_Opened = false;
 
     std::shared_ptr<Util::Image> m_ClosedImage;
@@ -110,9 +108,6 @@ class PowerUp : public Interactable {
 public:
     PowerUp(int gridX, int gridY, std::unique_ptr<IPlayerEffect> effect, const std::string& imagePath);
 
-    int GetGridX() const override { return m_GridX; }
-    int GetGridY() const override { return m_GridY; }
-
     bool IsBlocksBomb() const override { return true; }
     bool IsDestroyedByFire() const override { return true; }
 
@@ -122,8 +117,6 @@ public:
     int GetAttackerTargetPriority(bool /*botHasKey*/) const override { return 1; }
 
 protected:
-    int m_GridX;
-    int m_GridY;
     std::unique_ptr<IPlayerEffect> m_Effect;
 };
 
@@ -162,16 +155,12 @@ public:
 class Conveyor : public Interactable {
 public:
     Conveyor(int gridX, int gridY, Direction dir);
-    int GetGridX() const override { return m_GridX; }
-    int GetGridY() const override { return m_GridY; }
 
     bool OnInteract(Player& /*player*/) override { return false; }
 
     glm::vec2 GetForce() const override;
 
 private:
-    int m_GridX;
-    int m_GridY;
     Direction m_Dir;
 };
 
@@ -181,14 +170,9 @@ public:
     BouncePad(int gridX, int gridY, Direction dir);
     void Update() override;
 
-    int GetGridX() const override { return m_GridX; }
-    int GetGridY() const override { return m_GridY; }
-
     bool OnInteract(Player& player) override;
 
 private:
-    int m_GridX;
-    int m_GridY;
     Direction m_Dir;
     int m_Distance = Constants::BouncePad::kDefaultDistance;
     int m_Cooldown = 0;

@@ -8,6 +8,7 @@
 #include "Turret/TurretManager.hpp"
 #include "Bot/BotNavigator.hpp"
 #include "Controller/IProgrammableController.hpp"
+#include "Controller/CooldownResetGuard.hpp"
 #include <queue>
 #include <cmath>
 #include <algorithm>
@@ -99,21 +100,14 @@ void AIManager::Update(std::vector<std::shared_ptr<Player>>& players,
         const bool needsImmediate = inDanger || onForceField || needsAlignment;
         if (!needsImmediate && !botController->IsReadyToDecide()) continue;
 
-        // 決策完成後設定下次冷卻 (用 playerID 做相位偏移，分散不同 bot 的決策幀)
-        // immediate 情境 (危險 / 輸送帶 / 像素偏離) cooldown = 0，每幀都會繼續微調 — 避免 S 型走
-        class ResetGuard {
-        public:
-            ResetGuard(IProgrammableController* ctrl, int frames) : m_Ctrl(ctrl), m_Frames(frames) {}
-            ~ResetGuard() { m_Ctrl->ResetCooldown(m_Frames); }
-        private:
-            IProgrammableController* m_Ctrl;
-            int m_Frames;
-        };
+        // 決策完成後設定下次冷卻 (用 playerID 做相位偏移，分散不同 bot 的決策幀)。
+        // immediate 情境 (危險 / 輸送帶 / 像素偏離) cooldown = 0，每幀都會繼續微調 — 避免 S 型走。
+        // RAII 守衛已抽到 CooldownResetGuard (header)，不再於本 .cpp 內定義區域類別。
         // 反應幀數改由性格決定：積極的 bot 反應快、較少在原地發呆，謹慎的較慢。
         const int nextCooldown = needsImmediate
             ? 0
             : profile.ReactionFrames() + (bot->GetPlayerID() % 3);
-        ResetGuard guard{ botController, nextCooldown };
+        CooldownResetGuard guard{ botController, nextCooldown };
 
         // 策略 1：身處危險 — 逃往最近的安全格 (穿越危險也要逃，故用 RetreatCost)
         if (inDanger) {

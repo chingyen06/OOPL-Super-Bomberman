@@ -1,4 +1,4 @@
-#include "States/TitleScreenState.hpp"
+﻿#include "States/TitleScreenState.hpp"
 
 #include <cmath>
 
@@ -18,7 +18,7 @@ void TitleScreenState::OnEnter(App& app) {
     m_Logo = std::make_shared<UIImage>(RESOURCE_DIR"/Image/logo.png", 0.0f, kLogoBaseY, 5.0f);
     root.AddChild(m_Logo);
 
-    m_Press = std::make_shared<UIText>("- 請按空白鍵 -", 0.0f, -250.0f, 10.0f, DarkText());
+    m_Press = std::make_shared<UIText>("- 請按空白鍵 -", 0.0f, -250.0f, 10.0f, MenuCommon::DarkText());
     root.AddChild(m_Press);
 
     // 左下角版本號 (右下角留給 ESC 提示)
@@ -27,7 +27,7 @@ void TitleScreenState::OnEnter(App& app) {
     m_Version->SetScale(0.6f, 0.6f);
     root.AddChild(m_Version);
 
-    m_Hint = AddKeyHint(app, {{"ESC", "結束遊戲"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"ESC", "結束遊戲"}});
 
     m_Tick = 0;
 

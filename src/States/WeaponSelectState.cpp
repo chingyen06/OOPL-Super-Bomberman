@@ -1,4 +1,4 @@
-#include "States/WeaponSelectState.hpp"
+﻿#include "States/WeaponSelectState.hpp"
 
 #include "Config/MatchConfig.hpp"
 #include "Core/App.hpp"
@@ -19,7 +19,7 @@ void WeaponSelectState::OnEnter(App& app) {
     app.ShowMenuBg();
     auto& root = app.Root();
 
-    m_Title = std::make_shared<UIText>("選擇武器", -505.0f, 320.0f, 30.0f, DarkText());
+    m_Title = std::make_shared<UIText>("選擇武器", -505.0f, 320.0f, 30.0f, MenuCommon::DarkText());
     root.AddChild(m_Title);
 
     m_List.Init(RESOURCE_DIR"/Image/btn.png", RESOURCE_DIR"/Image/btn_sel.png");
@@ -33,7 +33,7 @@ void WeaponSelectState::OnEnter(App& app) {
     root.AddChild(m_Desc);
     RefreshDesc();
 
-    m_Hint = AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
 }
 
 void WeaponSelectState::OnExit(App& app) {

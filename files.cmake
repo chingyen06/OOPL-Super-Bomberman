@@ -1,4 +1,4 @@
-set(SRC_FILES
+﻿set(SRC_FILES
     # ---- Core ----
     Core/App.cpp
     Core/GameSession.cpp
@@ -41,6 +41,9 @@ set(SRC_FILES
     Bot/DangerMap.cpp
     Bot/Pathfinder.cpp
     # ---- UI ----
+    UI/SelectableList.cpp
+    UI/ButtonRow.cpp
+    UI/UIGroup.cpp
     UI/UIManager.cpp
     UI/UIImage.cpp
     UI/UIText.cpp
@@ -116,10 +119,14 @@ set(INCLUDE_FILES
     Controller/HumanController.hpp
     Controller/BotController.hpp
     Controller/IProgrammableController.hpp
+    Controller/CooldownResetGuard.hpp
     # ---- Effects ----
     Effects/IPlayerEffect.hpp
     Effects/PlayerEffects.hpp
     # ---- UI ----
+    UI/SelectableList.hpp
+    UI/ButtonRow.hpp
+    UI/UIGroup.hpp
     UI/UIManager.hpp
     UI/UIImage.hpp
     UI/UIText.hpp

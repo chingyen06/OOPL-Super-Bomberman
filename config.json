@@ -1,5 +1,8 @@
 {
-    "title": "Super Bomberman",
+    "title": "Super Bomberman R2",
     "window_width": 1280,
-    "window_height": 720
+    "window_height": 720,
+    "author": "曾靖諺",
+    "copyright": "(c) Konami Digital Entertainment",
+    "icon": "Resources/app.ico"
 }

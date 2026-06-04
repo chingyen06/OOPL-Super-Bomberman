@@ -1,33 +1,27 @@
 ﻿#ifndef UIBUTTONLIST_HPP
 #define UIBUTTONLIST_HPP
 
-#include <memory>
 #include <string>
-#include <vector>
 
-#include "UI/UIImage.hpp"
-#include "UI/UIText.hpp"
-#include "Util/Image.hpp"
+#include "UI/ButtonRow.hpp"
 #include "Util/Renderer.hpp"
 
-// 可重用的「一排可選按鈕」元件，供各選單畫面共用 (避免重複)。
-//
-// 由上往下 (stepX=0) 或由左往右 (stepY=0) 排列；每個項目有一張一般底圖與一張
-// 選取底圖，選取項以橘色底圖標示。導覽：↑←/WA 上一個、↓→/SD 下一個 (略過停用項)。
-//
-// 確認回傳設計 (而非 callback)：Update() 回傳本幀被 SPACE 確認的項目索引 (否則 -1)，
-// 由擁有本元件的 state 在它自己的 OnUpdate 末端執行轉場 —— 避免 callback 在 Update()
-// 執行途中把擁有者 state (連同本元件) 銷毀而造成 use-after-free。
-class UIButtonList {
+// 可重用的「一排可選按鈕」元件，供各選單畫面共用。按鈕列的共用機制 (容器 / 底圖 /
+// 導覽 / 高亮 / 配色) 已上移至基底 ButtonRow；本類只定義自己的兩個特性：
+//   (1) 彈性版面：由 (startX, startY) 起，每項位移 (stepX, stepY) — 可直/可橫排。
+//   (2) 確認語意：Update() 回傳本幀被 SPACE 確認的索引 (否則 -1)，由擁有它的 state
+//       在自己的 OnUpdate 末端執行轉場 —— 避免 callback 在 Update() 途中銷毀擁有者
+//       (連同本元件) 而 use-after-free。
+class UIButtonList : public ButtonRow {
 public:
     // normalImg / selectedImg：項目底圖 (一般 / 選取)，於 GL context 就緒後呼叫。
     void Init(const std::string& normalImg, const std::string& selectedImg);
 
-    void AddItem(const std::string& text);
-    void SetItemLabel(int index, const std::string& text);
-    void SetItemEnabled(int index, bool enabled);  // 停用項：變灰、無法選取
-    void SetSelected(int index);                   // 指定目前選取項 (需為可選)
-    void SetHighlight(bool on);                    // 是否顯示選取高亮 (焦點移出此列表時關掉)
+    void AddItem(const std::string& text)                 { AddButton(text, kButtonZ, kLabelZ); }
+    void SetItemLabel(int index, const std::string& text) { SetLabel(index, text); }
+    void SetItemEnabled(int index, bool enabled)          { SetButtonEnabled(index, enabled); }  // 停用項：變灰、無法選取
+    void SetSelected(int index);                          // 指定目前選取項 (需為可選)
+    void SetHighlight(bool on);                           // 是否顯示選取高亮 (焦點移出此列表時關掉)
 
     // 從 (startX, startY) 開始，每個項目位移 (stepX, stepY)。
     void Show(Util::Renderer& root, float startX, float startY, float stepX, float stepY);
@@ -35,13 +29,9 @@ public:
 
     int  Update();  // 導覽 + 確認；回傳被確認的索引，否則 -1
 
-    int  Selected() const { return m_Selected; }
     bool IsVisible() const { return m_Visible; }
 
 private:
-    void UpdateCursor();
-    int  StepToEnabled(int from, int dir) const;  // 朝 dir 找下一個可選項 (含環繞)
-
     static constexpr float kButtonZ = 20.0f;
     static constexpr float kLabelZ  = 30.0f;
     // 文字 (Util::Text) 以中心對齊；視覺上略往右一點較順眼 (與暫停選單 / 確認框一致)。
@@ -49,16 +39,6 @@ private:
     static constexpr float kLabelYNudge = 1.0f;
 
     bool m_Visible = false;
-    bool m_Highlight = true;  // false → 不顯示選取高亮 (全部維持一般底圖)
-    int  m_Selected = 0;
-
-    std::shared_ptr<Util::Image> m_NormalImg;
-    std::shared_ptr<Util::Image> m_SelectedImg;
-
-    std::vector<std::string>              m_Texts;
-    std::vector<std::shared_ptr<UIImage>> m_Buttons;
-    std::vector<std::shared_ptr<UIText>>  m_Labels;
-    std::vector<bool>                     m_Enabled;
 };
 
 #endif

@@ -21,6 +21,7 @@
     States/ResultsState.cpp
     # ---- Config ----
     Config/SaveData.cpp
+    Config/KeyBindings.cpp
     # ---- Entities ----
     Entities/Player.cpp
     Entities/PlayerBounce.cpp

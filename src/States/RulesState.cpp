@@ -87,7 +87,14 @@ void RulesState::Refresh(App& app) {
     m_RowLabels[0]->SetText(std::string("時間：")    + kTimeLabels[TimeIndex(cfg.RoundSeconds())]);
     m_RowLabels[1]->SetText(std::string("源石精靈：") + (cfg.SpiritsEnabled() ? "開" : "關"));
     m_RowLabels[2]->SetText(std::string("砲台：")    + (cfg.TurretsEnabled() ? "開" : "關"));
-    for (int i = 0; i < kRows; i++) m_Rows[i]->SetDrawable(m_Sel == i ? m_RowSel : m_RowNormal);
+    // row_grey 原生 820 寬、row_sel 只有 64 寬 → 依當前底圖重設縮放，讓選取列也撐滿整列寬度
+    // (修正：原本未縮放，選取時整條底圖縮成一小塊橘色)。
+    for (int i = 0; i < kRows; i++) {
+        const auto img = (m_Sel == i) ? m_RowSel : m_RowNormal;
+        m_Rows[i]->SetDrawable(img);
+        m_Rows[i]->SetScale(m_RowNormal->GetSize().x / img->GetSize().x,
+                            m_RowNormal->GetSize().y / img->GetSize().y);
+    }
     const bool doneSel = (m_Sel == kRows);
     m_DoneBtn->SetDrawable(doneSel ? m_BtnSel : m_BtnNormal);
     m_DoneLabel->SetColor(doneSel ? MenuCommon::WhiteText() : MenuCommon::DarkText());

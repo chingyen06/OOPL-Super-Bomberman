@@ -28,6 +28,7 @@ void SettingsState::OnEnter(App& app) {
 }
 
 void SettingsState::OnExit(App& app) {
+    app.Keys().Save();  // 持久化本次改過的按鍵設定 (離開設定畫面時寫檔)
     auto& root = app.Root();
     ClearTable(root);
     m_BgmSlider.Hide(root);

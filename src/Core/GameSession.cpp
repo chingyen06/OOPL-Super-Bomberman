@@ -62,6 +62,7 @@ void GameSession::LoadLevel(int levelIndex) {
         if (mode == MatchConfig::SlotMode::Off) continue;
 
         std::unique_ptr<InputController> ctrl;
+        std::shared_ptr<const IBotProfile> botProfile;  // 非人類席位才有；用來決定移動速度
         if (mode == MatchConfig::SlotMode::Human) {
             const Control p2Ctrl = m_Keys ? m_Keys->p[1]
                 : Control{ Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT, static_cast<Util::Keycode>(0) };
@@ -69,7 +70,8 @@ void GameSession::LoadLevel(int levelIndex) {
         }
         else {
             // 依席位給不同性格，讓同場每隻 AI 想法各異 (獵人 / 拾荒 / 狂戰 / 謹慎輪替)。
-            ctrl = std::make_unique<BotController>(BotProfileFactory::ForSlot(slot),
+            botProfile = BotProfileFactory::ForSlot(slot);
+            ctrl = std::make_unique<BotController>(botProfile,
                                                    nextPlayerId % Constants::Bot::kReactionFrames);
         }
         const auto& spawn = atkSpawns[spawnIdx++];
@@ -77,9 +79,9 @@ void GameSession::LoadLevel(int levelIndex) {
         if (mode == MatchConfig::SlotMode::Human) m_HumanPlayer2 = attacker.get();   // 玩家2 (作弊對象)
         else {
             attacker->SetAutoCenterIdle(true);
-            // 每隻 AI 速度略不同 (0.80~0.89，皆 < 防守方 1.0)：即使走同一條路也會逐漸拉開、
-            // 不再整排同步移動 (「走路一致」)。
-            attacker->SetSpeedFactor(0.80f + (attacker->GetPlayerID() % 4) * 0.03f);
+            // 移動速度由性格決定 (狂戰快 0.95、謹慎慢 0.78) + 依 id 的小幅抖動：不同性格、
+            // 同性格不同個體都看得出差異，皆 < 防守方 1.0；不再整排同步、同速移動 (「AI 太一致」)。
+            attacker->SetSpeedFactor(botProfile->MoveSpeedScale() + (attacker->GetPlayerID() % 3) * 0.02f);
         }
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
@@ -88,10 +90,11 @@ void GameSession::LoadLevel(int levelIndex) {
     // 安全網：至少要有 1 名進攻方 (設定全關時，補一個 AI)
     if (spawnIdx == 0 && !atkSpawns.empty()) {
         const auto& spawn = atkSpawns[0];
+        auto profile = BotProfileFactory::Default();
         auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
-                                                 std::make_unique<BotController>(BotProfileFactory::Default(), 0), nextPlayerId++);
+                                                 std::make_unique<BotController>(profile, 0), nextPlayerId++);
         attacker->SetAutoCenterIdle(true);
-        attacker->SetSpeedFactor(0.80f + (attacker->GetPlayerID() % 4) * 0.03f);  // AI：略慢且各異
+        attacker->SetSpeedFactor(profile->MoveSpeedScale());  // AI：依性格決定速度
         m_Players.push_back(attacker);
         m_Root.AddChild(attacker);
     }

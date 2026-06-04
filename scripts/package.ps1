@@ -30,10 +30,17 @@ Get-ChildItem $stage -Force | ForEach-Object {
     else { [System.IO.File]::Delete($_.FullName) }
 }
 
-# 內容：exe (改名為產品名) + 資源 + 設定
-Copy-Item $exe (Join-Path $stage "$name.exe") -Force
+# 內容：exe + 資源 + 設定
+Copy-Item $exe (Join-Path $stage 'superbomberman.exe') -Force
 Copy-Item (Join-Path $root 'Resources')  (Join-Path $stage 'Resources') -Recurse -Force
 Copy-Item (Join-Path $root 'config.json') (Join-Path $stage 'config.json') -Force
+
+# 不要把開發者的執行期狀態帶給玩家：移除套件內的存檔與按鍵設定，
+# 讓玩家首次啟動為 0 金幣 + 預設按鍵。
+foreach ($u in 'save.json', 'keybindings.json') {
+    $uf = Join-Path $stage "Resources\$u"
+    if (Test-Path $uf) { [System.IO.File]::Delete($uf) }
+}
 
 # VC runtime：動態尋找最新的 VC*.CRT x64，讓未裝 VC++ Redistributable 的電腦也能跑
 $crtDir = $null

@@ -497,3 +497,4 @@ docs/html/
 
 # runtime player save
 Resources/save.json
+Resources/keybindings.json

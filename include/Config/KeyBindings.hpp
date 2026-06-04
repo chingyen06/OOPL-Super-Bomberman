@@ -1,4 +1,4 @@
-#ifndef KEYBINDINGS_HPP
+﻿#ifndef KEYBINDINGS_HPP
 #define KEYBINDINGS_HPP
 
 #include "Controller/HumanController.hpp"  // Control
@@ -34,6 +34,10 @@ public:
     Util::Keycode Key(int player, int action) const {
         return const_cast<KeyBindings*>(this)->Key(player, action);
     }
+
+    // 持久化到 RESOURCE_DIR"/keybindings.json"：關掉遊戲重開仍記得改過的鍵 (與 save.json 同風格)。
+    void Load();        // 啟動時讀檔；檔案不存在 → 維持上方預設鍵
+    void Save() const;  // 設定畫面離開時寫檔
 };
 
 #endif

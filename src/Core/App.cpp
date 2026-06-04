@@ -1,4 +1,4 @@
-#include "Core/App.hpp"
+﻿#include "Core/App.hpp"
 
 #include <SDL.h>
 #include <imgui.h>
@@ -34,6 +34,7 @@ void App::Start() {
     LOG_TRACE("Start");
 
     m_Save.Load();  // 讀取金幣 / 音量存檔 (關掉重開仍保留)
+    m_Keys.Load();  // 讀取按鍵設定 (改過的鍵重開仍保留)
     m_Music.SetVolume(m_Save.BgmVolume() * 128 / 100);  // 套用存檔的背景音樂音量
     m_Session.SetProfile(&m_Save);      // debug 主控台讀寫金幣用
     m_Session.SetKeyBindings(&m_Keys);  // 套用玩家按鍵設定

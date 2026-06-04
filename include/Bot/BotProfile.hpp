@@ -28,6 +28,10 @@ public:
     // 是否願意「搶在火焰蔓延前衝去開寶箱」(穿越即將爆炸的格)。只有最莽的性格會，
     // 其餘會被防守方在寶箱附近的炸彈/武器嚇阻 (靠近等待)，讓防守方守得住。
     virtual bool RushesObjectives() const = 0;
+
+    // 移動速度倍率 (相對防守方 1.0)。由性格決定，讓不同性格的 AI 連「走多快」都看得出差異，
+    // 而非整排同速 (皆 < 1.0，維持防守方的機動優勢)。
+    virtual float MoveSpeedScale() const = 0;
 };
 
 // ---- 具體性格 (header-only inline，與 TileSet / BotController 同風格) ----
@@ -41,6 +45,7 @@ public:
     int  BombChaseRange()  const override { return 4; }
     int  SuicideBoldness() const override { return 2; }
     bool RushesObjectives() const override { return false; }
+    float MoveSpeedScale() const override { return 0.90f; }  // 偏快、積極
 };
 
 // 拾荒者：優先衝鑰匙 / 道具 / 寶箱，少正面衝突。
@@ -52,6 +57,7 @@ public:
     int  BombChaseRange()  const override { return 2; }
     int  SuicideBoldness() const override { return 0; }
     bool RushesObjectives() const override { return false; }
+    float MoveSpeedScale() const override { return 0.84f; }  // 中等
 };
 
 // 狂戰士：反應極快、膽量極大，會搶在爆炸前行動、不惜冒險。
@@ -63,6 +69,7 @@ public:
     int  BombChaseRange()  const override { return 5; }
     int  SuicideBoldness() const override { return 4; }
     bool RushesObjectives() const override { return true; }  // 只有狂戰士會冒險衝寶箱
+    float MoveSpeedScale() const override { return 0.95f; }  // 最快、最具壓迫
 };
 
 // 謹慎者：反應慢、不冒險，會等危險完全過去才動 (刻意保留的「穩健」性格)。
@@ -74,6 +81,7 @@ public:
     int  BombChaseRange()  const override { return 2; }
     int  SuicideBoldness() const override { return 0; }
     bool RushesObjectives() const override { return false; }
+    float MoveSpeedScale() const override { return 0.78f; }  // 最慢、最穩健
 };
 
 // 性格工廠：依席位輪流配置，讓同場每隻 AI 想法不同。性格無狀態，可安全共用單例。

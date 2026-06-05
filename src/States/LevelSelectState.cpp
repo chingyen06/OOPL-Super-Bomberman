@@ -34,7 +34,7 @@ void LevelSelectState::OnEnter(App& app) {
 
     m_LastSel = -1;  // 強制首幀更新預覽
 
-    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空白鍵", "確定"}, {"X", "返回"}});
 }
 
 void LevelSelectState::OnExit(App& app) {

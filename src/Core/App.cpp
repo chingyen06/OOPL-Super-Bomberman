@@ -24,6 +24,10 @@ void App::TransitionTo(std::unique_ptr<IGameState> next) {
     if (m_CurrentGameState) m_CurrentGameState->OnEnter(*this);
 }
 
+App::~App() {
+    if (m_ArrowCursor) SDL_FreeCursor(m_ArrowCursor);
+}
+
 void App::SetCursorShown(bool shown) {
     if (shown == m_CursorShown) return;  // 僅在改變時呼叫，避免閃爍
     SDL_ShowCursor(shown ? SDL_ENABLE : SDL_DISABLE);
@@ -41,6 +45,10 @@ void App::Start() {
 
     // 讓 ImGui 不要自己改 OS 游標，避免和我們的隱藏邏輯打架而閃爍
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+    // 有些玩家在 Windows 改過滑鼠游標配置，SDL 還原它的「預設游標」時會畫成黑方塊。
+    // 明確建立並指定標準箭頭系統游標可避開此問題 (此設定與顯示/隱藏獨立，隱藏時設定亦保留)。
+    m_ArrowCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
+    if (m_ArrowCursor) SDL_SetCursor(m_ArrowCursor);
     SDL_ShowCursor(SDL_DISABLE);  // 預設隱藏；只有暫停/Debug 才顯示
     m_CursorShown = false;
 

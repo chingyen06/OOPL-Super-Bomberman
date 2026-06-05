@@ -69,7 +69,7 @@ void BattleSetupState::OnEnter(App& app) {
     root.AddChild(m_LevelInfo);
 
     m_Coins = MenuCommon::AddCoinHud(app);
-    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇"}, {"空白鍵", "確定"}, {"X", "返回"}});
 }
 
 void BattleSetupState::OnExit(App& app) {

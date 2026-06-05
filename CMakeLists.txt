@@ -1,4 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
+
+# CMake 4.0+ (例如 CLion 2026.x 自帶的 4.2) 移除了對 cmake_minimum_required(VERSION < 3.5) 的相容，
+# 而 PTSD 內含的舊版 SDL2 2.26.5 等相依仍宣告舊的最低版本 → 不設這個會直接 configure 失敗。
+# 設成 3.5 讓那些舊子專案仍能設定 (對宣告 >=3.5 的專案無影響；VS 自帶的 CMake 3.31 也安全)。
+# 必須在 FetchContent 拉入相依「之前」設定。
+if(NOT DEFINED CMAKE_POLICY_VERSION_MINIMUM)
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+endif()
+
 project(superbomberman)
 
 if(WIN32 AND MSVC)
@@ -85,7 +94,10 @@ if(MSVC)
     # 進入二進位檔，供 TTF_RenderUTF8 正確繪製；同時消除 C4819 (cp950) 警告。
     target_compile_options(${PROJECT_NAME} PRIVATE /W4 /utf-8)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
+    # GCC/Clang (含 MinGW)：明確指定 UTF-8 來源/執行字元集 (等同 MSVC /utf-8)，
+    # 讓中文字串字面值以 UTF-8 進入二進位檔供 TTF_RenderUTF8 使用。
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        -Wall -Wextra -pedantic -finput-charset=UTF-8 -fexec-charset=UTF-8)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -115,9 +127,17 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 # ---- Release / 封裝：以 Windows GUI 子系統連結，避免雙擊 exe 時彈出黑色 console 視窗 ----
-# 仍用標準 main() 進入點 (mainCRTStartup)，故不需改寫成 WinMain。Debug 保留 console 方便看 log。
-if(MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+# Debug 保留 console 方便看 log。
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    if(MSVC)
+        # 仍用標準 main() 進入點 (mainCRTStartup)，繞過 SDL2main 的 WinMain，不需改寫程式。
+        target_link_options(${PROJECT_NAME} PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+    elseif(WIN32)
+        # MinGW (GCC/Clang)：-mwindows 切到 GUI 子系統 (進入點由 SDL2main 的 WinMain 轉呼 main)。
+        # -static 系列把 libstdc++ / libgcc / winpthread 靜態連入，讓 exe 不必額外帶 MinGW runtime DLL，
+        # 直接複製套件到別台沒裝 MinGW 的電腦也能跑。
+        target_link_options(${PROJECT_NAME} PRIVATE -mwindows -static -static-libgcc -static-libstdc++)
+    endif()
 endif()
 
 # ---- 建置後：把執行所需檔案放到 exe 旁 (main.cpp 啟動時會 chdir 到此目錄) ----

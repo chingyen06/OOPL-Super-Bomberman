@@ -24,7 +24,7 @@ void SettingsState::OnEnter(App& app) {
     m_BgmSlider.SetOnChange([&app](int v) { app.SetBgmVolume(v); });
 
     Build(app);
-    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"空格鍵", "設定"}, {"Del", "清除"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"方向鍵", "選擇/調整"}, {"空白鍵", "設定"}, {"Del", "清除"}, {"X", "返回"}});
 }
 
 void SettingsState::OnExit(App& app) {

@@ -13,6 +13,8 @@
 #include "UI/UIImage.hpp"
 #include "Util/Renderer.hpp"
 
+struct SDL_Cursor;  // 前置宣告：成員只用到指標，毋須在標頭引入 SDL.h
+
 class App {
 public:
     enum class State {
@@ -22,6 +24,8 @@ public:
     };
 
     State GetCurrentState() const { return m_CurrentState; }
+
+    ~App();  // 釋放自訂滑鼠游標 (m_ArrowCursor)
 
     void Start();
     void Update();
@@ -84,6 +88,7 @@ private:
     void ValidTask();
 
     bool m_CursorShown = true;
+    SDL_Cursor* m_ArrowCursor = nullptr;  // 明確指定的標準箭頭游標 (避開 SDL 預設游標在自訂游標環境下變黑方塊)
 
     State m_CurrentState = State::START;
     std::unique_ptr<IGameState> m_CurrentGameState;

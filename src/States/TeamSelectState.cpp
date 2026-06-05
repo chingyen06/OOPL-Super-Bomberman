@@ -38,7 +38,7 @@ void TeamSelectState::OnEnter(App& app) {
 
     m_Sel = 0;
     Refresh(app);
-    m_Hint = MenuCommon::AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空格鍵", "確定"}, {"X", "返回"}});
+    m_Hint = MenuCommon::AddKeyHint(app, {{"上下", "選擇"}, {"左右", "調整"}, {"空白鍵", "確定"}, {"X", "返回"}});
 }
 
 void TeamSelectState::OnExit(App& app) {

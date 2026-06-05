@@ -19,7 +19,7 @@ std::string MenuCommon::KeyName(Util::Keycode k) {
     if (sc == 39) return "0";
     switch (k) {
         case K::UP: return "↑"; case K::DOWN: return "↓"; case K::LEFT: return "←"; case K::RIGHT: return "→";
-        case K::SPACE: return "空格鍵"; case K::RETURN: return "Enter"; case K::TAB: return "Tab";
+        case K::SPACE: return "空白鍵"; case K::RETURN: return "Enter"; case K::TAB: return "Tab";
         case K::RSHIFT: return "右Shift"; case K::LSHIFT: return "左Shift";
         case K::RCTRL: return "右Ctrl"; case K::LCTRL: return "左Ctrl"; case K::ESCAPE: return "ESC";
         default: return "?";

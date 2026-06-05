@@ -30,7 +30,7 @@ Get-ChildItem $stage -Force | ForEach-Object {
     else { [System.IO.File]::Delete($_.FullName) }
 }
 
-# 內容：exe + 資源 + 設定
+# 內容：exe + 資源 + 設定 (Resources/ 內含 PTSD 繪圖/文字用的 shaders/，少了它會畫不出圖片/文字)
 Copy-Item $exe (Join-Path $stage 'superbomberman.exe') -Force
 Copy-Item (Join-Path $root 'Resources')  (Join-Path $stage 'Resources') -Recurse -Force
 Copy-Item (Join-Path $root 'config.json') (Join-Path $stage 'config.json') -Force

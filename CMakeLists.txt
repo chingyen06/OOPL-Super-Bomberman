@@ -26,6 +26,26 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(ptsd)
 
+# ---- 讓 PTSD 的 shader 在 Release / 封裝後仍可解析 ----
+# PTSD 把繪製圖片/文字用的 shader 路徑 (PTSD_ASSETS_DIR) 寫死成「編譯當下的絕對路徑」
+# (其建置資料夾 _deps/ptsd-src/assets)。在開發機從建置資料夾跑沒問題，但一旦把套件
+# 複製到別台電腦 (或刪掉建置資料夾)，該絕對路徑就不存在 → Base.vert/frag 載不到 →
+# shader program 連結失敗 → 所有圖片與文字都畫不出來 (只 log error 不崩潰)。
+# 修法：非 Debug 時把 PTSD_ASSETS_DIR 改成相對路徑 "Resources" (與遊戲自己的 RESOURCE_DIR
+# 同一個資料夾；執行期 cwd 已被 main.cpp chdir 到 exe 旁)，shader 解析為 Resources/shaders/Base.*。
+# Resources/shaders/ 已隨 repo 一起版控，POST_BUILD 與 package.ps1 既有的 Resources 複製即可帶上。
+# (用 FILTER 先移除 PTSD 自己加的絕對路徑定義，避免 MSVC C4005 巨集重定義警告。)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    get_target_property(_ptsd_defs PTSD COMPILE_DEFINITIONS)
+    if(_ptsd_defs)
+        list(FILTER _ptsd_defs EXCLUDE REGEX "^PTSD_ASSETS_DIR=")
+    else()
+        set(_ptsd_defs "")
+    endif()
+    list(APPEND _ptsd_defs "PTSD_ASSETS_DIR=\"Resources\"")
+    set_target_properties(PTSD PROPERTIES COMPILE_DEFINITIONS "${_ptsd_defs}")
+endif()
+
 include(files.cmake)
 set(SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)

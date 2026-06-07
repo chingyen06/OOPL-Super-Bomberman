@@ -8,7 +8,7 @@
 param(
     [string]$BuildDir = "",
     [string]$OutDir   = "$PSScriptRoot\..\release",
-    [string]$Version  = "1.0"
+    [string]$Version  = ""    # 留空時自動取 config.json 的 version (單一設定來源)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,9 +39,12 @@ if (-not (Test-Path $exe)) {
     throw "找不到 Release exe：$exe`n請先建置 Release：cmake --build `"$BuildDir`" --target superbomberman"
 }
 
-# 產品名取自 config.json 的 title (與 exe 內嵌名稱一致)
+# 產品名 / 版本取自 config.json (與 exe 內嵌名稱一致；單一設定來源)
 $cfg  = Get-Content -Raw -Encoding UTF8 (Join-Path $root 'config.json') | ConvertFrom-Json
 $name = if ($cfg.title) { [string]$cfg.title } else { 'Game' }
+if (-not $Version) {
+    $Version = if ($cfg.version) { [string]$cfg.version } else { '1.0' }
+}
 
 # 建立 / 清空 staging 資料夾 (用 .NET 刪除，避免 Remove-Item 在沙箱被攔)
 $stage = Join-Path $OutDir $name

@@ -40,7 +40,7 @@ void DefenderWeaponSystem::Update(Player* humanPlayer, std::vector<std::shared_p
     if (m_Weapon && humanPlayer && !humanPlayer->IsDead() && !humanPlayer->IsStunned() && m_Charge >= 1.0f) {
         InputController* ctrl = humanPlayer->GetController();
         if (ctrl && ctrl->IsWeaponJustPressed()) {
-            const int kills = m_Weapon->Fire(*humanPlayer, players, level, *m_Root, *this);
+            const int kills = m_Weapon->Fire(FireContext(*humanPlayer, players, level, *m_Root, *this));
             m_DefenderKills += kills;
             float bonus = kills * kKillBonus;
             m_Charge = (bonus > 1.0f) ? 1.0f : bonus;  // 歸零後依擊倒回充

@@ -54,6 +54,8 @@ protected:
     // 子類透過此建構子提供所在格座標 (座標欄位與 getter 收進基底，消除子類重複)。
     Interactable(int gridX, int gridY) : m_GridX(gridX), m_GridY(gridY) {}
 
+private:
+    // 座標收進 private，子類想讀請用 GetGridX/GetGridY (避免被誤覆寫 / 維護一致)
     int m_GridX;
     int m_GridY;
 };
@@ -116,7 +118,7 @@ public:
     // PowerUp 一律為 bot 最優先目標 (priority 1)
     int GetAttackerTargetPriority(bool /*botHasKey*/) const override { return 1; }
 
-protected:
+private:
     std::unique_ptr<IPlayerEffect> m_Effect;
 };
 

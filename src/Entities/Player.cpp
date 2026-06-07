@@ -1,33 +1,26 @@
-﻿#include "Player.hpp"
-#include "BombManager.hpp"
+#include "Player.hpp"
 #include "GridCoord.hpp"
-#include "InteractableManager.hpp"
-#include "Util/Input.hpp"
-#include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
 #include <cmath>
 #include <algorithm>
 
-Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id) : m_GridX(startGridX), m_GridY(startGridY), m_SpawnX(startGridX), m_SpawnY(startGridY),
-    m_CurrentDir(Direction::DOWN), m_Team(team), m_Controller(std::move(controller)), m_PlayerID(id) {
+Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id)
+    : m_GridX(startGridX), m_GridY(startGridY),
+      m_CurrentDir(Direction::DOWN),
+      m_Lifecycle((team == Team::DEFENDER) ? Constants::Player::kDefenderLives
+                                           : Constants::Player::kAttackerLives),
+      m_Team(team), m_Controller(std::move(controller)),
+      m_SpawnX(startGridX), m_SpawnY(startGridY),
+      m_PlayerID(id) {
 
-    // 防守方 3 命、進攻方 1 命 (依陣營自動決定)
-    m_MaxLives = (team == Team::DEFENDER) ? Constants::Player::kDefenderLives
-                                          : Constants::Player::kAttackerLives;
-    m_Lives = m_MaxLives;
-
-    m_ImgUp = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_up.png");
-    m_ImgDown = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_down.png");
-    m_ImgLeft = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_left.png");
-    m_ImgRight = std::make_shared<Util::Image>(RESOURCE_DIR"/Image/player_right.png");
-
-    SetDrawable(m_ImgDown); // 初始面向下方
+    auto initImg = m_Animator.InitialImage();
+    SetDrawable(initImg); // 初始面向下方
     SetZIndex(20);
 
     // 放大角色至設定的 sprite 尺寸
     m_Transform.scale = {
-        Constants::Player::kSpriteWidth  / m_ImgDown->GetSize().x,
-        Constants::Player::kSpriteHeight / m_ImgDown->GetSize().y
+        Constants::Player::kSpriteWidth  / initImg->GetSize().x,
+        Constants::Player::kSpriteHeight / initImg->GetSize().y
     };
 
     // 計算初始像素座標
@@ -36,62 +29,38 @@ Player::Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputC
     m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
 }
 
-void Player::Update(const IWorldContext& worldContext) {
-    float speed = Constants::Player::kNormalSpeed;
-    float dx = 0.0f;
-    float dy = 0.0f;
-    float nextX = m_Pos.x;
-    float nextY = m_Pos.y;
+void Player::ApplyStunVisuals(const PlayerLifecycle::TickStatus& s) {
+    if (s.stunJustEnded) {
+        m_Transform.rotation = 0.0f;
+        m_Transform.translation = { std::round(m_Pos.x), std::round(m_Pos.y + Constants::Player::kSpriteYOffset) };
+        SetVisible(true);
+        return;
+    }
+    // 漸進倒下 + 下沉 + 閃爍
+    const float t = std::min(1.0f, static_cast<float>(s.stunFramesElapsed) / Constants::Player::kKnockdownFallFrames);
+    m_Transform.rotation = t * Constants::Player::kKnockdownRotation;
+    m_Transform.translation = {
+        std::round(m_Pos.x),
+        std::round(m_Pos.y + Constants::Player::kSpriteYOffset - t * Constants::Player::kKnockdownDrop)
+    };
+    SetVisible((s.stunFramesLeft / 8) % 2 == 0);
+}
 
+void Player::Update(const IWorldContext& worldContext) {
+    // 死亡 / 暈眩計時推進；視覺由本類別套用，狀態機本身不依賴 PTSD
+    const auto lifecycleStatus = m_Lifecycle.Tick();
+    if (lifecycleStatus.hideSpriteNow) SetVisible(false);
+    if (lifecycleStatus.respawnNow)    Respawn();
+    if (lifecycleStatus.stunFramesLeft >= 0) ApplyStunVisuals(lifecycleStatus);
+    if (lifecycleStatus.skipMovement)  return;
+
+    // 移動速度：加速道具 / AI 速度倍率
+    float speed = Constants::Player::kNormalSpeed;
     if (m_SpeedBoostTimer > 0) {
         m_SpeedBoostTimer--;
         speed = Constants::Player::kBoostSpeed;
     }
-    else {
-        speed = Constants::Player::kNormalSpeed;
-    }
     speed *= m_SpeedFactor;  // AI 進攻方 <1：讓人類防守方有機動優勢
-
-    if (m_IsDead) {
-        if (m_DeathCountdown > 0) {
-            m_DeathCountdown--;
-            if (m_DeathCountdown == 0) {
-                SetVisible(false);
-                m_RespawnTimer = Constants::Player::kRespawnDelayFrames;
-                m_DeathCountdown = -1;
-            }
-        }
-        else if (m_RespawnTimer > 0) {
-            m_RespawnTimer--;
-            if (m_RespawnTimer == 0) {
-                Respawn();
-                m_RespawnTimer = -1;
-            }
-        }
-        return;
-    }
-
-    // 倒地暈眩中：原地漸進倒下 (旋轉 0→90°) + 閃爍，不能移動；時間到起身並給予短暫無敵。
-    // 頭上的暈眩星星由 UIManager 依 IsStunned() 顯示。
-    if (m_StunTimer > 0) {
-        m_StunTimer--;
-        const int elapsed = Constants::Player::kStunFrames - m_StunTimer;
-        const float t = std::min(1.0f, static_cast<float>(elapsed) / Constants::Player::kKnockdownFallFrames);
-        m_Transform.rotation = t * Constants::Player::kKnockdownRotation;  // 漸進倒下的感覺
-        // 倒下時整個人往下沉一點，貼近地面 (而不是原地平轉)
-        m_Transform.translation = {
-            std::round(m_Pos.x),
-            std::round(m_Pos.y + Constants::Player::kSpriteYOffset - t * Constants::Player::kKnockdownDrop)
-        };
-        SetVisible((m_StunTimer / 8) % 2 == 0);  // 閃爍表示受擊
-        if (m_StunTimer == 0) {
-            m_Transform.rotation = 0.0f;  // 起身
-            m_Transform.translation = { std::round(m_Pos.x), std::round(m_Pos.y + Constants::Player::kSpriteYOffset) };
-            SetVisible(true);
-            m_Invincible = Constants::Player::kStunInvincibleAfter;  // 起身後短暫無敵
-        }
-        return;
-    }
 
     if (m_Bounce.IsActive()) {
         auto step = m_Bounce.Update();
@@ -106,6 +75,11 @@ void Player::Update(const IWorldContext& worldContext) {
         }
         return;
     }
+
+    float dx = 0.0f;
+    float dy = 0.0f;
+    float nextX = m_Pos.x;
+    float nextY = m_Pos.y;
 
     // 取得當前位置的網格中心點座標
     float centerX = GridCoord::ToPixelX(m_GridX);
@@ -228,33 +202,13 @@ void Player::Update(const IWorldContext& worldContext) {
         std::round(m_Pos.x),
         std::round(m_Pos.y + Constants::Player::kSpriteYOffset)
     };
-
-    // 無敵時間
-    if (m_Invincible > 0) {
-        m_Invincible--;
-    }
 }
 
-// 切換方向
+// 切換方向 — 方向→貼圖對映由 PlayerAnimator 提供 (取代 switch；新增方向不改本函式)
 void Player::ChangeDirection(Direction dir) {
-    if (m_CurrentDir == dir)
-        return;  // 方向沒變
-
+    if (m_CurrentDir == dir) return;  // 方向沒變
     m_CurrentDir = dir;
-    switch (m_CurrentDir) {
-        case Direction::UP:
-            SetDrawable(m_ImgUp);
-            break;
-        case Direction::DOWN:
-            SetDrawable(m_ImgDown);
-            break;
-        case Direction::LEFT:
-            SetDrawable(m_ImgLeft);
-            break;
-        case Direction::RIGHT:
-            SetDrawable(m_ImgRight);
-            break;
-    }
+    SetDrawable(m_Animator.GetImage(dir));
 }
 
 bool Player::IsColliding(float nextX, float nextY, const IWorldContext& worldContext, bool ignoreBombs) {
@@ -299,62 +253,45 @@ void Player::Respawn() {
     m_GridY = m_SpawnY;
     m_Pos = GridCoord::ToPixel(m_GridX, m_GridY);
     m_Transform.translation = { m_Pos.x, m_Pos.y + Constants::Player::kSpriteYOffset };
-    m_IsDead = false;
+    m_Transform.rotation = 0.0f;
     m_CurrentBombs = 0;
     m_MaxBombs = Constants::Player::kInitialMaxBombs;
     m_Firepower = Constants::Player::kInitialFirepower;
-
-    // 重生時恢復滿命、清除暈眩與躺下旋轉
-    m_Lives = m_MaxLives;
-    m_StunTimer = -1;
-    m_Transform.rotation = 0.0f;
     SetVisible(true);
 
-    m_Invincible = Constants::Player::kInvincibleFramesOnRespawn;
+    m_Lifecycle.OnRespawned();
 }
 
 void Player::Kill() {
-    // 作弊無敵 / 重生無敵 / 暈眩中 / 彈跳飛行中 (可跨過炸彈與火焰) 皆免疫
-    if (m_GodMode || m_Invincible > 0 || m_StunTimer > 0 || m_Bounce.IsActive())
-        return;
+    const auto outcome = m_Lifecycle.OnHit(m_Bounce.IsActive());
+    if (outcome == PlayerLifecycle::HitOutcome::Immune) return;
 
-    m_Lives--;
+    m_IgnoreBombs.clear();
+    m_Bounce.Cancel();
 
-    // 還有命：不死亡，改為「倒地暈一下」(原地暈眩 + 起身後短暫無敵)，命數遞減
-    if (m_Lives > 0) {
-        m_StunTimer = Constants::Player::kStunFrames;
-        m_IgnoreBombs.clear();
-        m_Bounce.Cancel();
-        LOG_INFO("Player knocked down! Lives left: " + std::to_string(m_Lives));
+    if (outcome == PlayerLifecycle::HitOutcome::KnockedDown) {
+        LOG_INFO("Player knocked down! Lives left: " + std::to_string(GetLives()));
         return;
     }
 
-    // 命數歸 0：真正死亡 (掉鑰匙 + 重生倒數)
-    m_IsDead = true;
-    m_IgnoreBombs.clear();
-    m_DeathCountdown = Constants::Player::kDeathCountdownFrames;
-
-    // 死亡時若持有鑰匙就掉落：清掉持有狀態並標記待掉落，由 GameSession 放回世界
+    // Killed：死亡時若持有鑰匙就掉落，由 GameSession 放回世界
     if (m_HasKey) {
         m_HasKey = false;
         m_DroppedKeyPending = true;
     }
-
-    // 確保死亡時清空彈跳狀態，避免重生後莫名其妙被彈走
-    m_Bounce.Cancel();
-
     LOG_INFO("Player died");
 }
 
 void Player::DebugKill() {
-    if (m_IsDead) return;
-    // 無視所有免疫狀態，強制把命數打到 0 → 走真正的死亡流程
-    m_GodMode = false;
-    m_Invincible = -1;
-    m_StunTimer = -1;
+    const auto outcome = m_Lifecycle.OnDebugKill();
+    if (outcome != PlayerLifecycle::HitOutcome::Killed) return;
+    m_IgnoreBombs.clear();
     m_Bounce.Cancel();
-    m_Lives = 1;   // Kill() 會遞減為 0
-    Kill();
+    if (m_HasKey) {
+        m_HasKey = false;
+        m_DroppedKeyPending = true;
+    }
+    LOG_INFO("Player died");
 }
 
 void Player::IncreaseMaxBombs() {

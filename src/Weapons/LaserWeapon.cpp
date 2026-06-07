@@ -6,8 +6,9 @@
 #include "Player.hpp"
 #include "Weapons/IWeaponEffects.hpp"
 
-int LaserWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& players,
-                      LevelManager& level, Util::Renderer& /*root*/, IWeaponEffects& fx) {
+int LaserWeapon::Fire(const FireContext& ctx) {
+    Player& defender = ctx.Defender();
+    LevelManager& level = ctx.Level();
     const GridOffset o = kCardinalOffsets[static_cast<int>(defender.GetDirection())];
     constexpr int kRange = 6;
     int kills = 0;
@@ -17,9 +18,9 @@ int LaserWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& pl
         if (!GridCoord::InBounds(gx, gy)) break;
 
         const glm::vec2 pix = GridCoord::ToPixel(gx, gy);
-        fx.AddEffect(pix.x, pix.y, RESOURCE_DIR"/Image/fx_laser.png", 16);
+        ctx.Fx().AddEffect(pix.x, pix.y, RESOURCE_DIR"/Image/fx_laser.png", 16);
 
-        for (auto& p : players) {
+        for (auto& p : ctx.Players()) {
             if (p->GetTeam() == Team::ATTACKER && !p->IsDead() &&
                 p->GetGridX() == gx && p->GetGridY() == gy) {
                 p->Kill();

@@ -5,8 +5,8 @@
 #include "Player.hpp"
 #include "Weapons/IWeaponEffects.hpp"
 
-int SwordWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& players,
-                      LevelManager& /*level*/, Util::Renderer& /*root*/, IWeaponEffects& fx) {
+int SwordWeapon::Fire(const FireContext& ctx) {
+    Player& defender = ctx.Defender();
     const GridOffset o = kCardinalOffsets[static_cast<int>(defender.GetDirection())];
     const int fxg = defender.GetGridX() + o.dx;
     const int fyg = defender.GetGridY() + o.dy;
@@ -15,7 +15,7 @@ int SwordWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& pl
 
     int kills = 0;
     for (auto& t : tiles) {
-        for (auto& p : players) {
+        for (auto& p : ctx.Players()) {
             if (p->GetTeam() == Team::ATTACKER && !p->IsDead() &&
                 p->GetGridX() == t[0] && p->GetGridY() == t[1]) {
                 p->Kill();
@@ -23,7 +23,7 @@ int SwordWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& pl
             }
         }
         const glm::vec2 pix = GridCoord::ToPixel(t[0], t[1]);
-        fx.AddEffect(pix.x, pix.y, RESOURCE_DIR"/Image/fx_slash.png", 18);
+        ctx.Fx().AddEffect(pix.x, pix.y, RESOURCE_DIR"/Image/fx_slash.png", 18);
     }
     return kills;
 }

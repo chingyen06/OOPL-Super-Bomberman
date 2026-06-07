@@ -1,13 +1,9 @@
 ﻿#include "GameSession.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cstdio>
-#include <random>
 #include <string>
 
-#include "Controller/BotController.hpp"
-#include "Controller/HumanController.hpp"
 #include "GameConstants.hpp"
 #include "GameWorldContext.hpp"
 #include "GridCoord.hpp"
@@ -19,99 +15,25 @@
 
 GameSession::GameSession(Util::Renderer& root) : m_Root(root) {}
 
+// LoadLevel 只做高層協調：載地圖 / 委派 LevelSpawner 生實體 / 初始 UI 與武器充能。
+// 玩家 / 源石 / 砲台的「依設定生成」細節皆已委派 (SRP)；新增可選實體型別只需在 LevelSpawner
+// 加一個 Spawn 方法 + 這裡呼叫一行，不必動既有生成邏輯 (OCP 友善)。
 void GameSession::LoadLevel(int levelIndex) {
     LOG_INFO("Loading Level " + std::to_string(levelIndex) + "...");
 
     m_CurrentLevelIndex = levelIndex;
-
-    // 清理上一局可能殘留的實體
-    Clear();
+    Clear();  // 清理上一局可能殘留的實體
 
     const std::string levelPath = RESOURCE_DIR"/Map/level_" + std::to_string(levelIndex) + ".txt";
-
     m_LevelManager.LoadLevel(levelPath, TileSet::ForLevel(levelIndex), m_InteractableManager, m_Root);
     m_LevelManager.AttachToRoot(m_Root);
 
-    const int totalChests = m_InteractableManager.GetObjectiveCount();
-    m_UIManager.Init(m_Root, totalChests);
+    m_UIManager.Init(m_Root, m_InteractableManager.GetObjectiveCount());
 
-    // 出生點
-    auto defSpawn = m_LevelManager.GetDefenderSpawn();
-    auto atkSpawns = m_LevelManager.GetAttackerSpawns();
-
-    static std::random_device rd;
-    static std::mt19937 g(rd());
-    std::shuffle(atkSpawns.begin(), atkSpawns.end(), g);
-
-    // 玩家 1 永遠是守方 (人類)；作弊 / HUD 命數都以玩家 1 為對象。
-    const Control p1Ctrl = m_Keys ? m_Keys->p[0]
-        : Control{ Util::Keycode::W, Util::Keycode::S, Util::Keycode::A, Util::Keycode::D, Util::Keycode::SPACE, Util::Keycode::E };
-    auto ctrl1P = std::make_unique<HumanController>(p1Ctrl);
-
-    auto defender = std::make_shared<Player>(defSpawn.first, defSpawn.second, Team::DEFENDER, std::move(ctrl1P), 0);
-    m_Players.push_back(defender);
-    m_Root.AddChild(defender);
-    m_HumanPlayer = defender.get();
-
-    // 進攻方依「選擇隊伍」的席位設定生成 (slot 0 = 玩家 2，1..7 = 電腦)，依序填入地圖出生點。
-    // 玩家 2 為人類時用方向鍵 + 右 Shift 放炸彈 (ENTER 留給暫停)。不會有 AI 防守。
-    int nextPlayerId = 1;
-    int spawnIdx = 0;
-    for (int slot = 0; slot < MatchConfig::kMaxAttackers && spawnIdx < static_cast<int>(atkSpawns.size()); slot++) {
-        const MatchConfig::SlotMode mode = m_Config.AttackerSlot(slot);
-        if (mode == MatchConfig::SlotMode::Off) continue;
-
-        std::unique_ptr<InputController> ctrl;
-        std::shared_ptr<const IBotProfile> botProfile;  // 非人類席位才有；用來決定移動速度
-        if (mode == MatchConfig::SlotMode::Human) {
-            const Control p2Ctrl = m_Keys ? m_Keys->p[1]
-                : Control{ Util::Keycode::UP, Util::Keycode::DOWN, Util::Keycode::LEFT, Util::Keycode::RIGHT, Util::Keycode::RSHIFT, static_cast<Util::Keycode>(0) };
-            ctrl = std::make_unique<HumanController>(p2Ctrl);
-        }
-        else {
-            // 依席位給不同性格，讓同場每隻 AI 想法各異 (獵人 / 拾荒 / 狂戰 / 謹慎輪替)。
-            botProfile = BotProfileFactory::ForSlot(slot);
-            ctrl = std::make_unique<BotController>(botProfile,
-                                                   nextPlayerId % Constants::Bot::kReactionFrames);
-        }
-        const auto& spawn = atkSpawns[spawnIdx++];
-        auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER, std::move(ctrl), nextPlayerId++);
-        if (mode == MatchConfig::SlotMode::Human) m_HumanPlayer2 = attacker.get();   // 玩家2 (作弊對象)
-        else {
-            attacker->SetAutoCenterIdle(true);
-            // 移動速度由性格決定 (狂戰快 0.95、謹慎慢 0.78) + 依 id 的小幅抖動：不同性格、
-            // 同性格不同個體都看得出差異，皆 < 防守方 1.0；不再整排同步、同速移動 (「AI 太一致」)。
-            attacker->SetSpeedFactor(botProfile->MoveSpeedScale() + (attacker->GetPlayerID() % 3) * 0.02f);
-        }
-        m_Players.push_back(attacker);
-        m_Root.AddChild(attacker);
-    }
-
-    // 安全網：至少要有 1 名進攻方 (設定全關時，補一個 AI)
-    if (spawnIdx == 0 && !atkSpawns.empty()) {
-        const auto& spawn = atkSpawns[0];
-        auto profile = BotProfileFactory::Default();
-        auto attacker = std::make_shared<Player>(spawn.first, spawn.second, Team::ATTACKER,
-                                                 std::make_unique<BotController>(profile, 0), nextPlayerId++);
-        attacker->SetAutoCenterIdle(true);
-        attacker->SetSpeedFactor(profile->MoveSpeedScale());  // AI：依性格決定速度
-        m_Players.push_back(attacker);
-        m_Root.AddChild(attacker);
-    }
-
-    if (m_Config.SpiritsEnabled()) {
-        for (const auto& sp : m_LevelManager.GetSpiritSpawns()) {
-            auto spirit = std::make_shared<Spirit>(sp.first, sp.second);
-            m_Spirits.push_back(spirit);
-            m_Root.AddChild(spirit);
-        }
-    }
-
-    if (m_Config.TurretsEnabled()) {
-        for (const auto& sp : m_LevelManager.GetTurretSpawns()) {
-            m_TurretManager.AddTurret(std::make_shared<RotatingTurret>(sp.first, sp.second, Direction::DOWN), m_Root);
-        }
-    }
+    m_Spawner.SpawnPlayers(m_LevelManager, m_Config, m_Keys, m_Root,
+                           m_Players, m_HumanPlayer, m_HumanPlayer2);
+    m_Spawner.SpawnSpirits(m_LevelManager, m_Config, m_Root, m_Spirits);
+    m_Spawner.SpawnTurrets(m_LevelManager, m_Config, m_Root, m_TurretManager);
 
     // 防守方武器 + 充能槽 (依本場選擇建立；充能條浮在防守方頭上)
     m_WeaponSystem.Init(m_Config.DefenderWeapon(), m_Root);

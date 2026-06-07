@@ -17,12 +17,18 @@ $cfg       = Get-Content -Raw -Encoding UTF8 $ConfigJson | ConvertFrom-Json
 $name      = if ($cfg.title)     { [string]$cfg.title     } else { 'Application' }
 $author    = if ($cfg.author)    { [string]$cfg.author    } else { 'Unknown' }
 $copyright = if ($cfg.copyright) { [string]$cfg.copyright } else { '' }
+$version   = if ($cfg.version)   { [string]$cfg.version   } else { '1.0' }
 $icon      = ($IconPath -replace '\\','/')      # rc 接受正斜線，避免反斜線轉義問題
 
 # rc 字串中的雙引號需以兩個雙引號轉義
 $name      = $name      -replace '"','""'
 $author    = $author    -replace '"','""'
 $copyright = $copyright -replace '"','""'
+
+# 把語意化版本 (e.g. "1.1" / "1.1.0") 補滿成 RC 需要的四段格式
+$parts = ($version -split '\.') + @('0','0','0','0') | Select-Object -First 4
+$verCommas = ($parts -join ',')                # 1.1 → "1,1,0,0"
+$verDots   = ($parts -join '.')                # 1.1 → "1.1.0.0"
 
 $rc = @"
 #include <windows.h>
@@ -32,8 +38,8 @@ $rc = @"
 
 // 版本資訊：檔案總管「內容 → 詳細資料」可見的名稱 / 發行者 / 著作權
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,0
- PRODUCTVERSION 1,0,0,0
+ FILEVERSION $verCommas
+ PRODUCTVERSION $verCommas
  FILEFLAGSMASK 0x3fL
  FILEFLAGS 0x0L
  FILEOS VOS__WINDOWS32
@@ -46,12 +52,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "$author"
             VALUE "FileDescription",  "$name"
-            VALUE "FileVersion",      "1.0.0.0"
+            VALUE "FileVersion",      "$verDots"
             VALUE "InternalName",     "$name"
             VALUE "LegalCopyright",   "$copyright"
             VALUE "OriginalFilename", "superbomberman.exe"
             VALUE "ProductName",      "$name"
-            VALUE "ProductVersion",   "1.0.0.0"
+            VALUE "ProductVersion",   "$verDots"
             VALUE "Comments",         "Developed by $author"
         END
     END
@@ -64,4 +70,4 @@ END
 
 $enc = New-Object System.Text.UnicodeEncoding($false, $true)  # UTF-16 LE + BOM
 [System.IO.File]::WriteAllText($OutRc, $rc, $enc)
-Write-Output "gen_rc: wrote $OutRc (name='$name', author='$author', copyright='$copyright')"
+Write-Output "gen_rc: wrote $OutRc (name='$name', version='$verDots', author='$author', copyright='$copyright')"

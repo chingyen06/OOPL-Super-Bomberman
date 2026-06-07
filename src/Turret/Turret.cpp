@@ -71,7 +71,6 @@ void Turret::Fire(std::vector<std::shared_ptr<Projectile>>& outProjectiles, cons
                 }
             }
 
-            // The InteractableManager reference is now available, so we can check it here
             if (lm.IsWalkable(checkX, checkY) && !lm.IsBrick(checkX, checkY) && !bm.IsBombAt(checkX, checkY) && !hasTurret && !im.IsBlocksBombAt(checkX, checkY)) {
                 targetX = checkX;
                 targetY = checkY;
@@ -80,10 +79,7 @@ void Turret::Fire(std::vector<std::shared_ptr<Projectile>>& outProjectiles, cons
         }
     }
 
-    // Skip firing if no valid landing tile was found
-    if (targetX == -1 && targetY == -1) {
-        return;
-    }
+    if (targetX == -1 && targetY == -1) return;
 
     auto bullet = std::make_shared<Projectile>(m_GridX, m_GridY, targetX, targetY, m_Dir);
     outProjectiles.push_back(bullet);
@@ -94,34 +90,33 @@ RotatingTurret::RotatingTurret(int gridX, int gridY, Direction startDir)
 }
 
 void RotatingTurret::Rotate() {
-    if (m_Dir == Direction::UP) m_Dir = Direction::RIGHT;
-    else if (m_Dir == Direction::RIGHT) m_Dir = Direction::DOWN;
-    else if (m_Dir == Direction::DOWN) m_Dir = Direction::LEFT;
-    else if (m_Dir == Direction::LEFT) m_Dir = Direction::UP;
+    // 透過基底封裝介面切換方向，不再直接寫 m_Dir
+    if (Dir() == Direction::UP) SetDir(Direction::RIGHT);
+    else if (Dir() == Direction::RIGHT) SetDir(Direction::DOWN);
+    else if (Dir() == Direction::DOWN) SetDir(Direction::LEFT);
+    else if (Dir() == Direction::LEFT) SetDir(Direction::UP);
     UpdateRotationVisual();
 }
 
 void RotatingTurret::Update(std::vector<std::shared_ptr<Projectile>>& outProjectiles, const LevelManager& lm, const BombManager& bm, const InteractableManager& im, const std::vector<std::shared_ptr<Turret>>& turrets) {
-    m_Timer--;
+    DecTimer();
 
     if (m_State == State::IDLE) {
-        if (m_Timer <= 0) {
+        if (TimerLeft() <= 0) {
             Fire(outProjectiles, lm, bm, im, turrets);
 
             m_State = State::READY;
-            m_Timer = Constants::Turret::kReadyFrames;
-            m_CooldownTotal = Constants::Turret::kReadyFrames;
-            SetDrawable(m_ImgActive);
+            StartPhase(Constants::Turret::kReadyFrames);
+            ShowActive();
         }
     }
     else if (m_State == State::READY) {
-        if (m_Timer <= 0) {
+        if (TimerLeft() <= 0) {
             Rotate();
 
             m_State = State::IDLE;
-            m_Timer = Constants::Turret::kCooldownFrames;
-            m_CooldownTotal = Constants::Turret::kCooldownFrames;
-            SetDrawable(m_ImgIdle);
+            StartPhase(Constants::Turret::kCooldownFrames);
+            ShowIdle();
         }
     }
 

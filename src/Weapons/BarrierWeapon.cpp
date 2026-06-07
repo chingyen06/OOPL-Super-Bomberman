@@ -5,8 +5,9 @@
 #include "Player.hpp"
 #include "Weapons/IWeaponEffects.hpp"
 
-int BarrierWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& /*players*/,
-                        LevelManager& level, Util::Renderer& root, IWeaponEffects& /*fx*/) {
+int BarrierWeapon::Fire(const FireContext& ctx) {
+    Player& defender = ctx.Defender();
+    LevelManager& level = ctx.Level();
     const GridOffset o = kCardinalOffsets[static_cast<int>(defender.GetDirection())];
     const int fxg = defender.GetGridX() + o.dx;
     const int fyg = defender.GetGridY() + o.dy;
@@ -14,7 +15,7 @@ int BarrierWeapon::Fire(Player& defender, std::vector<std::shared_ptr<Player>>& 
     constexpr int kFrames = 60 * 6;   // 屏障維持 6 秒
     const int tiles[3][2] = { {fxg, fyg}, {fxg + px, fyg + py}, {fxg - px, fyg - py} };
     for (auto& t : tiles) {
-        level.AddTemporaryWall(t[0], t[1], kFrames, RESOURCE_DIR"/Image/fx_barrier.png", root);
+        level.AddTemporaryWall(t[0], t[1], kFrames, RESOURCE_DIR"/Image/fx_barrier.png", ctx.Root());
     }
     return 0;  // 屏障不造成擊倒
 }

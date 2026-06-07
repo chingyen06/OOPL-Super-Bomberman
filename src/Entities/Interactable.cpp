@@ -43,7 +43,7 @@ void Chest::Open() {
 
     m_Opened = true;
     SetDrawable(m_OpenedImage);
-    LOG_INFO("Chest opened at (" + std::to_string(m_GridX) + ", " + std::to_string(m_GridY) + ")");
+    LOG_INFO("Chest opened at (" + std::to_string(GetGridX()) + ", " + std::to_string(GetGridY()) + ")");
 }
 
 bool Chest::OnInteract(Player& player) {

@@ -4,5 +4,6 @@
     "window_height": 720,
     "author": "曾靖諺",
     "copyright": "(c) Konami Digital Entertainment",
-    "icon": "Resources/app.ico"
+    "icon": "Resources/app.ico",
+    "version": "1.1"
 }

@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "Config/AppVersion.hpp"
 #include "Core/App.hpp"
 #include "States/MainMenuState.hpp"
 #include "States/MenuCommon.hpp"
@@ -21,8 +22,9 @@ void TitleScreenState::OnEnter(App& app) {
     m_Press = std::make_shared<UIText>("- 請按空白鍵 -", 0.0f, -250.0f, 10.0f, MenuCommon::DarkText());
     root.AddChild(m_Press);
 
-    // 左下角版本號 (右下角留給 ESC 提示)
-    m_Version = std::make_shared<UIText>("版本 1.0", -560.0f, -340.0f, 10.0f,
+    // 左下角版本號 (右下角留給 ESC 提示) — 版本字串自 config.json 取得 (與 exe 版本資訊
+    // 和打包檔名同源，升版只需改 config.json 一處)
+    m_Version = std::make_shared<UIText>("版本 " + AppVersion::String(), -560.0f, -340.0f, 10.0f,
                                          Util::Color::FromName(Util::Colors::DIM_GRAY));
     m_Version->SetScale(0.6f, 0.6f);
     root.AddChild(m_Version);

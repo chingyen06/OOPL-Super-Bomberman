@@ -1,9 +1,7 @@
-﻿#ifndef PLAYER_HPP
+#ifndef PLAYER_HPP
 #define PLAYER_HPP
 
 #include "Util/GameObject.hpp"
-#include "Util/Image.hpp"
-#include "Util/Keycode.hpp"
 #include <memory>
 #include <vector>
 #include <utility>
@@ -13,12 +11,13 @@
 #include "WorldContext.hpp"
 #include "Controller/InputController.hpp"
 #include "PlayerBounce.hpp"
+#include "PlayerAnimator.hpp"
+#include "PlayerLifecycle.hpp"
 
 class Player : public Util::GameObject {
 public:
     Player(int startGridX, int startGridY, Team team, std::unique_ptr<InputController> controller, int id);
 
-    // void Update(const LevelManager& levelManager);
     void Update(const IWorldContext& worldContext);
 
     // 取得角色真正的座標
@@ -28,14 +27,14 @@ public:
     // 取得角色像素座標
     glm::vec2 GetPixelPos() const { return m_Pos; }
 
-    bool IsDead() const { return m_IsDead; }
+    // ---- Lifecycle 轉發 (對外 API 不變，內部委派給 PlayerLifecycle) ----
+    bool IsDead() const   { return m_Lifecycle.IsDead(); }
+    int  GetLives() const { return m_Lifecycle.Lives(); }
+    bool IsStunned() const{ return m_Lifecycle.IsStunned(); }
+
     void Kill();
     void DebugKill();  // debug 主控台用：無視無敵/暈眩/彈跳，直接致死
 
-    int  GetLives() const { return m_Lives; }
-    bool IsStunned() const { return m_StunTimer > 0; }
-
-    // void Respawn(int gridX, int gridY
     void Respawn();
 
     void AddBombCount() { m_CurrentBombs++; }
@@ -78,10 +77,10 @@ public:
     void IncreaseFirepower();
 
     // ------- 作弊模式 (CheatManager 透過這些 public API 操作，不碰私有狀態) -------
-    void SetGodMode(bool on) { m_GodMode = on; }
-    bool IsGodMode() const { return m_GodMode; }
-    void MaxOutBombs()     { m_MaxBombs = Constants::Player::kMaxBombsCap; }
-    void MaxOutFirepower() { m_Firepower = Constants::Player::kFirepowerCap; }
+    void SetGodMode(bool on) { m_Lifecycle.SetGodMode(on); }
+    bool IsGodMode() const   { return m_Lifecycle.IsGodMode(); }
+    void MaxOutBombs()       { m_MaxBombs = Constants::Player::kMaxBombsCap; }
+    void MaxOutFirepower()   { m_Firepower = Constants::Player::kFirepowerCap; }
 
     InputController* GetController() const { return m_Controller.get(); }
 
@@ -102,17 +101,15 @@ private:
 
     Direction m_CurrentDir;
 
-    std::shared_ptr<Util::Image> m_ImgUp;
-    std::shared_ptr<Util::Image> m_ImgDown;
-    std::shared_ptr<Util::Image> m_ImgLeft;
-    std::shared_ptr<Util::Image> m_ImgRight;
+    PlayerAnimator m_Animator;  // 方向→貼圖管理 (抽離自 Player，SRP/OCP)
 
     void ChangeDirection(Direction dir);
 
+    // 暈眩視覺：依 PlayerLifecycle::TickStatus 套用旋轉 / 下沉 / 閃爍
+    void ApplyStunVisuals(const PlayerLifecycle::TickStatus& s);
+
     // 確認是否可以移動
     bool IsColliding(float nextX, float nextY, const IWorldContext& worldContext, bool ignoreBombs = false);
-
-	bool m_IsDead = false;  // 角色是否死亡
 
     int m_MaxBombs = Constants::Player::kInitialMaxBombs;        // 最大炸彈放置數量
     int m_CurrentBombs = 0;                                       // 當前場上炸彈數量
@@ -120,12 +117,7 @@ private:
 	// 暫時忽略的炸彈座標
     std::vector<std::pair<int, int>> m_IgnoreBombs;
 
-    int m_Invincible = -1;  // 無敵時間
-    bool m_GodMode = false;  // 作弊：永久無敵 (不隨時間衰減)
-
-    int m_MaxLives;          // 依陣營決定 (防守 3 / 進攻 1)，建構時設定
-    int m_Lives;             // 剩餘命數；>1 時被打中只倒地暈，歸 0 才真死亡
-    int m_StunTimer = -1;    // 倒地暈眩剩餘 frame (>0 = 暈眩中，不能移動)
+    PlayerLifecycle m_Lifecycle;  // 死亡/暈眩/無敵/重生計時的狀態機 (抽離，SRP)
 
     bool m_HasKey = false;  // 角色是否有鑰匙
     bool m_DroppedKeyPending = false;  // 死亡時持有鑰匙 → 等 GameSession 取走並放回世界
@@ -137,8 +129,6 @@ private:
 
     int m_SpawnX;
     int m_SpawnY;
-    int m_DeathCountdown = -1;
-    int m_RespawnTimer = -1;
 
     int m_PlayerID;
 

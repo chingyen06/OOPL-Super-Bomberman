@@ -98,12 +98,11 @@ void App::End() { LOG_TRACE("End"); }
 void App::ValidTask() { LOG_TRACE("ValidTask"); }
 
 const char* App::LevelName(int level) {
-    switch (level) {
-        case 1:  return "炸彈節";
-        case 2:  return "植物基地";
-        case 3:  return "磐石論壇";
-        default: return "未知關卡";
-    }
+    // 關卡名稱表 — 以查表取代 switch (OCP)：新增關卡只要改這張表 + kNumLevels，不必動程式分支。
+    // 索引以 0 起算 (level=1 → kLevelNames[0])；範圍外回退提示字串。
+    static const char* const kLevelNames[kNumLevels] = { "炸彈節", "植物基地", "磐石論壇" };
+    if (level < 1 || level > kNumLevels) return "未知關卡";
+    return kLevelNames[level - 1];
 }
 
 void App::StartMatch() {

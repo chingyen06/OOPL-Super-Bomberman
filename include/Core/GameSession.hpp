@@ -14,6 +14,7 @@
 #include "DebugConsole.hpp"
 #include "DebugOverlay.hpp"
 #include "DefenderWeaponSystem.hpp"
+#include "LevelSpawner.hpp"
 #include "MatchConfig.hpp"
 #include "InteractableManager.hpp"
 #include "LevelManager.hpp"
@@ -86,6 +87,7 @@ private:
     DebugOverlay        m_DebugOverlay;
     DebugConsole        m_DebugConsole;    // F3 主控台 (抽自 GameSession，SRP)
     DefenderWeaponSystem m_WeaponSystem;   // 防守方武器 + 充能 (抽自 GameSession，SRP)
+    LevelSpawner        m_Spawner;         // 玩家/源石/砲台生成 (抽自 GameSession，SRP)
 
     std::vector<std::shared_ptr<Player>> m_Players;
     std::vector<std::shared_ptr<Spirit>> m_Spirits;

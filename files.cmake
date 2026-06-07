@@ -4,6 +4,7 @@
     Core/GameSession.cpp
     Core/GameWorldContext.cpp
     Core/DefenderWeaponSystem.cpp
+    Core/LevelSpawner.cpp
     # ---- Audio ----
     Audio/MusicPlayer.cpp
     # ---- States ----
@@ -22,9 +23,12 @@
     # ---- Config ----
     Config/SaveData.cpp
     Config/KeyBindings.cpp
+    Config/AppVersion.cpp
     # ---- Entities ----
     Entities/Player.cpp
     Entities/PlayerBounce.cpp
+    Entities/PlayerAnimator.cpp
+    Entities/PlayerLifecycle.cpp
     Entities/Bomb.cpp
     Entities/Explosion.cpp
     Entities/Spirit.cpp
@@ -39,6 +43,7 @@
     Map/MapTiles.cpp
     # ---- Bot ----
     Bot/BotNavigator.cpp
+    Bot/BotDecisionMaker.cpp
     Bot/DangerMap.cpp
     Bot/Pathfinder.cpp
     # ---- UI ----
@@ -71,6 +76,7 @@ set(INCLUDE_FILES
     Core/GameWorldContext.hpp
     Core/WorldContext.hpp
     Core/DefenderWeaponSystem.hpp
+    Core/LevelSpawner.hpp
     # ---- States ----
     States/IGameState.hpp
     States/MenuCommon.hpp
@@ -92,9 +98,12 @@ set(INCLUDE_FILES
     Config/MatchConfig.hpp
     Config/SaveData.hpp
     Config/KeyBindings.hpp
+    Config/AppVersion.hpp
     # ---- Entities ----
     Entities/Player.hpp
     Entities/PlayerBounce.hpp
+    Entities/PlayerAnimator.hpp
+    Entities/PlayerLifecycle.hpp
     Entities/Bomb.hpp
     Entities/Explosion.hpp
     Entities/Spirit.hpp
@@ -112,6 +121,7 @@ set(INCLUDE_FILES
     Audio/MusicPlayer.hpp
     # ---- Bot ----
     Bot/BotNavigator.hpp
+    Bot/BotDecisionMaker.hpp
     Bot/BotProfile.hpp
     Bot/DangerMap.hpp
     Bot/Pathfinder.hpp

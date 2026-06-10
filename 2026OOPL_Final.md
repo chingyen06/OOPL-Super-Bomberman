@@ -46,12 +46,12 @@
 | 武器發動 | E | （守方專用） |
 
 **對戰流程**
-1. 遊戲封面 → 主選單 → 戰鬥選項 → 進入對戰
+1. 遊戲封面 → 主選單 → 戰鬥選單 → 進入對戰
 2. 對戰中畫面上方顯示倒數計時、剩餘寶箱數，人物頭頂以皇冠顯示防守方、鑰匙顯示持有鑰匙的進攻方
 3. 倒數結束（防守方勝）或所有寶箱被開啟（進攻方勝）時，進入結算畫面並依表現結算金幣，金幣會保存
 
 **核心機制**
-- **炸彈與爆炸：** 雙方皆可放置炸彈，引爆後以十字形向四方延伸火焰，遇到可破壞磚塊則炸毀、遇到不可破壞的無敵牆則停止；火焰會引爆相鄰炸彈（連鎖）
+- **炸彈與爆炸：** 雙方皆可放置炸彈，引爆後以十字形向四方延伸火焰，遇到可破壞磚塊則炸毀、遇到不可破壞的無敵牆則停止；火焰會引爆相鄰炸彈（連鎖爆炸）
 - **鑰匙與寶箱：** 進攻方需在地圖上取得鑰匙，帶到寶箱前開啟，持有鑰匙者死亡會原地掉落鑰匙
 - **遊戲道具：** 磚塊被破壞後有機率掉落遊戲道具（55% 掉落空氣、15% 加速鞋 (玩家加速 5 秒 3.0f -> 5.0f)、15% 炸彈道具 (增加可放置炸彈數，上限為 10)、15% 火焰道具 (擴大火焰蔓延半徑，上限為 5)）
 - **陷阱地形：** 輸送帶（強制位移）、彈跳板（彈飛角色）、砲台 (發射砲彈，在射程內的玩家砲彈路過會砸暈)
@@ -63,72 +63,46 @@
 
 | 屬性 | 說明 |
 |------|------|
-| 生命 (Lives) | 進攻方 1 條；防守方 3 條（前 2 次被擊中只會倒地暈眩 1.5 秒，不會直接死） |
-| 移動速度 (Speed) | 預設 3.0；撿到加速鞋後 5 秒內提升到 5.0；AI 進攻方依性格略低於 1.0 倍 |
-| 火力 (Firepower) | 炸彈爆炸的十字延伸格數，初始 2，上限 5 |
-| 炸彈上限 (MaxBombs) | 可同時存在的炸彈數，初始 3，上限 10 |
-| 金幣 (Coin) | 結算時依勝負 / 守住寶箱 / 武器擊倒數結算並寫入存檔 |
+| 生命 | 進攻方 1 條；防守方 3 條（前 2 次被擊中只會倒地暈眩 1.5 秒，不會直接死） |
+| 移動速度 | 預設 3.0f；撿到加速鞋後 5 秒內提升到 5.0f；AI 進攻方依性格略低於 1.0 倍（倍數：狂戰士 0.95、獵人 0.9、拾荒者 0.84、謹慎者 0.78） |
+| 火力 | 炸彈爆炸的十字延伸格數，初始 2，上限 5 |
+| 炸彈上限 | 可同時存在的炸彈數，初始 3，上限 10 |
+| 金幣 | 結算時依勝負 / 守住寶箱 / 武器擊倒數結算並寫入存檔 |
 
 **狀態異常**
 
 | 狀態 | 效果 | 解除 |
 |------|------|------|
-| 倒地暈眩 | 防守方被擊中時若仍有命，會原地暈眩 90 frames 並閃爍，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
-| 無敵 | 重生 / 起身 / 作弊「無敵」開啟時生效，免疫所有傷害 | 計時結束 / 作弊關閉 |
-
-> 詳細數值定義於 `include/Core/GameConstants.hpp`
+| 倒地暈眩 | 防守方被擊中時若仍有命，會原地暈眩 1.5 秒 並閃爍星星，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
+| 無敵 | 重生 / 起身 / 作弊開啟時生效，免疫所有傷害 | 計時結束 / 作弊關閉 |
 
 ### 遊戲畫面
 
 | 說明 | 畫面 |
-|------|------|
+|:------:|:------:|
 | 遊戲封面 | <img src="docs/title.png" width="500"> |
 | 主選單 | <img src="docs/mainmenu.png" width="500"> |
-| 操作設定 | <img src="docs/setting.PNG" width="500"> |
+| 操作設定 | <img src="docs/setting.png" width="500"> |
+| 戰鬥選單 | <img src="docs/fighting.png" width="500"> |
+| 更換規則 | <img src="docs/rule.png" width="500"> |
+| 選擇隊伍 | <img src="docs/team.png" width="500"> |
+| 選擇武器 | <img src="docs/weapon.png" width="500"> |
+| 選擇關卡 | <img src="docs/level.png" width="500"> |
+| 遊玩畫面 | <img src="docs/playing.png" width="500"> |
+| 暫停選單 | <img src="docs/pause.png" width="500"> |
+| Debug 選單 | <img src="docs/debug.png" width="500"> |
+| 結算畫面 (防守方獲勝) | <img src="docs/result.png" width="500"> |
+| 結算畫面 (進攻方獲勝) | <img src="docs/result2.png" width="500"> |
 
 ## 程式設計
 
 ### 程式架構
-
-整體採「分層 + 單一職責」的物件導向設計，以 `App` 為頂層協調者，透過**狀態模式**切換各畫面，遊戲進行時的邏輯再委派給各 **Manager** 與 **Entity**。原始碼依職責分到 `include/` 與 `src/` 下的對應子資料夾：
-
-```
-main.cpp ── App（生命週期 / 狀態機 / 共用資源）
-                │
-                ├── States/        各畫面（狀態模式：IGameState 子類）
-                │                  Title / MainMenu / Rules / Settings /
-                │                  LevelSelect / TeamSelect / WeaponSelect /
-                │                  BattleSetup / Gameplay / GamePaused / Results
-                │
-                └── Core/GameSession  一場對戰的容器，持有並協調：
-                      ├── Managers/   LevelManager（地圖載入/碰撞）
-                      │               BombManager（炸彈/爆炸/連鎖）
-                      │               InteractableManager（鑰匙/寶箱/陷阱）
-                      │               AIManager（進攻方 bot 決策協調）
-                      │               CheatManager（作弊）
-                      ├── Core/       LevelSpawner（依設定生玩家 / 源石 / 砲台）
-                      │               DefenderWeaponSystem（武器 + 充能 + 特效）
-                      ├── Entities/   Player / Bomb / Explosion / Spirit /
-                      │               Interactable / PlayerBounce /
-                      │               PlayerAnimator（方向→貼圖）/
-                      │               PlayerLifecycle（死亡/暈眩/重生計時）
-                      ├── Turret/     Turret / Projectile / TurretManager（源石砲台）
-                      ├── Weapons/    IDefenderWeapon ＋ Sword/Laser/Barrier ＋
-                      │               WeaponFactory ＋ FireContext（參數物件）
-                      ├── Bot/        Pathfinder（A*）/ DangerMap / BotNavigator /
-                      │               BotDecisionMaker（單幀策略樹）
-                      ├── Controller/ InputController：HumanController / BotController
-                      ├── UI/         UIManager / HUD / DebugConsole / DebugOverlay …
-                      ├── Config/     SaveData / KeyBindings / MatchConfig / AppVersion
-                      └── Audio/      MusicPlayer
-```
-
-下方為省略屬性與方法的純繼承關聯圖：
+以下為省略屬性與方法的純繼承關聯圖：
 
 ```mermaid
 classDiagram
     direction TB
-    class GameObject["Util::GameObject"]
+    class GameObject[Util::GameObject]
     class IGameState
     class IDefenderWeapon
     class IPlayerEffect
@@ -182,20 +156,24 @@ classDiagram
     IPlayerEffect <|-- FirepowerEffect
 ```
 
-以下的點代表繼承、後面的字代表解釋：
+以下的點代表繼承，後面的字代表解釋：
 
-* `Util::GameObject` — PTSD 框架的基礎遊戲物件（含 z-index、transform）
-  * `Player` — 玩家角色（雙方共用同一類，差別在 Team 與 InputController）
-  * `Bomb` / `Explosion` / `Spirit` / `Turret` / `Projectile` — 對戰場上各類動態物件
+* `Util::GameObject` — PTSD 框架的基礎遊戲物件
+  * `Player` — 玩家角色
+  * `Bomb` / `Explosion` / `Spirit` / `Turret` / `Projectile` — 地圖上可互動物件
     * `RotatingTurret` — 會自動旋轉並射擊的砲台
   * `Interactable` — 地圖上可互動的物件
-    * `Key` — 鑰匙；`Chest` — 寶箱（攻擊方計分目標）；`PowerUp` — 道具（透過建構子注入 `IPlayerEffect`，新增道具不必新增 subclass）；`Conveyor` — 輸送帶；`BouncePad` — 彈跳板
+    * `Key` — 鑰匙
+    * `Chest` — 寶箱
+    * `PowerUp` — 道具（透過建構子注入 `IPlayerEffect`，新增道具不必新增 subclass）
+    * `Conveyor` — 輸送帶
+    * `BouncePad` — 彈跳板
   * `Tile` — 地圖磚塊
-* `IGameState` — 場景介面（狀態模式）；11 個畫面各為一個 subclass
-* `IDefenderWeapon` — 防守方武器介面（策略模式）；3 把武器各為一個 subclass
-* `InputController` — 玩家輸入「讀取」介面；`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
-* `IProgrammableController` — 「可被外部寫入按鍵」的介面；與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
-* `InteractableFactory` — 磚塊掉落物的工廠；`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass
+* `IGameState` — 場景介面：11 個畫面各為一個 subclass
+* `IDefenderWeapon` — 武器介面：3 把武器各為一個 subclass
+* `InputController` — 移動方式讀取介面：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
+* `IProgrammableController` — 可被外部寫入按鍵的介面：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
+* `InteractableFactory` — 磚塊掉落物的靜態工廠：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass
 
 **體現的物件導向原則與設計模式**
 
@@ -242,6 +220,7 @@ classDiagram
 - **輔助程式開發：** 由於進度壓力，我採取 我決定具體方向 -> AI 實作程式 -> 我做 code review -> 根據類型決定是我改還是 AI 改 (例如 UI 渲染問題、AI 的邏輯太過一致等這種需要實際遊玩測試的部分就由我自行完成，若是須對程式做大幅改動或 god class 問題則由 AI 協助拆分問題並實作)
 - **PTSD 框架除錯：** 例如我將 debug 模式轉為 Release 後打包發布，就遇到在其他電腦會圖片 / 文字不顯示的問題，AI 幫助我了解整個框架的內容，並檢測出是因為 shader 路徑寫死成開發機的絕對路徑，打包未帶 shader 的問題，最後將 shader 納入 `Resources/shaders/` 並改相對路徑後解決
 - **開發環境相容：** 同學幫忙測試時發現 CLion 無法正確編譯的問題，我根據錯誤內容與 AI 一同處理完成
+- **輔助報告撰寫：** 掃描完整程式碼給予提示以及撰寫建議
 
 ## 結語
 
@@ -278,15 +257,15 @@ classDiagram
 
 ### 心得
 
-這次以單人完成《超級炸彈人》城堡模式的 2D 復刻，最大的收穫不是把遊戲做出來這件事，而是把整個專案的 v1.0 寫出來、跑通、發佈出去之後，再回頭做了一次完整的 SOLID 審查 — 然後 v1.1 把那些「能動但結構不對」的地方一個一個拆開重寫。
+在修這門物件導向程式設計實習前，我寫的程式多半採取競程的寫法，大多不考慮可維護性、可擴充性等等的軟工實踐問題。然而在這一次的實作中，我深刻了解到一個好的設計方法與架構不僅能夠使程式更易讀、易維護，同時也能夠讓 AI Agent 更容易理解並解決我的需求。
 
-最有感的是 SRP。`Player::Update` 在 v1.0 是一坨 200 多行的函式，輸入、物理、暈眩、死亡、重生、無敵閃爍、彈跳、轉向、加速計時，全部擠在裡面。當時自己看著還覺得「順著時間軸寫下來不就是這樣？」直到 v1.1 把死亡 / 暈眩 / 重生計時抽成 `PlayerLifecycle`、方向→貼圖抽成 `PlayerAnimator`，`Update` 變成「Tick lifecycle → 看結果決定要不要 return → 跑剩下的物理」三段乾淨流程，才意識到原本那 200 行不是「順著時間軸」，是 9 種職責互相借用同一個變數空間而已。`AIManager` 與 `GameSession::LoadLevel` 也是同樣的故事 — 抽出 `BotDecisionMaker` 與 `LevelSpawner` 後，原本要花兩分鐘讀完一個函式才看得到全貌，現在三個檔案各 10 行就是全貌。
+這次以單人完成《Super Bomberman R2》城堡模式的 2D 復刻，我認為我最大的收穫不是把遊戲做出來這件事，而是把整個專案的寫出來、跑通之後，又回頭與 AI 一同審視，並做了一次完整 OOP 架構檢查，包含 SOLID 與可擴充性等，然後一個一個拆掉重寫。
 
-OCP 的部分最有感的是 `IDefenderWeapon::Fire` 簽名長到讓我每次新增武器都要重抄一份。改成 `FireContext` 參數物件之後，三個武器子類的 Fire 都變成單一參數，未來要塞個音效服務 / 觸控震動進去也不必改既有武器 — 一個介面變動成本從「動三個檔」變成「動一個檔」，感覺很值。
+我認為這次最有感的是 SRP。在一開始，我的架構設計得不太好，尤其 `Player::Update` 原本是一坨 200 多行的函式，輸入、物理、暈眩、死亡、重生、無敵閃爍、彈跳、轉向、加速計時，全部擠在裡面，當時我覺得程式這樣能跑就好，而且也很符合一個人思考的順序性，但到了後面我發現每次要添加功能都要多加非常多行，才意識到我的設計似乎不太好。不過我很慶幸我們現在有 AI Agent 能夠快速重構，後來就很快地把這些設計不良的地方一一處理完，把死亡 / 暈眩 / 重生計時抽成 `PlayerLifecycle`、方向與貼圖抽成 `PlayerAnimator`，`Update` 變成 `Tick lifecycle → 看結果決定要不要 return → 跑剩下的物理` 的流程，這時候我才意識到原本那 200 行的設計有多難維護，諸如此類問題還有很多，但已經幾乎都有做修正了。
 
-另外是 ISP。`InputController`（讀按鍵）與 `IProgrammableController`（被寫入按鍵）一開始我想過要不要塞同一個介面，畢竟 `BotController` 兩者皆是。但若 `HumanController` 也得實作 `SetInput / SetGoal / TickCooldown`，就會多出一堆「永遠不會被呼叫的 stub」 — 而 stub 本身就是壞氣味。拆完之後 `AIManager` 用 `dynamic_cast<IProgrammableController*>` 做能力查詢，`HumanController` 自動被跳過 — 這不是 LSP 違反，而是介面分得乾淨後的自然結果。
+我認為我做這個專案中，最自豪的就是想起上學期鄭老師 OOP 課程後期提到的模式，我第一次利用 InteractableFactory 來實作磚塊掉落的物件時，就發現這是一個很用的設計方法，無論我要添加多少內容，都只需要添加幾行，並於其他地方加上功能即可，不需要修改太多內容，那時候起我就了解到一個好的方法有多重要，後續與 AI 合作開發的時候也會多注意在什麼時候應該用什麼設計方法，避免他實作出設計不好的程式。
 
-最後是發佈這件事。「能在自己電腦跑」跟「能交到別人手上跑」真的是兩件事。打包 v1.0 給朋友試的時候，他點兩下 exe 圖片文字全沒了，蒙了好一陣子才發現是框架把 shader 路徑寫死成我開發機的絕對路徑、打包沒帶到。處理完那個又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊…每一個都是「自己電腦跑得好好的」結果換台機器就壞的細節。這次 v1.1 也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面三處 — 升版只要改一個地方，是 SOLID 之外另一個小小的 DRY 實踐。
+最後是發佈的問題，能在自己電腦跑跟能在別人電腦跑真的是兩件事。打包 v1.0 上一個版本給奕宏幫忙測試的時候，他一點開遊戲我的圖片文字全沒了，想了好一陣子又問了 AI 後才發現是框架把 shader 路徑寫死成開發機的絕對路徑，打包沒帶到。處理完後又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊等等，每一個都是換台機器就壞的細節，這些都在新的 v1.0 解決了。最後的 v1.1 也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面 三處 — 升版本只需要改一個地方，是 SOLID 之外另一個方便發布版本的小巧思。
 
 ### 貢獻比例
 |      組員      | 貢獻 |

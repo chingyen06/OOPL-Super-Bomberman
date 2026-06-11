@@ -145,10 +145,13 @@
 - 玩家道具效果子類（`IPlayerEffect`）：3 個
 - 地圖磚塊子類（`Tile`）：3 個
 
-以下為省略屬性與方法的純繼承關聯圖（`GameObject` 即 PTSD 框架的 `Util::GameObject`）：
+以下為省略屬性與方法的純繼承關聯圖，依主題拆成四張以便閱讀（`GameObject` 即 PTSD 框架的 `Util::GameObject`）：
+
+**(1) 遊戲實體：`Util::GameObject` 繼承樹**
 
 ```mermaid
 classDiagram
+    direction LR
     class GameObject {
         <<PTSD Framework>>
     }
@@ -164,19 +167,22 @@ classDiagram
 
     Turret <|-- RotatingTurret
 
-    Tile <|-- Ground
-    Tile <|-- Wall
-    Tile <|-- Brick
-
     Interactable <|-- Key
     Interactable <|-- Chest
     Interactable <|-- PowerUp
     Interactable <|-- Conveyor
     Interactable <|-- BouncePad
 
-    InteractableFactory <|-- GenericPowerUpFactory
-    InteractableFactory <|-- EmptyDropFactory
+    Tile <|-- Ground
+    Tile <|-- Wall
+    Tile <|-- Brick
+```
 
+**(2) 場景狀態：`IGameState`（11 個畫面）**
+
+```mermaid
+classDiagram
+    direction LR
     IGameState <|-- TitleScreenState
     IGameState <|-- MainMenuState
     IGameState <|-- BattleSetupState
@@ -188,7 +194,13 @@ classDiagram
     IGameState <|-- GameplayState
     IGameState <|-- GamePausedState
     IGameState <|-- ResultsState
+```
 
+**(3) 武器與輸入控制：`IDefenderWeapon` / `InputController`**
+
+```mermaid
+classDiagram
+    direction LR
     IDefenderWeapon <|-- SwordWeapon
     IDefenderWeapon <|-- LaserWeapon
     IDefenderWeapon <|-- BarrierWeapon
@@ -196,7 +208,13 @@ classDiagram
     InputController <|-- HumanController
     InputController <|-- BotController
     IProgrammableController <|-- BotController
+```
 
+**(4) 策略與工廠：`IPlayerEffect` / `IBotProfile` / `InteractableFactory`**
+
+```mermaid
+classDiagram
+    direction LR
     IPlayerEffect <|-- SpeedBoostEffect
     IPlayerEffect <|-- BombUpEffect
     IPlayerEffect <|-- FirepowerUpEffect
@@ -205,35 +223,38 @@ classDiagram
     IBotProfile <|-- CollectorBotProfile
     IBotProfile <|-- BerserkerBotProfile
     IBotProfile <|-- CautiousBotProfile
+
+    InteractableFactory <|-- GenericPowerUpFactory
+    InteractableFactory <|-- EmptyDropFactory
 ```
 
 以下的點代表繼承，後面的字代表解釋：
 
-* `Util::GameObject` — PTSD 框架的基礎遊戲物件
-  * `Player` — 玩家角色
-  * `Bomb` — 炸彈
-  * `Explosion` — 火焰
-  * `Spirit` — 源石精靈
-  * `Turret` — 砲台
-    * `RotatingTurret` — 會自動旋轉並射擊的砲台
-  * `Projectile` — 砲台發射的砲彈
-  * `Interactable` — 地圖上可互動的物件
-    * `Key` — 鑰匙
-    * `Chest` — 寶箱
-    * `PowerUp` — 道具（透過建構子注入 `IPlayerEffect`，新增道具不必新增 subclass）
-    * `Conveyor` — 輸送帶
-    * `BouncePad` — 彈跳板
-  * `Tile` — 地圖磚塊
-    * `Ground` — 可通行的地面
-    * `Wall` — 不可破壞的無敵牆
-    * `Brick` — 可被炸彈破壞的磚塊（破壞後有機率掉落道具）
-* `IGameState` — 場景介面：11 個畫面各為一個 subclass
-* `IDefenderWeapon` — 武器介面：3 把武器各為一個 subclass
-* `InputController` — 移動方式讀取介面：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
-* `IProgrammableController` — 可被外部寫入按鍵的介面：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
-* `InteractableFactory` — 磚塊掉落物的靜態工廠：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
-* `IPlayerEffect` — 道具效果介面：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
-* `IBotProfile` — AI 性格策略介面：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
+* `Util::GameObject`：PTSD 框架的基礎遊戲物件
+  * `Player`：玩家角色
+  * `Bomb`：炸彈
+  * `Explosion`：火焰
+  * `Spirit`：源石精靈
+  * `Turret`：砲台
+    * `RotatingTurret`：會自動旋轉並射擊的砲台
+  * `Projectile`：砲台發射的砲彈
+  * `Interactable`：地圖上可互動的物件
+    * `Key`：鑰匙
+    * `Chest`：寶箱
+    * `PowerUp`：道具（透過建構子注入 `IPlayerEffect`，新增道具不必新增 subclass）
+    * `Conveyor`：輸送帶
+    * `BouncePad`：彈跳板
+  * `Tile`：地圖磚塊
+    * `Ground`：可通行的地面
+    * `Wall`：不可破壞的無敵牆
+    * `Brick`：可被炸彈破壞的磚塊（破壞後有機率掉落道具）
+* `IGameState`：場景介面：11 個畫面各為一個 subclass
+* `IDefenderWeapon`：武器介面：3 把武器各為一個 subclass
+* `InputController`：移動方式讀取介面：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
+* `IProgrammableController`：可被外部寫入按鍵的介面：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
+* `InteractableFactory`：磚塊掉落物的靜態工廠：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
+* `IPlayerEffect`：道具效果介面：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
+* `IBotProfile`：AI 性格策略介面：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
 
 **遊戲狀態移轉圖**
 `App` 只持有目前狀態，所有畫面切換皆透過 `App::TransitionTo()` 完成：
@@ -369,7 +390,7 @@ stateDiagram-v2
 
 我認為我做這個專案中，最自豪的就是想起上學期鄭老師 OOP 課程後期提到的模式，我第一次利用 InteractableFactory 來實作磚塊掉落的物件時，就發現這是一個很有用的設計方法，無論我要添加多少內容，都只需要添加幾行，並於其他地方加上功能即可，不需要修改太多內容，那時候起我就了解到一個好的方法有多重要，後續與 AI 合作開發的時候也會多注意在什麼時候應該用什麼設計方法，避免他實作出設計不好的程式。
 
-最後是發佈的問題，能在自己電腦跑跟能在別人電腦跑真的是兩件事。打包第一個版本給奕宏幫忙測試的時候，他一點開遊戲我的圖片跟文字都沒了，想了好一陣子又問了 AI 後才發現是框架把 shader 路徑寫死成開發機的絕對路徑，打包沒帶到。處理完後又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊等等，每一個都是換台機器就壞的細節，這些都在新的 v1.0 解決了。最後的 v1.1 也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面 三處 — 升版本只需要改一個地方，是 SOLID 之外另一個方便發布版本的小巧思。
+最後是發佈的問題，能在自己電腦跑跟能在別人電腦跑真的是兩件事。打包第一個版本給奕宏幫忙測試的時候，他一點開遊戲我的圖片跟文字都沒了，想了好一陣子又問了 AI 後才發現是框架把 shader 路徑寫死成開發機的絕對路徑，打包沒帶到。處理完後又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊等等，每一個都是換台機器就壞的細節，這些都在新的 v1.0 解決了。最後的 v1.1 也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面 三處：升版本只需要改一個地方，是 SOLID 之外另一個方便發布版本的小巧思。
 
 ### 貢獻比例
 |      組員      | 貢獻 |

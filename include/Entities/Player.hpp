@@ -42,7 +42,7 @@ public:
     // BombManager 會再呼叫 DecBombCount，沒下限保護會讓計數變負數，導致玩家事實上
     // 可以放比 m_MaxBombs 多 1 顆。Clamp 至 0 修掉這個對戰時可重現的 bug。
     void DecBombCount() { if (m_CurrentBombs > 0) m_CurrentBombs--; }
-    bool CanPlaceBomb() const { return m_CurrentBombs < m_MaxBombs; }
+    bool CanPlaceBomb() const { return m_CurrentBombs < EffectiveMaxBombs(); }
 
 	Direction GetDirection() const { return m_CurrentDir; }  // 取得當前方向
 
@@ -73,14 +73,17 @@ public:
     void ActivateSpeedBoost() { m_SpeedBoostTimer = Constants::Player::kSpeedBoostFrames; }
     void CancelSpeedBoost()   { m_SpeedBoostTimer = -1; }  // 立即解除加速 (作弊關閉時用)
     void IncreaseMaxBombs();
-    int GetFirepower() const { return m_Firepower; }
+    // 作弊開啟時回報上限值；不影響玩家真實火力 (m_Firepower)。
+    int GetFirepower() const { return m_CheatStats ? Constants::Player::kFirepowerCap : m_Firepower; }
     void IncreaseFirepower();
 
     // ------- 作弊模式 (CheatManager 透過這些 public API 操作，不碰私有狀態) -------
     void SetGodMode(bool on) { m_Lifecycle.SetGodMode(on); }
     bool IsGodMode() const   { return m_Lifecycle.IsGodMode(); }
-    void MaxOutBombs()       { m_MaxBombs = Constants::Player::kMaxBombsCap; }
-    void MaxOutFirepower()   { m_Firepower = Constants::Player::kFirepowerCap; }
+    // 炸彈數 / 火力以「覆寫」方式拉滿：開啟期間有效數值=上限，但不動玩家真實進度
+    // (m_MaxBombs / m_Firepower)。關閉的瞬間即自動還原為正常數值 — 連作弊期間
+    // 正常吃到的道具一併保留，不需另外存檔/還原。
+    void SetCheatStats(bool on) { m_CheatStats = on; }
 
     InputController* GetController() const { return m_Controller.get(); }
 
@@ -111,8 +114,12 @@ private:
     // 確認是否可以移動
     bool IsColliding(float nextX, float nextY, const IWorldContext& worldContext, bool ignoreBombs = false);
 
+    // 作弊開啟時回報上限值；否則回報玩家真實上限。
+    int EffectiveMaxBombs() const { return m_CheatStats ? Constants::Player::kMaxBombsCap : m_MaxBombs; }
+
     int m_MaxBombs = Constants::Player::kInitialMaxBombs;        // 最大炸彈放置數量
     int m_CurrentBombs = 0;                                       // 當前場上炸彈數量
+    bool m_CheatStats = false;  // 作弊：以覆寫方式拉滿炸彈數/火力 (不動真實進度，關閉即還原)
 
 	// 暫時忽略的炸彈座標
     std::vector<std::pair<int, int>> m_IgnoreBombs;

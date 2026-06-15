@@ -19,7 +19,7 @@
 
 * **會死掉：** 
   - **進攻方：** 進攻方會被陷阱、源石精靈、炸彈爆炸與防守方的武器攻擊波及，受到攻擊就會死亡；死亡的進攻方會掉落身上的鑰匙，並進入重生倒數。  
-  - **防守方：** 防守方有 3 條命，會被陷阱與炸彈爆炸波及；前 2 次受到攻擊只會原地暈眩一段時間，第 3 次才會死亡，並進入重生倒數。  
+  - **防守方：** 防守方有 3 條命，會被陷阱與炸彈爆炸波及；前 2 次受到攻擊只會倒地暈眩一段時間，第 3 次才會死亡，並進入重生倒數。  
 * **會獲勝：**
   - **進攻方獲勝：** 成功取得鑰匙並成功開啟所有寶箱
   - **防守方獲勝：** 成功拖延至倒數計時結束
@@ -98,7 +98,7 @@
 
 | 屬性 | 說明 |
 |------|------|
-| 生命 | 進攻方 1 條；防守方 3 條（前 2 次被擊中只會倒地暈眩 1.5 秒，不會直接死） |
+| 生命 | 進攻方 1 條；防守方 3 條（前 2 次被擊中會倒地暈眩 1.5 秒，不會直接死） |
 | 移動速度 | 預設 3.0f；撿到加速鞋後 5 秒內提升到 5.0f；AI 進攻方依性格為基準速度的 0.78 ~ 0.95 倍（狂戰士 0.95、獵人 0.90、拾荒者 0.84、謹慎者 0.78） |
 | 火力 | 炸彈爆炸的十字延伸格數，初始 2，上限 5 |
 | 炸彈上限 | 可同時存在的炸彈數，初始 3，上限 10 |
@@ -108,7 +108,7 @@
 
 | 狀態 | 效果 | 解除 |
 |------|------|------|
-| 倒地暈眩 | 防守方被擊中時若仍有命，會原地暈眩 1.5 秒 並閃爍星星，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
+| 倒地暈眩 | 防守方被擊中時若仍有命，會倒地暈眩 1.5 秒並閃爍星星，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
 | 無敵 | 重生、起身、作弊開啟時生效，免疫所有傷害 | 計時結束或作弊關閉 |
 
 ### 遊戲畫面
@@ -248,13 +248,13 @@ classDiagram
     * `Ground`：可通行的地面
     * `Wall`：不可破壞的無敵牆
     * `Brick`：可被炸彈破壞的磚塊（破壞後有機率掉落道具）
-* `IGameState`：場景介面：11 個畫面各為一個 subclass
-* `IDefenderWeapon`：武器介面：3 把武器各為一個 subclass
-* `InputController`：移動方式讀取介面：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
-* `IProgrammableController`：可被外部寫入按鍵的介面：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
-* `InteractableFactory`：磚塊掉落物的靜態工廠：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
-* `IPlayerEffect`：道具效果介面：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
-* `IBotProfile`：AI 性格策略介面：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
+* `IGameState`（場景介面）：11 個畫面各為一個 subclass
+* `IDefenderWeapon`（武器介面）：3 把武器各為一個 subclass
+* `InputController`（移動方式讀取介面）：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
+* `IProgrammableController`（可被外部寫入按鍵的介面）：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
+* `InteractableFactory`（磚塊掉落物的靜態工廠）：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
+* `IPlayerEffect`（道具效果介面）：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
+* `IBotProfile`（AI 性格策略介面）：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
 
 **遊戲狀態移轉圖**
 `App` 只持有目前狀態，所有畫面切換皆透過 `App::TransitionTo()` 完成：

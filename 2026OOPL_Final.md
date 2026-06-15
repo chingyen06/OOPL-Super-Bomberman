@@ -19,7 +19,7 @@
 
 * **會死掉：** 
   - **進攻方：** 進攻方會被陷阱、源石精靈、炸彈爆炸與防守方的武器攻擊波及，受到攻擊就會死亡；死亡的進攻方會掉落身上的鑰匙，並進入重生倒數。  
-  - **防守方：** 防守方有 3 條命，會被陷阱與炸彈爆炸波及；前 2 次受到攻擊只會原地暈眩一段時間，第 3 次才會死亡，並進入重生倒數。  
+  - **防守方：** 防守方有 3 條命，會被陷阱與炸彈爆炸波及；前 2 次受到攻擊只會倒地暈眩一段時間，第 3 次才會死亡，並進入重生倒數。  
 * **會獲勝：**
   - **進攻方獲勝：** 成功取得鑰匙並成功開啟所有寶箱
   - **防守方獲勝：** 成功拖延至倒數計時結束
@@ -60,7 +60,7 @@
 |:---:|:---:|---|
 | <img src="Resources/Image/player_down.png" width="36"> | **炸彈人** | 進攻方與防守方皆可移動與放置炸彈；防守方頭頂以皇冠 <img src="Resources/Image/crown.png" width="20"> 標示、持有鑰匙的進攻方頭頂以鑰匙 <img src="Resources/Image/key.png" width="20"> 標示 |
 | <img src="Resources/Image/spirit.png" width="36"> | **源石精靈** | 與防守方合作的 AI 單位，平時在地圖上隨機朝四個方向巡邏，發現進攻方（警戒半徑 5 格）則主動追擊 |
-| <img src="Resources/Image/turret_down.png" width="36"> | **砲台** | 週期性朝面前發射砲彈（射程 2 ~ 3 格），砲彈飛行途中碰到玩家會將其砸暈；並且會會自動旋轉，改變射擊方向 |
+| <img src="Resources/Image/turret_down.png" width="36"> | **砲台** | 週期性朝面前發射砲彈（射程 2 ~ 3 格），砲彈飛行途中碰到玩家會將其砸暈；並且會自動旋轉，改變射擊方向 |
 
 **陷阱地形**
 
@@ -91,7 +91,7 @@
 | 圖示 | 名稱 | 效果 |
 |:---:|:---:|---|
 | <img src="Resources/Image/fx_slash.png" width="36"> | **劍** | 將前方三格的目標擊倒 |
-| <img src="Resources/Image/fx_laser.png" width="36"> | **雷射** | 朝面向直線發射，擊倒命中目標 |
+| <img src="Resources/Image/fx_laser.png" width="36"> | **雷射** | 朝面向直線發射，擊倒命中的目標 |
 | <img src="Resources/Image/fx_barrier.png" width="36"> | **屏障** | 生成暫時牆阻擋進攻方 |
 
 **屬性說明**
@@ -108,7 +108,7 @@
 
 | 狀態 | 效果 | 解除 |
 |------|------|------|
-| 倒地暈眩 | 防守方被擊中時若仍有命，會原地暈眩 1.5 秒 並閃爍星星，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
+| 倒地暈眩 | 防守方被擊中時若仍有命，會倒地暈眩 1.5 秒並閃爍星星，期間不能移動 | 自動起身，並給予 1 秒短暫無敵 |
 | 無敵 | 重生、起身、作弊開啟時生效，免疫所有傷害 | 計時結束或作弊關閉 |
 
 ### 遊戲畫面
@@ -248,13 +248,13 @@ classDiagram
     * `Ground`：可通行的地面
     * `Wall`：不可破壞的無敵牆
     * `Brick`：可被炸彈破壞的磚塊（破壞後有機率掉落道具）
-* `IGameState`：場景介面：11 個畫面各為一個 subclass
-* `IDefenderWeapon`：武器介面：3 把武器各為一個 subclass
-* `InputController`：移動方式讀取介面：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
-* `IProgrammableController`：可被外部寫入按鍵的介面：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
-* `InteractableFactory`：磚塊掉落物的靜態工廠：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
-* `IPlayerEffect`：道具效果介面：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
-* `IBotProfile`：AI 性格策略介面：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
+* `IGameState`（場景介面）：11 個畫面各為一個 subclass
+* `IDefenderWeapon`（武器介面）：3 把武器各為一個 subclass
+* `InputController`（移動方式讀取介面）：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
+* `IProgrammableController`（可被外部寫入按鍵的介面）：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
+* `InteractableFactory`（磚塊掉落物的靜態工廠）：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
+* `IPlayerEffect`（道具效果介面）：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
+* `IBotProfile`（AI 性格策略介面）：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
 
 **遊戲狀態移轉圖**
 `App` 只持有目前狀態，所有畫面切換皆透過 `App::TransitionTo()` 完成：
@@ -300,7 +300,7 @@ stateDiagram-v2
    以課程框架 PTSD（封裝 SDL2 + OpenGL）為底；圖片與文字皆經由 OpenGL shader（`Resources/shaders/Base.vert`、`Base.frag`）繪製。Release 版以 GUI 子系統連結，雙擊 exe 不會跳 console 視窗
 
 2. **AI 尋路（A\* + DangerMap）**  
-   進攻方 bot 採 A* 演算法（`Pathfinder`，`f = g + h`，以 `std::priority_queue` 做 min-heap），走法成本以 `costFunc` lambda 注入，因此同一份尋路引擎可被「安全走、衝目標、炸牆開路、自殺突擊、退路」五種策略重複利用。**DangerMap** 以 BFS 評估「現有炸彈與未來炸彈火焰會掃到哪些格」與「離自己最近的安全格」`BotDecisionMaker` 在決定放彈前會先 `FindSafeSpot + FindPath` 驗證逃生路徑是否走得到，可行才放，並用 `RegisterPendingBomb` 通知後續 bot，修掉了多 bot 同時放彈互炸的 bug
+   進攻方 bot 採 A* 演算法（`Pathfinder`，`f = g + h`，以 `std::priority_queue` 做 min-heap），走法成本以 `costFunc` lambda 注入，因此同一份尋路引擎可被「安全走、衝目標、炸牆開路、自殺突擊、退路」五種策略重複利用。**DangerMap** 以 BFS 評估「現有炸彈與未來炸彈火焰會掃到哪些格」與「離自己最近的安全格」。`BotDecisionMaker` 在決定放彈前會先 `FindSafeSpot + FindPath` 驗證逃生路徑是否走得到，可行才放，並用 `RegisterPendingBomb` 通知後續 bot，修掉了多 bot 同時放彈互炸的 bug
 
 3. **AI 性格**  
    `IBotProfile` 描述每隻 bot 想怎麼玩：反應速度、是否主動追防守方、衝目標的膽量、自殺突擊距離等。`BotController` 持有一個 `shared_ptr<const IBotProfile>`，`LevelSpawner::SpawnPlayers` 依席位給每隻 bot 不同性格（獵人、拾荒、狂戰、謹慎輪替），整場 AI 行為才不會像複製貼上
@@ -309,7 +309,7 @@ stateDiagram-v2
    關卡以文字檔 `Resources/Map/level_*.txt` 定義，`LevelManager` 載入後生成磚塊 / 出生點 / 互動物件；不同關卡套用不同 `TileSet`。新增關卡只要加一張地圖檔 + 一行 `TileSet`，程式不必動
 
 5. **可記憶的設定**  
-   `config.json` 是版本號、視窗、作者的單一來源：`gen_rc.ps1` 由它產生 exe 版本資訊、`package.ps1` 由它命名 zip、`AppVersion` 由它供標題畫面顯示 `版本 1.1`。升版只需改 `config.json` 一處。其餘執行期狀態（金幣、音量、自訂按鍵）寫入 `Resources/` 下的 json，關閉重開仍保留
+   `config.json` 是版本號、視窗、作者的單一來源：`gen_rc.ps1` 由它產生 exe 版本資訊、`package.ps1` 由它命名 zip、`AppVersion` 由它供標題畫面顯示 `版本 1.2`。升版只需改 `config.json` 一處。其餘執行期狀態（金幣、音量、自訂按鍵）寫入 `Resources/` 下的 json，關閉重開仍保留
 
 6. **Debug Mode**  
    F3 開啟 ImGui 主控台（`DebugConsole`）與資訊疊層（`DebugOverlay`），可即時改金幣、即殺指定玩家、強制進攻方 / 防守方獲勝、補滿武器充能、可視化危險地圖、顯示 FPS 等
@@ -326,7 +326,7 @@ stateDiagram-v2
 ### 使用到 AI/AI Agent 的部分
 開發過程中使用 **Gemini、Claude** 協助以下工作：
 - **OOP 架構審查：** 以 OOP 的 SOLID 五原則，請 AI 讀取整個 `include/` 與 `src/` 的內容，對於違反原則的部分，AI 會給出檔案、行號與建議，再由我決定哪些要修，並由我自己給予修正的具體方向後，再讓 AI 實施改動
-- **輔助程式開發：** 由於進度壓力，我採取 `我決定具體方向 → AI 實作程式 → 我做 code review → 根據類型決定是我改還是 AI 改` 的流程（例如 UI 渲染問題、AI 的邏輯太過一致 等需要實際遊玩測試的部分就由我自行完成；若是須對程式做大幅改動或 god class 問題，則由 AI 協助拆分問題並實作）
+- **輔助程式開發：** 由於進度壓力，我採取 `我決定具體方向 → AI 實作程式 → 我做 code review → 根據類型決定是我改還是 AI 改` 的流程（例如 UI 渲染問題、AI 的邏輯太過一致等需要實際遊玩測試的部分就由我自行完成；若是須對程式做大幅改動或 god class 問題，則由 AI 協助拆分問題並實作）
 - **PTSD 框架除錯：** 例如我將 debug 模式轉為 Release 後打包發布，就遇到在其他電腦會圖片 / 文字不顯示的問題，AI 幫助我了解整個框架的內容，並檢測出是因為 shader 路徑寫死成開發機的絕對路徑，打包未帶 shader 的問題，最後將 shader 納入 `Resources/shaders/` 並改相對路徑後解決
 - **開發環境相容：** 同學幫忙測試時發現 CLion 無法正確編譯的問題，我根據錯誤內容與 AI 一同處理完成
 - **輔助報告撰寫：** 由 AI 掃描完整程式碼後，提供素材提示與撰寫建議
@@ -343,7 +343,7 @@ stateDiagram-v2
 |:----|:----|
 | 玩家撿鑰匙、開寶箱等互動原本由 Manager 以 if-else 逐一判斷物件型別，每加一種互動物件就要回頭改判斷式 | `Interactable` 提供 `OnInteract(player)` 虛擬介面，鑰匙 / 寶箱等各自實作互動行為，Manager 只負責呼叫，以多型取代 if-else，後續演進為現在的 `Key / Chest / PowerUp / Conveyor / BouncePad` 繼承樹 |
 | 讀鍵盤與 AI 決策兩種控制來源混在 `Player` 內，人類與電腦玩家走不同程式路徑 | 抽出 `InputController` 介面：`HumanController` 讀鍵盤、`BotController` 由 AI 寫入。`Player` 只依賴介面，完全不知道操控自己的是人還是 AI（DIP） |
-| `LevelManager` 以 `dynamic_cast` + if-else 判斷磚塊能否通行 / 被炸毀 | `Tile` 提供 `IsPassable() / IsDestructible()` 虛擬函式，由 `Ground / Wall / Brick` 各自實作互動行為，刪除所有 `dynamic_cast` |
+| `LevelManager` 以 `dynamic_cast` + if-else 判斷磚塊能否通行 / 被炸毀 | `Tile` 提供 `IsPassable() / IsDestructible()` 虛擬函式，由 `Ground / Wall / Brick` 自行回答，刪除所有 `dynamic_cast` |
 | `Player` 直接持有 `LevelManager / BombManager / InteractableManager` 三個 Manager 的指標，耦合過深 | 引入 `IWorldContext` 世界查詢介面，`Player::Update(const IWorldContext&)` 只透過介面與世界互動（DIP） |
 | `App` 神物件：所有畫面的 switch-case、對戰邏輯、UI 全塞在 `App.cpp`，最肥時 600 多行 | 分三步拆解：先引入 `IGameState` + `TransitionTo()` 取代 enum switch（State Pattern）；再把對戰邏輯抽到 `GameSession` 並取消過渡期的 friend class；最後把 11 個場景狀態各自獨立成 `States/` 下的檔案，`App.cpp` 縮為 100 多行的純協調者 |
 | 速度、幀數、格數等魔術數字散落各檔案，改一個值要全專案搜尋 | 全部集中到 `GameConstants.hpp`（巢狀 class + `static constexpr`，如 `Constants::Player::kNormalSpeed`），另抽 `GridCoord` 統一格子座標與像素之間的轉換 |

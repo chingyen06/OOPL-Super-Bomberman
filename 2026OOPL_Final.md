@@ -9,7 +9,7 @@
 ## 專案簡介
 
 ### 遊戲簡介
-超級炸彈人 是一款參考 Super Bomberman R2 中城堡模式的遊戲。原作 Super Bomberman R2 為 3D 遊戲，本專案將其中的城堡模式復刻成類似 Super Bomberman 5 的 2D 版本，雙方圍繞場地上的「鑰匙」與「寶箱」展開攻防對決。  
+《超級炸彈人》是一款參考 Super Bomberman R2 中城堡模式的遊戲。原作 Super Bomberman R2 為 3D 遊戲，本專案將其中的城堡模式復刻成類似 Super Bomberman 5 的 2D 版本，雙方圍繞場地上的「鑰匙」與「寶箱」展開攻防對決。  
 
 遊戲分為 `進攻方` 與 `防守方`。  
 
@@ -25,6 +25,8 @@
   - **防守方獲勝：** 成功拖延至倒數計時結束
 * **有關卡：** 每個關卡都有不同的陷阱、寶箱、源石精靈配置
 
+專案簡介：https://youtu.be/k36F2Lw03Tk  
+
 ### 組別分工
 單人實作，無須分工
 
@@ -34,7 +36,7 @@
 
 **基本操作**
 - `ESC`：於主選單或遊戲封面按 `ESC` 可以開啟結束遊戲確認框
-- `ENTER`：於遊戲中按 `ENTER` 可以開啟暫停選單，可選擇繼續、作弊開關、再次開始、返回房間
+- `ENTER`：於遊戲中按 `ENTER` 可以開啟暫停選單，可選擇繼續、作弊開關(P1/P2)、再次開始、返回房間
 - `F3`：開啟 / 關閉 Debug Overlay 與 ImGui 主控台（即時改金幣、殺指定玩家、強制進攻方 / 防守方獲勝、可視化危險地圖等）
 
 預設按鍵（可於操作設定畫面自訂並保存）：
@@ -90,7 +92,7 @@
 
 | 圖示 | 名稱 | 效果 |
 |:---:|:---:|---|
-| <img src="Resources/Image/fx_slash.png" width="36"> | **劍** | 將前方三格的目標擊倒 |
+| <img src="Resources/Image/fx_slash.png" width="36"> | **劍** | 將前方一排（左／中／右三格）的目標擊倒 |
 | <img src="Resources/Image/fx_laser.png" width="36"> | **雷射** | 朝面向直線發射，擊倒命中的目標 |
 | <img src="Resources/Image/fx_barrier.png" width="36"> | **屏障** | 生成暫時牆阻擋進攻方 |
 
@@ -137,7 +139,7 @@
 
 - 標頭檔（`.hpp`）：75 個
 - 原始檔（`.cpp`）：58 個
-- 程式碼總行數：約 7000 多行（不含 PTSD 框架）
+- 程式碼總行數：約 8000 多行（不含 PTSD 框架）
 - 場景狀態子類（`IGameState`）：11 個
 - 防守方武器子類（`IDefenderWeapon`）：3 個
 - 可互動物件子類（`Interactable`）：5 個
@@ -252,7 +254,7 @@ classDiagram
 * `IDefenderWeapon`（武器介面）：3 把武器各為一個 subclass
 * `InputController`（移動方式讀取介面）：`HumanController` 讀鍵盤、`BotController` 內部由 AI 寫入
 * `IProgrammableController`（可被外部寫入按鍵的介面）：與 `InputController` 拆開避免 `HumanController` 出現無意義的 stub（ISP）
-* `InteractableFactory`（磚塊掉落物的靜態工廠）：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
+* `InteractableFactory`（磚塊掉落物的工廠）：`GenericPowerUpFactory` 以建構子注入 effect 與 sprite，新增道具不必再寫新工廠 subclass；`EmptyDropFactory` 代表「不掉落」的空結果
 * `IPlayerEffect`（道具效果介面）：加速 / 炸彈上限 +1 / 火力 +1 各為一個 subclass，由 `PowerUp` 持有，玩家撿取的瞬間 `Apply()` 到玩家身上
 * `IBotProfile`（AI 性格策略介面）：獵人 / 拾荒者 / 狂戰士 / 謹慎者各為一個 subclass，由 `BotProfileFactory` 依席位輪替注入，讓同場 AI 的反應速度、膽量與走速各異
 
@@ -288,7 +290,7 @@ stateDiagram-v2
 
 - **狀態模式：** `IGameState` 為純虛擬介面（`OnEnter / OnUpdate / OnExit / WantsCursor`），每個畫面是一個子類別；`App` 只持有目前狀態並負責轉場 `TransitionTo()`。新增畫面不需改動 `App` 主迴圈
 - **策略模式 + 靜態工廠 + OCP：** 防守方武器抽象為 `IDefenderWeapon::Fire(const FireContext&)`，`Sword / Laser / Barrier` 各自實作；`WeaponFactory` 依 `MatchConfig` 建立對應武器。新增一把武器只需新增一個子類別 + 工廠加一個 case，完全不動既有武器（開放封閉原則，OCP）
-- **依賴反轉（DIP）：** 武器不直接依賴具體場景，而是透過 `IWeaponEffects`（特效接收端）與 `IWorldContext`（世界查詢）等介面與外界互動，由 `GameSession` 提供實作。`Player::Update(const IWorldContext&)` 同理
+- **依賴反轉（DIP）：** 武器不直接依賴具體場景，而是透過 `IWeaponEffects`（特效接收端）與 `IWorldContext`（世界查詢）等介面與外界互動，由 `GameSession` 子系統(`DefenderWeaponSystem/GameWorldContext`) 提供實作。`Player::Update(const IWorldContext&)` 同理
 - **單一職責（SRP）：** 原本龐大的 gameplay 邏輯拆成多個 Manager 與職責類別：`Player::Update` 抽出 `PlayerLifecycle`（死亡/暈眩/重生計時）與 `PlayerAnimator`（方向→貼圖）；`GameSession::LoadLevel` 抽出 `LevelSpawner`；`AIManager` 抽出 `BotDecisionMaker`（單幀策略樹）；AI 又再細分為 `Pathfinder`（通用 A*）、`DangerMap`（哪些格會被火焰掃到、BFS 找安全格）、`BotNavigator`（單一 bot 對地圖的視角與成本函式）
 - **封裝（Encapsulation）：** 各類別資料成員一律 `private`（包含原本被 protected 暴露的 `Turret` 10 個成員與 `Interactable::m_GridX/m_GridY`），子類透過 `protected` 行為介面與基底互動
 - **介面隔離（ISP）：** `InputController`（讀）與 `IProgrammableController`（寫）刻意分家，`HumanController` 只實作前者，不必為 AI 提供無意義的虛設常式 (stub)
@@ -387,9 +389,9 @@ stateDiagram-v2
 
 我認為在實作這次專案的過程中，我最印象深刻的是 SRP。在一開始，我的架構設計得不太好，尤其 `Player::Update` 原本是一坨 200 多行的函式，輸入、物理、暈眩、死亡、重生、無敵閃爍、彈跳、轉向、加速計時，全部擠在裡面，當時我覺得程式能跑就好，而且也很符合一個人思考的順序性（不斷疊加內容），但到了後面我發現每次要添加功能時都要多加非常多行，然後改動很多原本的程式，這時才意識到我的設計似乎不太好。我很慶幸我們現在有 AI Agent 能夠輔助進行分析，並快速重構，所以後來就很快地把這些設計不良的地方一一處理完，把死亡 / 暈眩 / 重生計時抽成 `PlayerLifecycle`、方向與貼圖抽成 `PlayerAnimator`，`Update` 變成 `Tick lifecycle → 看結果決定要不要 return → 跑剩下的物理` 的流程，這時候我才意識到原本那 200 行的設計有多難維護，諸如此類問題還有很多，但幾乎都有做修正了。
 
-我認為我做這個專案中，最自豪的就是想起上學期 OOP 課程後期提到的靜態工廠模式，我第一次利用 InteractableFactory 來實作磚塊掉落的物件時，就發現這是一個很有用的設計方法，無論我要添加多少內容，都只需要添加幾行，並於其他地方加上功能即可，不需要修改太多內容，那時候起我就了解到一個好的方法設計有多重要，後續與 AI 合作開發的時候也會多注意在什麼時候應該用什麼設計方法，避免他實作出不好的程式。
+我認為我做這個專案中，最自豪的就是想起上學期 OOP 課程後期提到的靜態工廠模式，我第一次利用 WeaponFactory 來實作武器的物件時，就發現這是一個很有用的設計方法，無論我要添加多少內容，都只需要添加幾行，並於其他地方加上功能即可，不需要修改太多內容，那時候起我就了解到一個好的方法設計有多重要，後續與 AI 合作開發的時候也會多注意在什麼時候應該用什麼設計方法，避免它實作出不好的程式。
 
-最後是發佈的問題，能在自己電腦跑跟能在別人電腦跑真的是兩件事。打包第一個版本給奕宏幫忙測試的時候，他一點開遊戲我的圖片跟文字都沒了，想了好一陣子又問了 AI 後才發現是框架把 shader 路徑寫死成開發機的絕對路徑，打包沒帶到。處理完後又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊等等，每一個都是換台機器就壞的細節，這些都在新的 v1.0 解決了。最後的 v1.1 也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面 三處：升版本只需要改一個地方，是 SOLID 之外另一個方便發布版本的小巧思。
+最後是發佈的問題，能在自己電腦跑跟能在別人電腦跑真的是兩件事。打包第一個版本給奕宏幫忙測試的時候，他一點開遊戲我的圖片跟文字都沒了，想了好一陣子又問了 AI 後才發現是框架把 shader 路徑寫死成開發機的絕對路徑，打包沒帶到。處理完後又遇到 MSVC 與 MinGW 兩套工具鏈各有各的 runtime DLL 問題，再到 SDL 的滑鼠游標在改過配置的 Windows 上顯示成黑方塊等等，每一個都是換台機器就壞的細節，這些都在新的 v1.0 解決了。最新的版本也順手把 `config.json` 的 `version` 串到 `gen_rc.ps1` / `package.ps1` / 標題畫面 三處：升版本只需要改一個地方，是 SOLID 之外另一個方便發布版本的小巧思。
 
 ### 貢獻比例
 |      組員      | 貢獻 |
